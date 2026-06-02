@@ -28,12 +28,13 @@ import { truncateForPrompt } from "./approval";
 import { applyBashFixups } from "./bash-command-fixup";
 import { type BashInteractiveResult, runInteractiveBashPty } from "./bash-interactive";
 import { checkBashInterception } from "./bash-interceptor";
+import { getInterfaceTierBashBlockReason } from "./bash-interface-safety";
 import { canUseInteractiveBashPty } from "./bash-pty-selection";
 import { expandInternalUrls, type InternalUrlExpansionOptions } from "./bash-skill-urls";
 import { formatStyledTruncationWarning, type OutputMeta, stripOutputNotice } from "./output-meta";
 import { resolveToCwd } from "./path-utils";
 import { formatToolWorkingDirectory, replaceTabs } from "./render-utils";
-import { WORKER_ONLY_TIERS } from "./tier-access";
+import { INTERFACE_AND_WORKER_TIERS } from "./tier-access";
 import { ToolAbortError, ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 import { clampTimeout, TOOL_TIMEOUTS } from "./tool-timeouts";
@@ -324,7 +325,7 @@ function stripExitCodeNotice(text: string, exitCode: number | undefined): string
  */
 export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	readonly name = "bash";
-	readonly allowedTiers = WORKER_ONLY_TIERS;
+	readonly allowedTiers = INTERFACE_AND_WORKER_TIERS;
 	readonly approval = (args: unknown): ToolApprovalDecision => {
 		const rawCommand = (args as Partial<BashToolInput>).command;
 		const command = typeof rawCommand === "string" ? rawCommand : "";
@@ -648,6 +649,17 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				command = command.slice(cdMatch[0].length);
 			}
 		}
+
+		if ((this.session.taskDepth ?? 0) === 0) {
+			const commandsToValidate = rawCommand === command ? [command] : [rawCommand, command];
+			for (const commandToValidate of commandsToValidate) {
+				const blockReason = getInterfaceTierBashBlockReason(commandToValidate);
+				if (blockReason) {
+					throw new ToolError(blockReason);
+				}
+			}
+		}
+
 		if (asyncRequested && !this.#asyncEnabled) {
 			throw new ToolError("Async bash execution is disabled. Enable async.enabled to use async mode.");
 		}

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Allowed the interface tier to invoke `bash` for read-only shell commands (git status/log/diff/pull, file listing, package listing, `bun check`/`bun test`, etc.) while blocking destructive patterns; mutating tools (`edit`, `write`, …) remain worker-only.
+
 ## [15.8.1] - 2026-06-02
 
 ### Fixed
