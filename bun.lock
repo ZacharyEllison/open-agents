@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "omp-monorepo",
+      "name": "open-agents",
       "devDependencies": {
         "@biomejs/biome": "catalog:",
         "@types/bun": "catalog:",
@@ -14,12 +14,12 @@
       },
     },
     "packages/agent": {
-      "name": "@oh-my-pi/pi-agent-core",
+      "name": "@open-agents/agent",
       "version": "15.8.1",
       "dependencies": {
-        "@oh-my-pi/pi-ai": "catalog:",
-        "@oh-my-pi/pi-natives": "catalog:",
-        "@oh-my-pi/pi-utils": "catalog:",
+        "@open-agents/ai": "catalog:",
+        "@open-agents/natives": "catalog:",
+        "@open-agents/utils": "catalog:",
         "@opentelemetry/api": "catalog:",
       },
       "devDependencies": {
@@ -29,11 +29,11 @@
       },
     },
     "packages/ai": {
-      "name": "@oh-my-pi/pi-ai",
+      "name": "@open-agents/ai",
       "version": "15.8.1",
       "dependencies": {
         "@bufbuild/protobuf": "catalog:",
-        "@oh-my-pi/pi-utils": "catalog:",
+        "@open-agents/utils": "catalog:",
         "openai": "catalog:",
         "partial-json": "catalog:",
         "zod": "catalog:",
@@ -43,23 +43,23 @@
       },
     },
     "packages/coding-agent": {
-      "name": "@oh-my-pi/pi-coding-agent",
+      "name": "@open-agents/coding-agent",
       "version": "15.8.1",
       "bin": {
-        "omp": "src/cli.ts",
+        "open-agent": "src/cli.ts",
       },
       "dependencies": {
         "@agentclientprotocol/sdk": "catalog:",
         "@babel/parser": "catalog:",
         "@mozilla/readability": "catalog:",
-        "@oh-my-pi/hashline": "catalog:",
-        "@oh-my-pi/omp-stats": "catalog:",
-        "@oh-my-pi/pi-agent-core": "catalog:",
-        "@oh-my-pi/pi-ai": "catalog:",
-        "@oh-my-pi/pi-mnemopi": "catalog:",
-        "@oh-my-pi/pi-natives": "catalog:",
-        "@oh-my-pi/pi-tui": "catalog:",
-        "@oh-my-pi/pi-utils": "catalog:",
+        "@open-agents/agent": "catalog:",
+        "@open-agents/ai": "catalog:",
+        "@open-agents/hashline": "catalog:",
+        "@open-agents/mnemopi": "catalog:",
+        "@open-agents/natives": "catalog:",
+        "@open-agents/stats": "catalog:",
+        "@open-agents/tui": "catalog:",
+        "@open-agents/utils": "catalog:",
         "@puppeteer/browsers": "catalog:",
         "@types/turndown": "catalog:",
         "@xterm/headless": "catalog:",
@@ -83,7 +83,7 @@
       },
     },
     "packages/hashline": {
-      "name": "@oh-my-pi/hashline",
+      "name": "@open-agents/hashline",
       "version": "15.8.1",
       "dependencies": {
         "diff": "catalog:",
@@ -94,14 +94,14 @@
       },
     },
     "packages/mnemopi": {
-      "name": "@oh-my-pi/pi-mnemopi",
+      "name": "@open-agents/mnemopi",
       "version": "15.8.1",
       "bin": {
         "mnemopi": "src/cli.ts",
       },
       "dependencies": {
-        "@oh-my-pi/pi-ai": "catalog:",
-        "@oh-my-pi/pi-utils": "catalog:",
+        "@open-agents/ai": "catalog:",
+        "@open-agents/utils": "catalog:",
         "fastembed": "catalog:",
         "lru-cache": "catalog:",
         "onnxruntime-node": "catalog:",
@@ -111,7 +111,7 @@
       },
     },
     "packages/natives": {
-      "name": "@oh-my-pi/pi-natives",
+      "name": "@open-agents/natives",
       "version": "15.8.1",
       "devDependencies": {
         "@napi-rs/cli": "catalog:",
@@ -119,14 +119,14 @@
       },
     },
     "packages/stats": {
-      "name": "@oh-my-pi/omp-stats",
+      "name": "@open-agents/stats",
       "version": "15.8.1",
       "bin": {
         "omp-stats": "./src/index.ts",
       },
       "dependencies": {
-        "@oh-my-pi/pi-ai": "catalog:",
-        "@oh-my-pi/pi-utils": "catalog:",
+        "@open-agents/ai": "catalog:",
+        "@open-agents/utils": "catalog:",
         "@tailwindcss/node": "catalog:",
         "chart.js": "catalog:",
         "date-fns": "catalog:",
@@ -144,27 +144,27 @@
       },
     },
     "packages/swarm-extension": {
-      "name": "@oh-my-pi/swarm-extension",
+      "name": "@open-agents/swarm-extension",
       "version": "15.8.1",
       "bin": {
         "omp-swarm": "src/cli.ts",
       },
       "dependencies": {
-        "@oh-my-pi/pi-utils": "workspace:*",
+        "@open-agents/utils": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3.14",
       },
       "peerDependencies": {
-        "@oh-my-pi/pi-coding-agent": "^13",
+        "@open-agents/coding-agent": "workspace:*",
       },
     },
     "packages/tui": {
-      "name": "@oh-my-pi/pi-tui",
+      "name": "@open-agents/tui",
       "version": "15.8.1",
       "dependencies": {
-        "@oh-my-pi/pi-natives": "catalog:",
-        "@oh-my-pi/pi-utils": "catalog:",
+        "@open-agents/natives": "catalog:",
+        "@open-agents/utils": "catalog:",
         "lru-cache": "catalog:",
         "marked": "catalog:",
       },
@@ -174,7 +174,7 @@
       },
     },
     "packages/typescript-edit-benchmark": {
-      "name": "@oh-my-pi/typescript-edit-benchmark",
+      "name": "@open-agents/typescript-edit-benchmark",
       "version": "0.0.1",
       "bin": {
         "typescript-edit-benchmark": "src/index.ts",
@@ -184,12 +184,12 @@
         "@babel/parser": "catalog:",
         "@babel/traverse": "catalog:",
         "@babel/types": "catalog:",
-        "@oh-my-pi/hashline": "catalog:",
-        "@oh-my-pi/pi-agent-core": "catalog:",
-        "@oh-my-pi/pi-ai": "catalog:",
-        "@oh-my-pi/pi-coding-agent": "catalog:",
-        "@oh-my-pi/pi-tui": "catalog:",
-        "@oh-my-pi/pi-utils": "catalog:",
+        "@open-agents/agent": "catalog:",
+        "@open-agents/ai": "catalog:",
+        "@open-agents/coding-agent": "catalog:",
+        "@open-agents/hashline": "catalog:",
+        "@open-agents/tui": "catalog:",
+        "@open-agents/utils": "catalog:",
         "diff": "catalog:",
         "prettier": "catalog:",
         "regexp-tree": "catalog:",
@@ -201,10 +201,10 @@
       },
     },
     "packages/utils": {
-      "name": "@oh-my-pi/pi-utils",
+      "name": "@open-agents/utils",
       "version": "15.8.1",
       "dependencies": {
-        "@oh-my-pi/pi-natives": "catalog:",
+        "@open-agents/natives": "catalog:",
         "beautiful-mermaid": "catalog:",
         "handlebars": "catalog:",
         "winston": "catalog:",
@@ -242,15 +242,15 @@
     "@huggingface/transformers": "^4.2.0",
     "@mozilla/readability": "^0.6.0",
     "@napi-rs/cli": "3.7.0",
-    "@oh-my-pi/hashline": "15.8.1",
-    "@oh-my-pi/omp-stats": "15.8.1",
-    "@oh-my-pi/pi-agent-core": "15.8.1",
-    "@oh-my-pi/pi-ai": "15.8.1",
-    "@oh-my-pi/pi-coding-agent": "15.8.1",
-    "@oh-my-pi/pi-mnemopi": "15.8.1",
-    "@oh-my-pi/pi-natives": "15.8.1",
-    "@oh-my-pi/pi-tui": "15.8.1",
-    "@oh-my-pi/pi-utils": "15.8.1",
+    "@open-agents/agent": "15.8.1",
+    "@open-agents/ai": "15.8.1",
+    "@open-agents/coding-agent": "15.8.1",
+    "@open-agents/hashline": "15.8.1",
+    "@open-agents/mnemopi": "15.8.1",
+    "@open-agents/natives": "15.8.1",
+    "@open-agents/stats": "15.8.1",
+    "@open-agents/tui": "15.8.1",
+    "@open-agents/utils": "15.8.1",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/context-async-hooks": "^2.7.1",
     "@opentelemetry/sdk-trace-base": "^2.7.1",
@@ -623,27 +623,27 @@
 
     "@octokit/types": ["@octokit/types@16.0.0", "", { "dependencies": { "@octokit/openapi-types": "^27.0.0" } }, "sha512-sKq+9r1Mm4efXW1FCk7hFSeJo4QKreL/tTbR0rz/qx/r1Oa2VV83LTA/H/MuCOX7uCIJmQVRKBcbmWoySjAnSg=="],
 
-    "@oh-my-pi/hashline": ["@oh-my-pi/hashline@workspace:packages/hashline"],
+    "@open-agents/agent": ["@open-agents/agent@workspace:packages/agent"],
 
-    "@oh-my-pi/omp-stats": ["@oh-my-pi/omp-stats@workspace:packages/stats"],
+    "@open-agents/ai": ["@open-agents/ai@workspace:packages/ai"],
 
-    "@oh-my-pi/pi-agent-core": ["@oh-my-pi/pi-agent-core@workspace:packages/agent"],
+    "@open-agents/coding-agent": ["@open-agents/coding-agent@workspace:packages/coding-agent"],
 
-    "@oh-my-pi/pi-ai": ["@oh-my-pi/pi-ai@workspace:packages/ai"],
+    "@open-agents/hashline": ["@open-agents/hashline@workspace:packages/hashline"],
 
-    "@oh-my-pi/pi-coding-agent": ["@oh-my-pi/pi-coding-agent@workspace:packages/coding-agent"],
+    "@open-agents/mnemopi": ["@open-agents/mnemopi@workspace:packages/mnemopi"],
 
-    "@oh-my-pi/pi-mnemopi": ["@oh-my-pi/pi-mnemopi@workspace:packages/mnemopi"],
+    "@open-agents/natives": ["@open-agents/natives@workspace:packages/natives"],
 
-    "@oh-my-pi/pi-natives": ["@oh-my-pi/pi-natives@workspace:packages/natives"],
+    "@open-agents/stats": ["@open-agents/stats@workspace:packages/stats"],
 
-    "@oh-my-pi/pi-tui": ["@oh-my-pi/pi-tui@workspace:packages/tui"],
+    "@open-agents/swarm-extension": ["@open-agents/swarm-extension@workspace:packages/swarm-extension"],
 
-    "@oh-my-pi/pi-utils": ["@oh-my-pi/pi-utils@workspace:packages/utils"],
+    "@open-agents/tui": ["@open-agents/tui@workspace:packages/tui"],
 
-    "@oh-my-pi/swarm-extension": ["@oh-my-pi/swarm-extension@workspace:packages/swarm-extension"],
+    "@open-agents/typescript-edit-benchmark": ["@open-agents/typescript-edit-benchmark@workspace:packages/typescript-edit-benchmark"],
 
-    "@oh-my-pi/typescript-edit-benchmark": ["@oh-my-pi/typescript-edit-benchmark@workspace:packages/typescript-edit-benchmark"],
+    "@open-agents/utils": ["@open-agents/utils@workspace:packages/utils"],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.1", "", {}, "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="],
 

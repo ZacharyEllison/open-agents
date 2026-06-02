@@ -158,14 +158,18 @@ export class WelcomeComponent implements Component {
 		const rightCol = showRightColumn ? dualRightCol : 0;
 
 		// Logo: pick a frame from the intro animation if active, else the resting frame.
+		// Pad all logo lines to the widest visible width so #centerText shifts them uniformly
+		// (the art uses internal leading spaces for alignment; per-line centering would skew it).
 		const logoColored = this.#currentLogoFrame();
+		const logoMaxW = Math.max(...logoColored.map(l => visibleWidth(l)));
+		const logoPadded = logoColored.map(l => l + padding(logoMaxW - visibleWidth(l)));
 
 		// Left column - centered content
 		const leftLines = [
 			"",
 			this.#centerText(theme.bold("Welcome back!"), leftCol),
 			"",
-			...logoColored.map(l => this.#centerText(l, leftCol)),
+			...logoPadded.map(l => this.#centerText(l, leftCol)),
 			"",
 			this.#centerText(theme.fg("muted", this.modelName), leftCol),
 			this.#centerText(theme.fg("borderMuted", this.providerName), leftCol),
@@ -339,13 +343,19 @@ export class WelcomeComponent implements Component {
 	}
 }
 
-/** Triforce outline used by the welcome screen and setup splash. */
-export const TRIFORCE_ART = ["      ▲", "     ▲ ▲", "    ▲   ▲", "   ▲ ▲ ▲ ▲"] as const;
+/** Filled triforce (three solid block triangles around the inverted center gap) for the welcome screen and setup splash. */
+export const TRIFORCE_ART = [
+	"          ████",
+	"        ████████",
+	"      ████████████",
+	"    ████        ████",
+	"  ████████    ████████",
+	"████████████████████████",
+] as const;
 
 /** @deprecated Use {@link TRIFORCE_ART}. Kept for setup splash imports during transition. */
 export const PI_LOGO = [...TRIFORCE_ART];
 
-const SHIMMER_CHARS = ["░", "▒", "▓", "█", "▓", "▒", "░"] as const;
 const GOLD_STOPS: ReadonlyArray<readonly [number, number, number]> = [
 	[120, 85, 20],
 	[180, 130, 30],
@@ -371,36 +381,38 @@ function goldEscape(t: number): string {
 	return `\x1b[38;5;${GOLD_RAMP_256[idx]}m`;
 }
 
+/** Width of the widest row; the inverted center gap and the bottom-triangle split align to its midpoint. */
+const TRIFORCE_WIDTH = Math.max(...TRIFORCE_ART.map(l => l.length));
+/** Rows 0..TOP_ROWS-1 form the top triangle; rows TOP_ROWS+ split left/right at the midpoint. */
+const TRIFORCE_TOP_ROWS = 3;
+
 /** Which of the three triforce triangles owns a glyph at (row, col). */
-function triforceTriangleIndex(row: number, col: number, _rows: number, cols: number): number {
-	const mid = (cols - 1) / 2;
-	if (row <= 1) return 0;
-	if (col <= mid - (row - 1) * 0.6) return 1;
-	return 2;
+function triforceTriangleIndex(row: number, col: number): number {
+	if (row < TRIFORCE_TOP_ROWS) return 0;
+	return col < TRIFORCE_WIDTH / 2 ? 1 : 2;
 }
 
 /**
- * Render the triforce with a gentle golden shimmer. Each triangle ripples through
- * {@link SHIMMER_CHARS} on an independent phase offset.
+ * Render the triforce with a gentle golden shimmer. The triangle edge glyphs stay
+ * intact; only their gold tint animates, as a bright glint that sweeps diagonally
+ * across each triangle on an independent phase offset.
  */
 export function renderTriforceLogo(phase: number): string[] {
 	const reset = "\x1b[0m";
 	const rows = TRIFORCE_ART.length;
-	const cols = Math.max(...TRIFORCE_ART.map(l => l.length));
+	const span = TRIFORCE_WIDTH + rows;
 	return TRIFORCE_ART.map((line, y) => {
 		let result = "";
 		for (let x = 0; x < line.length; x++) {
 			const char = line[x];
-			if (char !== "▲") {
+			if (char === " ") {
 				result += char;
 				continue;
 			}
-			const tri = triforceTriangleIndex(y, x, rows, cols);
-			const triPhase = (phase + tri / 3) % 1;
-			const shimmerIdx = Math.floor(triPhase * SHIMMER_CHARS.length) % SHIMMER_CHARS.length;
-			const shimmerChar = SHIMMER_CHARS[shimmerIdx] ?? "▲";
-			const goldT = (triPhase + y / rows) % 1;
-			result += goldEscape(goldT) + shimmerChar + reset;
+			const tri = triforceTriangleIndex(y, x);
+			const sweep = (phase + tri / 3 + (x + y) / span) % 1;
+			const glint = 0.5 + 0.5 * Math.sin(sweep * Math.PI * 2);
+			result += goldEscape(glint) + char + reset;
 		}
 		return result;
 	});
