@@ -107,7 +107,7 @@ import {
 	resolveModelRoleValue,
 } from "../config/model-resolver";
 import { expandPromptTemplate, type PromptTemplate } from "../config/prompt-templates";
-import type { Settings, SkillsSettings } from "../config/settings";
+import type { CompactionSettings, Settings, SkillsSettings } from "../config/settings";
 import { onAppendOnlyModeChanged } from "../config/settings";
 import { RawSseDebugBuffer } from "../debug/raw-sse-buffer";
 import { loadCapability } from "../discovery";
@@ -369,6 +369,8 @@ export interface AgentSessionConfig {
 	 * so that credential sticky selection is consistent with the session's streaming calls.
 	 */
 	providerSessionId?: string;
+	/** Task depth of this session (0 = interface tier). */
+	taskDepth?: number;
 }
 
 /** Options for AgentSession.prompt() */
@@ -880,6 +882,7 @@ export class AgentSession {
 	// Extension system
 	#extensionRunner: ExtensionRunner | undefined = undefined;
 	#turnIndex = 0;
+	#taskDepth: number;
 
 	#skills: Skill[];
 	#skillWarnings: SkillWarning[];
@@ -1050,6 +1053,7 @@ export class AgentSession {
 		this.sessionManager = config.sessionManager;
 		this.settings = config.settings;
 		// Power assertions are taken per turn (see #beginInFlight); nothing acquired here.
+		this.#taskDepth = config.taskDepth ?? 0;
 		this.#evalKernelOwnerId = config.evalKernelOwnerId ?? `agent-session:${Snowflake.next()}`;
 		this.#parentEvalSessionId = config.parentEvalSessionId;
 		this.#ownedAsyncJobManager = config.ownedAsyncJobManager;
@@ -5736,6 +5740,17 @@ export class AgentSession {
 		}
 	}
 
+	#getEffectiveCompactionSettings(): CompactionSettings {
+		const base = this.settings.getGroup("compaction");
+		const tierKey =
+			this.#taskDepth === 0 ? "interface.compactionThresholdTokens" : "worker.compactionThresholdTokens";
+		const tierThreshold = this.settings.get(tierKey);
+		if (typeof tierThreshold === "number" && tierThreshold > 0) {
+			return { ...base, thresholdTokens: tierThreshold };
+		}
+		return base;
+	}
+
 	/**
 	 * Manually compact the session context.
 	 * Aborts current agent operation first.
@@ -5756,7 +5771,7 @@ export class AgentSession {
 				throw new Error("No model selected");
 			}
 
-			const compactionSettings = this.settings.getGroup("compaction");
+			const compactionSettings = this.#getEffectiveCompactionSettings();
 			const pathEntries = this.sessionManager.getBranch();
 			const preparation = prepareCompaction(pathEntries, compactionSettings);
 			if (!preparation) {
@@ -6111,7 +6126,7 @@ export class AgentSession {
 		if (!model) return;
 		const contextWindow = model.contextWindow ?? 0;
 		if (contextWindow <= 0) return;
-		const compactionSettings = this.settings.getGroup("compaction");
+		const compactionSettings = this.#getEffectiveCompactionSettings();
 		const contextTokens = this.#estimatePendingPromptTokens(messages);
 		if (!shouldCompact(contextTokens, contextWindow, compactionSettings)) return;
 
@@ -6189,7 +6204,7 @@ export class AgentSession {
 			}
 
 			// No promotion target available fall through to compaction
-			const compactionSettings = this.settings.getGroup("compaction");
+			const compactionSettings = this.#getEffectiveCompactionSettings();
 			if (compactionSettings.enabled && compactionSettings.strategy !== "off") {
 				await this.#runAutoCompaction("overflow", true, false, allowDefer, { autoContinue });
 			}
@@ -6217,7 +6232,7 @@ export class AgentSession {
 				return false;
 			}
 
-			const incompleteCompactionSettings = this.settings.getGroup("compaction");
+			const incompleteCompactionSettings = this.#getEffectiveCompactionSettings();
 			if (incompleteCompactionSettings.enabled && incompleteCompactionSettings.strategy !== "off") {
 				logger.debug("Compaction triggered by response.incomplete (length stop, no promotion target)", {
 					model: `${assistantMessage.provider}/${assistantMessage.model}`,
@@ -6234,7 +6249,7 @@ export class AgentSession {
 			return false;
 		}
 
-		const compactionSettings = this.settings.getGroup("compaction");
+		const compactionSettings = this.#getEffectiveCompactionSettings();
 		if (!compactionSettings.enabled || compactionSettings.strategy === "off") return false;
 
 		// Case 4: Threshold - turn succeeded but context is getting large
@@ -6948,7 +6963,7 @@ export class AgentSession {
 		allowDefer = true,
 		options: { autoContinue?: boolean } = {},
 	): Promise<boolean> {
-		const compactionSettings = this.settings.getGroup("compaction");
+		const compactionSettings = this.#getEffectiveCompactionSettings();
 		if (compactionSettings.strategy === "off") return false;
 		if (reason !== "idle" && !compactionSettings.enabled) return false;
 		const generation = this.#promptGeneration;

@@ -1045,6 +1045,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			level = selectedModel.thinking.defaultLevel;
 		}
 		if (level === undefined) {
+			const tierKey = taskDepth === 0 ? "interface.thinkingLevel" : "worker.thinkingLevel";
+			const tierLevel = parseThinkingLevel(settings.get(tierKey));
+			if (tierLevel !== undefined) {
+				level = tierLevel;
+			}
+		}
+		if (level === undefined) {
 			level = settings.get("defaultThinkingLevel");
 		}
 		return level;
@@ -2079,6 +2086,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			agentRegistry,
 			providerSessionId: options.providerSessionId,
 			parentEvalSessionId: options.parentEvalSessionId,
+			taskDepth,
 		});
 		hasSession = true;
 		if (asyncJobManager) {

@@ -345,6 +345,80 @@ export const SETTINGS_SCHEMA = {
 
 	modelTiers: { type: "record", default: DEFAULT_MODEL_TIERS },
 
+	"interface.compactionThresholdTokens": {
+		type: "number",
+		default: 16000,
+		ui: {
+			tab: "context",
+			label: "Interface Compaction Token Limit",
+			description:
+				"Fixed token limit for interface tier compaction. The interface should compact aggressively to keep prefill fast. -1 falls back to global compaction.thresholdTokens.",
+			options: [
+				{ value: "-1", label: "Use global", description: "Fall back to compaction.thresholdTokens" },
+				{ value: "8000", label: "8K tokens", description: "Very aggressive" },
+				{ value: "12000", label: "12K tokens", description: "Aggressive" },
+				{ value: "16000", label: "16K tokens", description: "Default for interface" },
+				{ value: "24000", label: "24K tokens", description: "Moderate" },
+				{ value: "32000", label: "32K tokens", description: "Relaxed" },
+			],
+		},
+	},
+
+	"interface.thinkingLevel": {
+		type: "string",
+		default: "medium",
+		ui: {
+			tab: "models",
+			label: "Interface Thinking Level",
+			description:
+				"Thinking level for the interface tier. Medium is recommended — the interface gathers context and delegates, it does not need deep reasoning chains.",
+			options: [
+				{ value: "none", label: "None", description: "No thinking" },
+				{ value: "minimal", label: "Minimal", description: "Brief thinking" },
+				{ value: "low", label: "Low", description: "Light thinking" },
+				{ value: "medium", label: "Medium", description: "Recommended for interface" },
+				{ value: "high", label: "High", description: "Deep thinking (slow)" },
+			],
+		},
+	},
+
+	"worker.compactionThresholdTokens": {
+		type: "number",
+		default: -1,
+		ui: {
+			tab: "context",
+			label: "Worker Compaction Token Limit",
+			description:
+				"Fixed token limit for worker tier compaction. Workers run deep reasoning and benefit from larger context. -1 falls back to global compaction.thresholdTokens.",
+			options: [
+				{ value: "-1", label: "Use global", description: "Fall back to compaction.thresholdTokens" },
+				{ value: "8000", label: "8K tokens", description: "Very aggressive" },
+				{ value: "12000", label: "12K tokens", description: "Aggressive" },
+				{ value: "16000", label: "16K tokens", description: "Moderate" },
+				{ value: "24000", label: "24K tokens", description: "Relaxed" },
+				{ value: "32000", label: "32K tokens", description: "Large context" },
+			],
+		},
+	},
+
+	"worker.thinkingLevel": {
+		type: "string",
+		default: "high",
+		ui: {
+			tab: "models",
+			label: "Worker Thinking Level",
+			description:
+				"Thinking level for the worker tier. High is recommended — workers perform deep reasoning on delegated tasks.",
+			options: [
+				{ value: "none", label: "None", description: "No thinking" },
+				{ value: "minimal", label: "Minimal", description: "Brief thinking" },
+				{ value: "low", label: "Low", description: "Light thinking" },
+				{ value: "medium", label: "Medium", description: "Moderate thinking" },
+				{ value: "high", label: "High", description: "Recommended for workers" },
+			],
+		},
+	},
+
 	modelTags: { type: "record", default: EMPTY_MODEL_TAGS_RECORD },
 
 	modelProviderOrder: { type: "array", default: EMPTY_STRING_ARRAY },
@@ -3394,6 +3468,16 @@ export interface ThinkingBudgetsSettings {
 	xhigh: number;
 }
 
+export interface InterfaceSettings {
+	compactionThresholdTokens: number;
+	thinkingLevel: string;
+}
+
+export interface WorkerSettings {
+	compactionThresholdTokens: number;
+	thinkingLevel: string;
+}
+
 export interface SttSettings {
 	enabled: boolean;
 	language: string | undefined;
@@ -3433,6 +3517,8 @@ export interface GroupTypeMap {
 	thinkingBudgets: ThinkingBudgetsSettings;
 	stt: SttSettings;
 	modelTiers: Record<string, string>;
+	interface: InterfaceSettings;
+	worker: WorkerSettings;
 	modelTags: ModelTagsSettings;
 	shellMinimizer: ShellMinimizerSettings;
 }
