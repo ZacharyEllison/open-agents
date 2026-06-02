@@ -59,6 +59,9 @@ packages/coding-agent/src/internal-urls/docs-index.generated.ts
 packages/natives/npm/
 /runs/
 python/omp-rpc/src/omp_rpc.egg-info/
+# turbo build cache (never commit)
+.turbo/
+
 # parallel-agent worktrees
 .wt/
 CPU*.md
