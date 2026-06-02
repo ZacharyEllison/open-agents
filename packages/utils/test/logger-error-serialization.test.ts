@@ -17,8 +17,8 @@ let restoredEnv: NodeJS.ProcessEnv;
 beforeAll(() => {
 	tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-logger-error-"));
 	restoredEnv = { ...process.env };
-	// `getLogsDir()` honors OMP_AGENT_DIR / HOME for its base; pin to our tmp.
-	process.env.OMP_AGENT_DIR = tempDir;
+	// `getLogsDir()` honors OA_AGENT_DIR / HOME for its base; pin to our tmp.
+	process.env.OA_AGENT_DIR = tempDir;
 	logger.setTransports({ file: tempDir, console: false });
 });
 

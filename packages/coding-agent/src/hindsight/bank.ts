@@ -18,7 +18,7 @@
  */
 
 import * as path from "node:path";
-import { logger } from "@oh-my-pi/pi-utils";
+import { logger } from "@open-agents/utils";
 import type { HindsightApi } from "./client";
 import type { HindsightConfig } from "./config";
 

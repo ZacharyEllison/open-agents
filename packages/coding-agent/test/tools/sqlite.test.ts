@@ -165,8 +165,8 @@ describe("SQLite tool support", () => {
 		sqlitePath = path.join(tmpDir, "app.sqlite");
 		sqliteDbPath = path.join(tmpDir, "app.db");
 		invalidDbPath = path.join(tmpDir, "thumbs.db");
-		originalEditVariant = Bun.env.PI_EDIT_VARIANT;
-		Bun.env.PI_EDIT_VARIANT = "replace";
+		originalEditVariant = Bun.env.OA_EDIT_VARIANT;
+		Bun.env.OA_EDIT_VARIANT = "replace";
 
 		createFixtureDatabase(sqlitePath);
 		await fs.copyFile(sqlitePath, sqliteDbPath);
@@ -179,9 +179,9 @@ describe("SQLite tool support", () => {
 
 	afterEach(async () => {
 		if (originalEditVariant === undefined) {
-			delete Bun.env.PI_EDIT_VARIANT;
+			delete Bun.env.OA_EDIT_VARIANT;
 		} else {
-			Bun.env.PI_EDIT_VARIANT = originalEditVariant;
+			Bun.env.OA_EDIT_VARIANT = originalEditVariant;
 		}
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});

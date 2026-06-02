@@ -1,4 +1,4 @@
-import { padding, type SelectItem, SelectList, truncateToWidth, visibleWidth } from "@oh-my-pi/pi-tui";
+import { padding, type SelectItem, SelectList, truncateToWidth, visibleWidth } from "@open-agents/tui";
 import {
 	enableAutoTheme,
 	getAvailableThemes,

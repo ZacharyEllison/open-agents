@@ -1,6 +1,6 @@
 # Natives Addon Loader Runtime
 
-This document covers the runtime loader shipped by `@oh-my-pi/pi-natives`: how `native/index.js` decides which `.node` file to require, how compiled-binary embedded payloads are extracted, and what startup failures report.
+This document covers the runtime loader shipped by `@open-agents/natives`: how `native/index.js` decides which `.node` file to require, how compiled-binary embedded payloads are extracted, and what startup failures report.
 
 ## Implementation files
 
@@ -29,7 +29,7 @@ At module initialization, `native/index.js` computes:
 - **Platform tag**: `${process.platform}-${process.arch}` (for example `darwin-arm64`).
 - **Package version**: from `packages/natives/package.json`.
 - **Core directories**:
-  - `leafPackageDir`: directory of the platform leaf package, resolved via `require.resolve("@oh-my-pi/pi-natives-<tag>/package.json")`; `null` when no leaf is installed (e.g. local dev).
+  - `leafPackageDir`: directory of the platform leaf package, resolved via `require.resolve("@open-agents/natives-<tag>/package.json")`; `null` when no leaf is installed (e.g. local dev).
   - `nativeDir`: package-local `packages/natives/native`.
   - `execDir`: directory containing `process.execPath`.
   - `versionedDir`: `<getNativesDir()>/<packageVersion>`.
@@ -38,10 +38,10 @@ At module initialization, `native/index.js` computes:
     - Non-Windows: `~/.local/bin`.
 - **Natives cache root** (`getNativesDir()`):
   - if `$XDG_DATA_HOME/omp` exists, `$XDG_DATA_HOME/omp/natives`;
-  - otherwise `~/.omp/natives`.
+  - otherwise `~/.open-agent/natives`.
 - **Compiled-binary mode** (`detectCompiledBinary`): true if any of:
   - embedded-addon manifest is non-null,
-  - `PI_COMPILED` env var is set,
+  - `OA_COMPILED` env var is set,
   - `import.meta.url` contains Bun embedded markers (`$bunfs`, `~BUN`, `%7EBUN`).
 - **Windows staging mode** (`shouldStageNodeModulesAddon`): true only on Windows, in non-compiled mode, when `nativeDir` is inside `node_modules`.
 - **Variant override**: `PI_NATIVE_VARIANT` (`modern`/`baseline` only; invalid values ignored).
@@ -195,12 +195,12 @@ Compiled mode diagnostics include:
 - expected versioned cache target paths (`<versionedDir>/<filename>`),
 - remediation to delete the versioned cache and rerun,
 - direct release download `curl` commands for each expected filename.
-- release sentinel mismatch details when a loadable `.node` belongs to another `@oh-my-pi/pi-natives` version.
+- release sentinel mismatch details when a loadable `.node` belongs to another `@open-agents/natives` version.
 
 ### Non-compiled startup failures
 
 Normal package/runtime diagnostics include:
 
-- reinstall hint (`bun install @oh-my-pi/pi-natives`),
+- reinstall hint (`bun install @open-agents/natives`),
 - local rebuild command (`bun --cwd=packages/natives run build`),
 - optional x64 variant build hint (`TARGET_VARIANT=baseline|modern bun --cwd=packages/natives run build`).

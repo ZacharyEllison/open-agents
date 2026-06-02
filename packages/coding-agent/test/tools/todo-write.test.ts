@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { initTheme, theme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { initTheme, theme } from "@open-agents/coding-agent/modes/theme/theme";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
 import {
 	selectStickyTodoWindow,
 	TODO_WRITE_STRIKE_HOLD_FRAMES,
@@ -11,7 +11,7 @@ import {
 	TodoWriteTool,
 	todoMatchesAnyDescription,
 	todoWriteToolRenderer,
-} from "@oh-my-pi/pi-coding-agent/tools";
+} from "@open-agents/coding-agent/tools";
 
 function createSession(initialPhases: TodoPhase[] = []): ToolSession {
 	let phases = initialPhases;

@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentTool } from "@oh-my-pi/pi-agent-core";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { EDIT_MODE_STRATEGIES } from "@oh-my-pi/pi-coding-agent/edit";
-import { initTheme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import { TUI } from "@oh-my-pi/pi-tui";
+import type { AgentTool } from "@open-agents/agent";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import { EDIT_MODE_STRATEGIES } from "@open-agents/coding-agent/edit";
+import { initTheme } from "@open-agents/coding-agent/modes/theme/theme";
+import { TUI } from "@open-agents/tui";
 import { VirtualTerminal } from "../../tui/test/virtual-terminal";
 import { ToolExecutionComponent } from "../src/modes/components/tool-execution";
 

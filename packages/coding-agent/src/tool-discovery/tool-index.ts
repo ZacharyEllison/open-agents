@@ -1,4 +1,4 @@
-import type { AgentTool } from "@oh-my-pi/pi-agent-core";
+import type { AgentTool } from "@open-agents/agent";
 
 // ─── Generic Tool Discovery Types ────────────────────────────────────────────
 

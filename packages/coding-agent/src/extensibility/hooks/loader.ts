@@ -2,7 +2,7 @@
  * Hook loader - loads TypeScript hook modules using native Bun import.
  */
 import * as path from "node:path";
-import { logger } from "@oh-my-pi/pi-utils";
+import { logger } from "@open-agents/utils";
 import * as zod from "zod/v4";
 import { hookCapability } from "../../capability/hook";
 import type { Hook } from "../../discovery";
@@ -138,7 +138,7 @@ async function createHookAPI(
 		logger,
 		typebox,
 		zod,
-		pi: await import("@oh-my-pi/pi-coding-agent"),
+		pi: await import("@open-agents/coding-agent"),
 	} as HookAPI;
 
 	return {

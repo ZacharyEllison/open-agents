@@ -2,7 +2,7 @@
  * Model resolution, scoping, and initial selection
  */
 
-import { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
+import { ThinkingLevel } from "@open-agents/agent";
 import {
 	type Api,
 	clampThinkingLevelForModel,
@@ -11,13 +11,13 @@ import {
 	type KnownProvider,
 	type Model,
 	modelsAreEqual,
-} from "@oh-my-pi/pi-ai";
-import { fuzzyMatch } from "@oh-my-pi/pi-tui";
-import { logger } from "@oh-my-pi/pi-utils";
+} from "@open-agents/ai";
+import { fuzzyMatch } from "@open-agents/tui";
+import { logger } from "@open-agents/utils";
 import chalk from "chalk";
-import MODEL_PRIO from "../priority.json" with { type: "json" };
 import { parseThinkingLevel, resolveThinkingLevelForModel } from "../thinking";
-import { isAuthenticated, kNoAuth, MODEL_ROLE_IDS, type ModelRegistry, type ModelRole } from "./model-registry";
+import { isAuthenticated, kNoAuth, MODEL_TIER_IDS, type ModelRegistry, type ModelTier } from "./model-registry";
+import { LEGACY_MODEL_ROLE_TO_TIER } from "./model-tier-legacy";
 import type { Settings } from "./settings";
 
 /** Default model IDs for each known provider */
@@ -495,16 +495,20 @@ export function parseModelPattern(
 	return parseModelPatternWithContext(pattern, availableModels, context, options);
 }
 
-const PREFIX_MODEL_ROLE = "pi/";
-const DEFAULT_MODEL_ROLE = "default";
+const PREFIX_MODEL_TIER = "pi/";
+const DEFAULT_MODEL_TIER = "interface";
 
-function getModelRoleAlias(value: string): ModelRole | undefined {
+const LEGACY_TIER_ALIASES: Record<string, ModelTier> = LEGACY_MODEL_ROLE_TO_TIER;
+
+function getModelTierAlias(value: string): ModelTier | undefined {
 	const normalized = value.trim();
-	if (!normalized.startsWith(PREFIX_MODEL_ROLE)) return undefined;
+	if (!normalized.startsWith(PREFIX_MODEL_TIER)) return undefined;
 
-	const candidate = normalized.slice(PREFIX_MODEL_ROLE.length);
-	for (const role of MODEL_ROLE_IDS) {
-		if (candidate === role) return role;
+	const candidate = normalized.slice(PREFIX_MODEL_TIER.length);
+	const legacy = LEGACY_TIER_ALIASES[candidate];
+	if (legacy) return legacy;
+	for (const tier of MODEL_TIER_IDS) {
+		if (candidate === tier) return tier;
 	}
 	return undefined;
 }
@@ -516,7 +520,12 @@ function normalizeModelPatternList(value: string | string[] | undefined): string
 }
 
 function isSessionInheritedAgentPattern(value: string): boolean {
-	return value === DEFAULT_MODEL_ROLE || value === `${PREFIX_MODEL_ROLE}${DEFAULT_MODEL_ROLE}` || value === "pi/task";
+	return (
+		value === DEFAULT_MODEL_TIER ||
+		value === `${PREFIX_MODEL_TIER}${DEFAULT_MODEL_TIER}` ||
+		value === "pi/worker" ||
+		value === "pi/task"
+	);
 }
 
 function resolveConfiguredRolePattern(value: string, settings?: Settings): string[] | undefined {
@@ -525,14 +534,13 @@ function resolveConfiguredRolePattern(value: string, settings?: Settings): strin
 
 	const lastColonIndex = normalized.lastIndexOf(":");
 	const thinkingLevel =
-		lastColonIndex > PREFIX_MODEL_ROLE.length ? parseThinkingLevel(normalized.slice(lastColonIndex + 1)) : undefined;
+		lastColonIndex > PREFIX_MODEL_TIER.length ? parseThinkingLevel(normalized.slice(lastColonIndex + 1)) : undefined;
 	const aliasCandidate = thinkingLevel ? normalized.slice(0, lastColonIndex) : normalized;
-	const role = getModelRoleAlias(aliasCandidate);
-	if (!role) return [normalized];
+	const tier = getModelTierAlias(aliasCandidate);
+	if (!tier) return [normalized];
 
-	const configured = settings?.getModelRole(role)?.trim();
-	const roleDefaults = normalizeModelPatternList(MODEL_PRIO[role as keyof typeof MODEL_PRIO]);
-	const resolved = configured ? normalizeModelPatternList(configured) : roleDefaults;
+	const configured = settings?.getModelTier(tier)?.trim();
+	const resolved = configured ? normalizeModelPatternList(configured) : [];
 	if (!resolved || resolved.length === 0) {
 		return undefined;
 	}
@@ -545,8 +553,8 @@ function resolveConfiguredRolePattern(value: string, settings?: Settings): strin
  */
 export function expandRoleAlias(value: string, settings?: Settings): string {
 	const normalized = value.trim();
-	if (normalized === DEFAULT_MODEL_ROLE) {
-		return settings?.getModelRole("default") ?? value;
+	if (normalized === DEFAULT_MODEL_TIER || normalized === "default") {
+		return settings?.getModelTier("interface") ?? value;
 	}
 
 	const resolved = resolveConfiguredRolePattern(value, settings)?.[0];
@@ -584,7 +592,7 @@ export function resolveAgentModelPatterns(options: AgentModelPatternResolutionOp
 	}
 
 	const fallback =
-		activeModelPattern?.trim() || fallbackModelPattern?.trim() || settings?.getModelRole("default")?.trim() || "";
+		activeModelPattern?.trim() || fallbackModelPattern?.trim() || settings?.getModelTier("interface")?.trim() || "";
 	return resolveConfiguredModelPatterns(fallback, settings);
 }
 
@@ -608,7 +616,7 @@ export function resolveModelRoleValue(
 	}
 
 	const normalized = roleValue.trim();
-	if (!normalized || normalized === DEFAULT_MODEL_ROLE) {
+	if (!normalized || normalized === DEFAULT_MODEL_TIER || normalized === "default" || normalized === "auto") {
 		return { model: undefined, thinkingLevel: undefined, explicitThinkingLevel: false, warning: undefined };
 	}
 
@@ -646,7 +654,7 @@ export function extractExplicitThinkingSelector(
 ): ThinkingLevel | undefined {
 	if (!value) return undefined;
 	const normalized = value.trim();
-	if (!normalized || normalized === DEFAULT_MODEL_ROLE) return undefined;
+	if (!normalized || normalized === DEFAULT_MODEL_TIER) return undefined;
 
 	const visited = new Set<string>();
 	let current = normalized;
@@ -654,13 +662,13 @@ export function extractExplicitThinkingSelector(
 		visited.add(current);
 		const lastColonIndex = current.lastIndexOf(":");
 		const thinkingSelector =
-			lastColonIndex > PREFIX_MODEL_ROLE.length ? parseThinkingLevel(current.slice(lastColonIndex + 1)) : undefined;
+			lastColonIndex > PREFIX_MODEL_TIER.length ? parseThinkingLevel(current.slice(lastColonIndex + 1)) : undefined;
 		if (thinkingSelector) {
 			return thinkingSelector;
 		}
 		const expanded = expandRoleAlias(current, settings).trim();
 		if (!expanded || expanded === current) break;
-		if (expanded === DEFAULT_MODEL_ROLE) return undefined;
+		if (expanded === DEFAULT_MODEL_TIER) return undefined;
 		current = expanded;
 	}
 
@@ -691,14 +699,14 @@ export function resolveModelFromSettings(options: {
 	settings: Settings;
 	availableModels: Model<Api>[];
 	matchPreferences?: ModelMatchPreferences;
-	roleOrder?: readonly ModelRole[];
+	tierOrder?: readonly ModelTier[];
 	modelRegistry?: CanonicalModelRegistry;
 }): Model<Api> | undefined {
-	const { settings, availableModels, matchPreferences, roleOrder, modelRegistry } = options;
-	const roles = roleOrder ?? MODEL_ROLE_IDS;
+	const { settings, availableModels, matchPreferences, tierOrder, modelRegistry } = options;
+	const tiers = tierOrder ?? MODEL_TIER_IDS;
 	let sawConfiguredProviderQualifiedRole = false;
-	for (const role of roles) {
-		const configured = settings.getModelRole(role);
+	for (const tier of tiers) {
+		const configured = settings.getModelTier(tier);
 		if (!configured) continue;
 		const expanded = expandRoleAlias(configured, settings).trim();
 		if (expanded.includes("/")) {
@@ -802,7 +810,10 @@ export function resolveRoleSelection(
 ): { model: Model<Api>; thinkingLevel?: ThinkingLevel } | undefined {
 	const matchPreferences = { usageOrder: settings.getStorage()?.getModelUsageOrder() };
 	for (const role of roles) {
-		const resolved = resolveModelRoleValue(settings.getModelRole(role), availableModels, {
+		const tier =
+			LEGACY_TIER_ALIASES[role] ?? (MODEL_TIER_IDS.includes(role as ModelTier) ? (role as ModelTier) : undefined);
+		const tierValue = tier ? settings.getModelTier(tier) : settings.getModelRole(role);
+		const resolved = resolveModelRoleValue(tierValue, availableModels, {
 			settings,
 			matchPreferences,
 			modelRegistry,
@@ -1343,21 +1354,7 @@ export async function findSmolModel(
 	}
 
 	// 2. Try priority chain
-	for (const pattern of MODEL_PRIO.smol) {
-		// Try exact match with provider prefix
-		const providerMatch = availableModels.find(m => `${m.provider}/${m.id}`.toLowerCase() === pattern);
-		if (providerMatch) return providerMatch;
-
-		// Try exact match first
-		const exactMatch = parseModelPattern(pattern, availableModels, undefined, { modelRegistry }).model;
-		if (exactMatch) return exactMatch;
-
-		// Try fuzzy match (substring)
-		const fuzzyMatch = availableModels.find(m => m.id.toLowerCase().includes(pattern));
-		if (fuzzyMatch) return fuzzyMatch;
-	}
-
-	// 3. Fallback to first available (same as default)
+	// 2. Fallback to first available
 	return availableModels[0];
 }
 
@@ -1383,16 +1380,6 @@ export async function findSlowModel(
 	}
 
 	// 2. Try priority chain
-	for (const pattern of MODEL_PRIO.slow) {
-		// Try exact match first
-		const exactMatch = parseModelPattern(pattern, availableModels, undefined, { modelRegistry }).model;
-		if (exactMatch) return exactMatch;
-
-		// Try fuzzy match (substring)
-		const fuzzyMatch = availableModels.find(m => m.id.toLowerCase().includes(pattern.toLowerCase()));
-		if (fuzzyMatch) return fuzzyMatch;
-	}
-
-	// 3. Fallback to first available (same as default)
+	// 2. Fallback to first available
 	return availableModels[0];
 }

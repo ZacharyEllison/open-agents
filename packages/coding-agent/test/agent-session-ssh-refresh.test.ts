@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
-import { Agent, type AgentTool } from "@oh-my-pi/pi-agent-core";
-import type { Model } from "@oh-my-pi/pi-ai";
-import { getSSHConfigPath, TempDir } from "@oh-my-pi/pi-utils";
+import { Agent, type AgentTool } from "@open-agents/agent";
+import type { Model } from "@open-agents/ai";
+import { getSSHConfigPath, TempDir } from "@open-agents/utils";
 import { reset as resetCapabilities } from "../src/capability";
 import { type SSHHost, sshCapability } from "../src/capability/ssh";
 import { Settings } from "../src/config/settings";

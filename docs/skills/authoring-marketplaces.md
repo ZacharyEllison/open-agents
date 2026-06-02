@@ -1,6 +1,6 @@
 ---
 name: authoring-marketplaces
-description: Use when creating a new omp marketplace. Covers marketplace.json schema, source types, install commands, and publishing.
+description: Use when creating a new open-agent marketplace. Covers marketplace.json schema, source types, install commands, and publishing.
 ---
 
 # Authoring Marketplaces
@@ -86,7 +86,7 @@ The catalog file must live at `.claude-plugin/marketplace.json` in the repositor
     "email": "plugins@acme.example"
   },
   "metadata": {
-    "description": "Official Acme plugins for oh-my-pi"
+    "description": "Official Acme plugins for open-agent"
   },
   "plugins": [
     {
@@ -223,14 +223,14 @@ Minimum `package.json`:
 CLI equivalent:
 
 ```
-omp plugin marketplace add owner/repo
-omp plugin install name@marketplace-name
+open-agent plugin marketplace add owner/repo
+open-agent plugin install name@marketplace-name
 ```
 
 Scope behavior:
 
-- **user** (default) — installed in `~/.omp/plugins/installed_plugins.json`, available in all projects
-- **project** — installed in `<project>/.omp/plugins/installed_plugins.json`, available only in that project
+- **user** (default) — installed in `~/.open-agent/plugins/installed_plugins.json`, available in all projects
+- **project** — installed in `<project>/.open-agent/plugins/installed_plugins.json`, available only in that project
 
 Project-scoped installs shadow user-scoped installs of the same plugin name.
 

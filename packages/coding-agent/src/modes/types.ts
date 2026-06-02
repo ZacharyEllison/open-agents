@@ -1,7 +1,7 @@
-import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import type { CompactionOutcome } from "@oh-my-pi/pi-agent-core/compaction";
-import type { AssistantMessage, ImageContent, Message, UsageReport } from "@oh-my-pi/pi-ai";
-import type { Component, Container, EditorTheme, Loader, Spacer, Text, TUI } from "@oh-my-pi/pi-tui";
+import type { AgentMessage } from "@open-agents/agent";
+import type { CompactionOutcome } from "@open-agents/agent/compaction";
+import type { AssistantMessage, ImageContent, Message, UsageReport } from "@open-agents/ai";
+import type { Component, Container, EditorTheme, Loader, Spacer, Text, TUI } from "@open-agents/tui";
 import type { KeybindingsManager } from "../config/keybindings";
 import type { Settings } from "../config/settings";
 import type {

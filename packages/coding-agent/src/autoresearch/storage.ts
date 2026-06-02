@@ -1,7 +1,7 @@
 import { Database, type SQLQueryBindings } from "bun:sqlite";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getAutoresearchDbPath, getAutoresearchProjectDir, logger } from "@oh-my-pi/pi-utils";
+import { getAutoresearchDbPath, getAutoresearchProjectDir, logger } from "@open-agents/utils";
 import * as git from "../utils/git";
 import type { ASIData, ExperimentStatus, MetricDirection, NumericMetricMap } from "./types";
 
@@ -571,7 +571,7 @@ export async function openAutoresearchStorageIfExists(cwd: string): Promise<Auto
 }
 
 async function resolveAutoresearchPaths(cwd: string): Promise<{ dbPath: string; projectDir: string }> {
-	const override = process.env.OMP_AUTORESEARCH_DB_DIR;
+	const override = process.env.OA_AUTORESEARCH_DB_DIR;
 	const repoRoot = (await git.repo.root(cwd)) ?? cwd;
 	const encoded = encodeProjectKey(repoRoot);
 	if (override) {

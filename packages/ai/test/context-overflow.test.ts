@@ -14,11 +14,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { execSync, spawn } from "node:child_process";
-import { getBundledModel } from "@oh-my-pi/pi-ai/models";
-import { complete } from "@oh-my-pi/pi-ai/stream";
-import type { AssistantMessage, Context, Model, Usage } from "@oh-my-pi/pi-ai/types";
-import { isContextOverflow } from "@oh-my-pi/pi-ai/utils/overflow";
-import { $which } from "@oh-my-pi/pi-utils";
+import { getBundledModel } from "@open-agents/ai/models";
+import { complete } from "@open-agents/ai/stream";
+import type { AssistantMessage, Context, Model, Usage } from "@open-agents/ai/types";
+import { isContextOverflow } from "@open-agents/ai/utils/overflow";
+import { $which } from "@open-agents/utils";
 import { e2eApiKey, resolveApiKey } from "./oauth";
 
 // Resolve OAuth tokens at module level (async, runs before tests)
@@ -445,8 +445,8 @@ describe("Context overflow error handling", () => {
 	// Ollama (local)
 	// =============================================================================
 
-	// Ollama tests require PI_LOCAL_LLM=1 and ollama installed
-	const ollamaInstalled = !!Bun.env.PI_LOCAL_LLM && !!$which("ollama");
+	// Ollama tests require OA_LOCAL_LLM=1 and ollama installed
+	const ollamaInstalled = !!Bun.env.OA_LOCAL_LLM && !!$which("ollama");
 
 	describe.skipIf(!ollamaInstalled)("Ollama (local)", () => {
 		let ollamaProcess: ChildProcess | null = null;
@@ -534,7 +534,7 @@ describe("Context overflow error handling", () => {
 	// =============================================================================
 
 	let lmStudioRunning = false;
-	if (!Bun.env.PI_NO_LOCAL_LLM) {
+	if (!Bun.env.OA_NO_LOCAL_LLM) {
 		try {
 			execSync("curl -s --max-time 1 http://localhost:1234/v1/models > /dev/null", { stdio: "ignore" });
 			lmStudioRunning = true;

@@ -1,5 +1,5 @@
-// @ts-nocheck — example file; install @oh-my-pi/pi-coding-agent before running
-import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+// @ts-nocheck — example file; install @open-agents/coding-agent before running
+import type { ExtensionAPI } from "@open-agents/coding-agent";
 
 export default function myPlugin(pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {

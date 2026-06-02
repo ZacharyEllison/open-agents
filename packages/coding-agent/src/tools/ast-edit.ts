@@ -1,10 +1,10 @@
 import * as path from "node:path";
-import { formatHashlineHeader } from "@oh-my-pi/hashline";
-import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import { type AstReplaceChange, type AstReplaceFileChange, astEdit } from "@oh-my-pi/pi-natives";
-import type { Component } from "@oh-my-pi/pi-tui";
-import { Text } from "@oh-my-pi/pi-tui";
-import { $envpos, prompt, untilAborted } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@open-agents/agent";
+import { formatHashlineHeader } from "@open-agents/hashline";
+import { type AstReplaceChange, type AstReplaceFileChange, astEdit } from "@open-agents/natives";
+import type { Component } from "@open-agents/tui";
+import { Text } from "@open-agents/tui";
+import { $envpos, prompt, untilAborted } from "@open-agents/utils";
 import * as z from "zod/v4";
 import { getFileSnapshotStore } from "../edit/file-snapshot-store";
 import { normalizeToLF } from "../edit/normalize";

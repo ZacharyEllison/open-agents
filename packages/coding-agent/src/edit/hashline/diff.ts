@@ -26,7 +26,7 @@ import {
 	resolveBlockEdits,
 	type SnapshotStore,
 	stripBom,
-} from "@oh-my-pi/hashline";
+} from "@open-agents/hashline";
 import { resolveToCwd } from "../../tools/path-utils";
 import { generateDiffString } from "../diff";
 import { readEditFileText } from "../read-file";

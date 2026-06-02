@@ -2,10 +2,10 @@
  * Edit tool renderer and LSP batching helpers.
  */
 
-import { HL_FILE_PREFIX } from "@oh-my-pi/hashline";
-import type { Component } from "@oh-my-pi/pi-tui";
-import { Text, visibleWidth, wrapTextWithAnsi } from "@oh-my-pi/pi-tui";
-import { sanitizeText } from "@oh-my-pi/pi-utils";
+import { HL_FILE_PREFIX } from "@open-agents/hashline";
+import type { Component } from "@open-agents/tui";
+import { Text, visibleWidth, wrapTextWithAnsi } from "@open-agents/tui";
+import { sanitizeText } from "@open-agents/utils";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { FileDiagnosticsResult } from "../lsp";
 import { renderDiff as renderDiffColored } from "../modes/components/diff";

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
-import { Agent } from "@oh-my-pi/pi-agent-core";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { AgentRegistry } from "@oh-my-pi/pi-coding-agent/registry/agent-registry";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { type FileEntry, SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { IrcTool } from "@oh-my-pi/pi-coding-agent/tools/irc";
+import { Agent } from "@open-agents/agent";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { AgentRegistry } from "@open-agents/coding-agent/registry/agent-registry";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { type FileEntry, SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { IrcTool } from "@open-agents/coding-agent/tools/irc";
 
 interface FakeSession {
 	session: AgentSession;

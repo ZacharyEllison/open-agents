@@ -3,7 +3,7 @@
 import * as path from "node:path";
 
 const packageDir = path.join(import.meta.dir, "..");
-const outputPath = path.join(packageDir, "dist", "omp");
+const outputPath = path.join(packageDir, "dist", "open-agent");
 
 function shouldAdhocSignDarwinBinary(): boolean {
 	return process.platform === "darwin";
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
 					"--no-compile-autoload-package-json",
 					"--keep-names",
 					"--define",
-					'process.env.PI_COMPILED="true"',
+					'process.env.OA_COMPILED="true"',
 					"--external",
 					"mupdf",
 					"--root",
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
 					"./src/extensibility/legacy-pi-ai-shim.ts",
 					"./src/extensibility/legacy-pi-coding-agent-shim.ts",
 					"--outfile",
-					"dist/omp",
+					"dist/open-agent",
 				],
 				buildEnv,
 			);

@@ -1,4 +1,4 @@
-import { $env, $flag } from "@oh-my-pi/pi-utils";
+import { $env, $flag } from "@open-agents/utils";
 import type { ToolSession } from ".";
 
 export interface EvalBackendsAllowance {

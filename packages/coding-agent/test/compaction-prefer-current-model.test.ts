@@ -1,24 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
-import { Agent } from "@oh-my-pi/pi-agent-core";
-import * as compactionModule from "@oh-my-pi/pi-agent-core/compaction";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import { Agent } from "@open-agents/agent";
+import * as compactionModule from "@open-agents/agent/compaction";
+import { getBundledModel } from "@open-agents/ai";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { TempDir } from "@open-agents/utils";
 import { assistantMsg, userMsg } from "./utilities";
 
 /**
- * Regression: when the user sets `modelRoles.default` to a model on a different
+ * Regression: when the user sets `modelTiers.default` to a model on a different
  * provider than the current chat, compaction must still pick the active chat's
  * model first. Otherwise an Anthropic chat would route compaction through the
  * OpenAI remote-compaction endpoint (gated by `shouldUseOpenAiRemoteCompaction`),
  * even though the live conversation never used OpenAI.
  */
-describe("compaction prefers the current session model over modelRoles.default", () => {
+describe("compaction prefers the current session model over modelTiers.default", () => {
 	let tempDir: TempDir;
 	let authStorage: AuthStorage;
 	let session: AgentSession;
@@ -37,7 +37,7 @@ describe("compaction prefers the current session model over modelRoles.default",
 		tempDir.removeSync();
 	});
 
-	it("uses the active Anthropic chat model when modelRoles.default points at an OpenAI model", async () => {
+	it("uses the active Anthropic chat model when modelTiers.default points at an OpenAI model", async () => {
 		const currentModel = getBundledModel("anthropic", "claude-sonnet-4-5");
 		const defaultRoleModel = getBundledModel("openai", "gpt-5");
 		if (!currentModel || !defaultRoleModel) {

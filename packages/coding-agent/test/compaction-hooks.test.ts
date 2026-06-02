@@ -6,23 +6,23 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Agent } from "@oh-my-pi/pi-agent-core";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
+import { Agent } from "@open-agents/agent";
+import { getBundledModel } from "@open-agents/ai";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
 import {
 	HookRunner,
 	type LoadedHook,
 	type SessionBeforeCompactEvent,
 	type SessionCompactEvent,
 	type SessionEvent,
-} from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
-import { theme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { createTools, type ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { Snowflake } from "@oh-my-pi/pi-utils";
+} from "@open-agents/coding-agent/extensibility/hooks";
+import { theme } from "@open-agents/coding-agent/modes/theme/theme";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { createTools, type ToolSession } from "@open-agents/coding-agent/tools";
+import { Snowflake } from "@open-agents/utils";
 import { e2eApiKey } from "./utilities";
 
 describe.skipIf(!e2eApiKey("ANTHROPIC_API_KEY"))("Compaction hooks", () => {

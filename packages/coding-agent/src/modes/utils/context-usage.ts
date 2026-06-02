@@ -1,8 +1,8 @@
-import type { CompactionSettings } from "@oh-my-pi/pi-agent-core/compaction";
-import { effectiveReserveTokens, estimateTokens, resolveThresholdTokens } from "@oh-my-pi/pi-agent-core/compaction";
-import type { Model } from "@oh-my-pi/pi-ai";
-import { countTokens } from "@oh-my-pi/pi-natives";
-import { formatNumber } from "@oh-my-pi/pi-utils";
+import type { CompactionSettings } from "@open-agents/agent/compaction";
+import { effectiveReserveTokens, estimateTokens, resolveThresholdTokens } from "@open-agents/agent/compaction";
+import type { Model } from "@open-agents/ai";
+import { countTokens } from "@open-agents/natives";
+import { formatNumber } from "@open-agents/utils";
 import type { Skill } from "../../extensibility/skills";
 import type { AgentSession } from "../../session/agent-session";
 import type { Tool } from "../../tools";

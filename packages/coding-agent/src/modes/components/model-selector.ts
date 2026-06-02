@@ -1,5 +1,5 @@
-import { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import { getSupportedEfforts, type Model, modelsAreEqual } from "@oh-my-pi/pi-ai";
+import { ThinkingLevel } from "@open-agents/agent";
+import { getSupportedEfforts, type Model, modelsAreEqual } from "@open-agents/ai";
 import {
 	Container,
 	fuzzyFilter,
@@ -12,9 +12,9 @@ import {
 	Text,
 	type TUI,
 	visibleWidth,
-} from "@oh-my-pi/pi-tui";
+} from "@open-agents/tui";
 import type { ModelRegistry } from "../../config/model-registry";
-import { getKnownRoleIds, getRoleInfo, MODEL_ROLE_IDS, MODEL_ROLES } from "../../config/model-registry";
+import { getKnownTierIds, getRoleInfo, MODEL_TIER_IDS, MODEL_TIERS } from "../../config/model-registry";
 import { resolveModelRoleValue } from "../../config/model-resolver";
 import type { Settings } from "../../config/settings";
 import { type ThemeColor, theme } from "../../modes/theme/theme";
@@ -46,8 +46,8 @@ function getAlphaSearchTokens(query: string): string[] {
 
 function computeModelRank(model: Model, roles: Record<string, RoleAssignment | undefined>): number {
 	let i = 0;
-	while (i < MODEL_ROLE_IDS.length) {
-		const role = MODEL_ROLE_IDS[i];
+	while (i < MODEL_TIER_IDS.length) {
+		const role = MODEL_TIER_IDS[i];
 		const assigned = roles[role];
 		if (assigned && modelsAreEqual(assigned.model, model)) {
 			break;
@@ -255,7 +255,7 @@ export class ModelSelectorComponent extends Container {
 	}
 
 	#buildMenuRoleActions(): void {
-		this.#menuRoleActions = getKnownRoleIds(this.#settings).map(role => {
+		this.#menuRoleActions = getKnownTierIds(this.#settings).map(role => {
 			const roleInfo = getRoleInfo(role, this.#settings);
 			const roleLabel = roleInfo.tag ? `${roleInfo.tag} (${roleInfo.name})` : roleInfo.name;
 			return {
@@ -268,8 +268,8 @@ export class ModelSelectorComponent extends Container {
 	#loadRoleModels(): void {
 		const allModels = this.#modelRegistry.getAll();
 		const matchPreferences = { usageOrder: this.#settings.getStorage()?.getModelUsageOrder() };
-		for (const role of getKnownRoleIds(this.#settings)) {
-			const roleValue = this.#settings.getModelRole(role);
+		for (const role of getKnownTierIds(this.#settings)) {
+			const roleValue = this.#settings.getModelTier(role as (typeof MODEL_TIER_IDS)[number]);
 			if (!roleValue) continue;
 
 			const resolved = resolveModelRoleValue(roleValue, allModels, {
@@ -789,7 +789,7 @@ export class ModelSelectorComponent extends Container {
 
 			// Build role badges (inverted: color as background, black text)
 			const roleBadgeTokens: string[] = [];
-			for (const role of MODEL_ROLE_IDS) {
+			for (const role of MODEL_TIER_IDS) {
 				const { tag, color } = getRoleInfo(role, this.#settings);
 				const assigned = this.#roles[role];
 				if (!tag || !assigned || !modelsAreEqual(assigned.model, item.model)) continue;
@@ -800,7 +800,7 @@ export class ModelSelectorComponent extends Container {
 			}
 			// Custom role badges
 			for (const [role, assigned] of Object.entries(this.#roles)) {
-				if (role in MODEL_ROLES || !assigned || !modelsAreEqual(assigned.model, item.model)) continue;
+				if (role in MODEL_TIERS || !assigned || !modelsAreEqual(assigned.model, item.model)) continue;
 				const roleInfo = getRoleInfo(role, this.#settings);
 				const badgeLabel = roleInfo.tag ?? roleInfo.name;
 				const badge = makeInvertedBadge(badgeLabel, roleInfo.color ?? "muted");

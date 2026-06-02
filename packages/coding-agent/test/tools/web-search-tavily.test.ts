@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
-import type { AuthStorage } from "@oh-my-pi/pi-ai";
-import { hookFetch } from "@oh-my-pi/pi-utils";
+import type { AuthStorage } from "@open-agents/ai";
+import { hookFetch } from "@open-agents/utils";
 import { searchTavily } from "../../src/web/search/providers/tavily";
 import type { SearchProviderError } from "../../src/web/search/types";
 

@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Component } from "@oh-my-pi/pi-tui";
+import type { Component } from "@open-agents/tui";
 import type { RenderResultOptions } from "../../src/extensibility/custom-tools/types";
 import { getThemeByName, initTheme, type Theme } from "../../src/modes/theme/theme";
 import { findToolRenderer } from "../../src/tools/find";

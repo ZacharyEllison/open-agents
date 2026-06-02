@@ -1,13 +1,13 @@
 import * as os from "node:os";
 import * as path from "node:path";
-import { getAntigravityUserAgent, getEnvApiKey, type Model } from "@oh-my-pi/pi-ai";
+import { getAntigravityUserAgent, getEnvApiKey, type Model } from "@open-agents/ai";
 import {
 	CODEX_BASE_URL,
 	getCodexAccountId,
 	OPENAI_HEADER_VALUES,
 	OPENAI_HEADERS,
 	URL_PATHS,
-} from "@oh-my-pi/pi-ai/providers/openai-codex/constants";
+} from "@open-agents/ai/providers/openai-codex/constants";
 import {
 	$env,
 	isEnoent,
@@ -17,7 +17,7 @@ import {
 	readSseJson,
 	Snowflake,
 	untilAborted,
-} from "@oh-my-pi/pi-utils";
+} from "@open-agents/utils";
 import * as z from "zod/v4";
 import packageJson from "../../package.json" with { type: "json" };
 import { isAuthenticated, type ModelRegistry } from "../config/model-registry";

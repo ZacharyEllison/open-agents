@@ -1,4 +1,4 @@
-import { logger, toError } from "@oh-my-pi/pi-utils";
+import { logger, toError } from "@open-agents/utils";
 import type { SessionStorage, SessionStorageStat, SessionStorageWriter } from "./session-storage";
 
 /**

@@ -6,7 +6,7 @@ import {
 	buildSystemPrompt,
 	loadProjectContextFiles,
 	loadSystemPromptFiles,
-} from "@oh-my-pi/pi-coding-agent/system-prompt";
+} from "@open-agents/coding-agent/system-prompt";
 import { cleanupTempHome } from "./helpers/temp-home-cleanup";
 
 function escapeRegExp(text: string): string {

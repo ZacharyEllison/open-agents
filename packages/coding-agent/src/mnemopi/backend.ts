@@ -1,10 +1,10 @@
 import { rm } from "node:fs/promises";
 import * as path from "node:path";
-import { completeSimple } from "@oh-my-pi/pi-ai";
-import { Mnemopi } from "@oh-my-pi/pi-mnemopi";
-import { BankManager } from "@oh-my-pi/pi-mnemopi/core";
-import { type DiagnosticSummary, inspectDatabase } from "@oh-my-pi/pi-mnemopi/diagnose";
-import { logger } from "@oh-my-pi/pi-utils";
+import { completeSimple } from "@open-agents/ai";
+import { Mnemopi } from "@open-agents/mnemopi";
+import { BankManager } from "@open-agents/mnemopi/core";
+import { type DiagnosticSummary, inspectDatabase } from "@open-agents/mnemopi/diagnose";
+import { logger } from "@open-agents/utils";
 import type { ModelRegistry } from "../config/model-registry";
 import { resolveRoleSelection } from "../config/model-resolver";
 import type { MemoryBackend, MemoryBackendStartOptions } from "../memory-backend/types";

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { renderHtmlToText } from "@oh-my-pi/pi-coding-agent/tools/fetch";
-import { hookFetch } from "@oh-my-pi/pi-utils";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { renderHtmlToText } from "@open-agents/coding-agent/tools/fetch";
+import { hookFetch } from "@open-agents/utils";
 
 /**
  * Regression test for #1449: a stalled Jina reader request must not prevent

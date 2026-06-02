@@ -1,12 +1,11 @@
 import { Database } from "bun:sqlite";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-
-import { formatHashlineHeader, stripHashlinePrefixes } from "@oh-my-pi/hashline";
-import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import type { Component } from "@oh-my-pi/pi-tui";
-import { Text } from "@oh-my-pi/pi-tui";
-import { isEnoent, isRecord, prompt, untilAborted } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@open-agents/agent";
+import { formatHashlineHeader, stripHashlinePrefixes } from "@open-agents/hashline";
+import type { Component } from "@open-agents/tui";
+import { Text } from "@open-agents/tui";
+import { isEnoent, isRecord, prompt, untilAborted } from "@open-agents/utils";
 import * as z from "zod/v4";
 
 import { getFileSnapshotStore } from "../edit/file-snapshot-store";
@@ -55,6 +54,7 @@ import {
 	updateRowByKey,
 	updateRowByRowId,
 } from "./sqlite-reader";
+import { WORKER_ONLY_TIERS } from "./tier-access";
 import { ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 
@@ -254,6 +254,7 @@ function parseSqliteWriteTarget(subPath: string, queryString: string): { table: 
  */
 export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails> {
 	readonly name = "write";
+	readonly allowedTiers = WORKER_ONLY_TIERS;
 	readonly approval = (args: unknown) => {
 		const rawPath = (args as Partial<WriteParams>).path;
 		return typeof rawPath === "string" && isInternalUrlPath(rawPath) ? "read" : "write";

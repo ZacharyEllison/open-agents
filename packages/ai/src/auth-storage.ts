@@ -10,7 +10,8 @@
 import { Database, type Statement } from "bun:sqlite";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getAgentDbPath, logger } from "@oh-my-pi/pi-utils";
+import { getAgentDbPath, logger } from "@open-agents/utils";
+import { NullAuthCredentialStore } from "./null-auth-credential-store";
 import { getEnvApiKey } from "./stream";
 import type { Provider } from "./types";
 import type {
@@ -31,8 +32,6 @@ import { kimiUsageProvider } from "./usage/kimi";
 import { codexRankingStrategy, openaiCodexUsageProvider } from "./usage/openai-codex";
 import { zaiUsageProvider } from "./usage/zai";
 import { getOAuthApiKey, getOAuthProvider, refreshOAuthToken } from "./utils/oauth";
-import { loginDeepSeek } from "./utils/oauth/deepseek";
-import { loginOpenAICodexDevice } from "./utils/oauth/openai-codex";
 import type { OAuthController, OAuthCredentials, OAuthProvider, OAuthProviderId } from "./utils/oauth/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -246,10 +245,8 @@ export interface AuthCredentialSnapshot {
  * Persistence abstraction consumed by {@link AuthStorage}.
  *
  * Concrete implementations:
- * - {@link SqliteAuthCredentialStore} — local SQLite-backed store (default).
- * - `RemoteAuthCredentialStore` from `./auth-broker` — client-side snapshot of
- *   a remote broker; mutating methods (`replace*`, `upsert*`, `delete*ForProvider`)
- *   throw because login flows route through the broker, not the client.
+ * - {@link SqliteAuthCredentialStore} — local SQLite-backed store (legacy / agent DB).
+ * - {@link NullAuthCredentialStore} — no-op store for keyless local builds (default).
  */
 export interface AuthCredentialStore {
 	close(): void;
@@ -812,6 +809,14 @@ export class AuthStorage {
 		return new AuthStorage(store, options);
 	}
 
+	/** Keyless build: no persisted credentials; env-var API keys only. */
+	static createKeyless(options: AuthStorageOptions = {}): AuthStorage {
+		return new AuthStorage(new NullAuthCredentialStore(), {
+			...options,
+			sourceLabel: options.sourceLabel ?? "keyless",
+		});
+	}
+
 	/**
 	 * Close the underlying credential store.
 	 *
@@ -1309,17 +1314,6 @@ export class AuthStorage {
 		this.#resetProviderAssignments(provider);
 	}
 
-	async #upsertOAuthCredential(provider: string, credential: OAuthCredential): Promise<void> {
-		const stored = this.#store.upsertAuthCredentialRemote
-			? await this.#store.upsertAuthCredentialRemote(provider, credential)
-			: this.#store.upsertAuthCredentialForProvider(provider, credential);
-		this.#setStoredCredentials(
-			provider,
-			stored.map(record => ({ id: record.id, credential: record.credential })),
-		);
-		this.#resetProviderAssignments(provider);
-	}
-
 	/**
 	 * Remove credential for a provider.
 	 */
@@ -1459,338 +1453,16 @@ export class AuthStorage {
 	 */
 	async login(
 		provider: OAuthProviderId,
-		ctrl: OAuthController & {
+		_ctrl: OAuthController & {
 			/** onAuth is required by auth-storage but optional in OAuthController */
 			onAuth: (info: { url: string; instructions?: string }) => void;
 			/** onPrompt is required for some providers (github-copilot, openai-codex) */
 			onPrompt: (prompt: { message: string; placeholder?: string }) => Promise<string>;
 		},
 	): Promise<void> {
-		let credentials: OAuthCredentials;
-		const saveApiKeyCredential = async (apiKey: string): Promise<void> => {
-			const newCredential: ApiKeyCredential = { type: "api_key", key: apiKey };
-			await this.set(provider, newCredential);
-		};
-		const manualCodeInput = () => ctrl.onPrompt({ message: "Paste the authorization code (or full redirect URL):" });
-		switch (provider) {
-			case "anthropic": {
-				const { loginAnthropic } = await import("./utils/oauth/anthropic");
-				credentials = await loginAnthropic({
-					...ctrl,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-				});
-				break;
-			}
-			case "xai-oauth": {
-				const { loginXAIOAuth } = await import("./utils/oauth/xai-oauth");
-				credentials = await loginXAIOAuth({
-					...ctrl,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-				});
-				break;
-			}
-			case "alibaba-coding-plan": {
-				const { loginAlibabaCodingPlan } = await import("./utils/oauth/alibaba-coding-plan");
-				const apiKey = await loginAlibabaCodingPlan(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "github-copilot": {
-				const { loginGitHubCopilot } = await import("./utils/oauth/github-copilot");
-				credentials = await loginGitHubCopilot({
-					onAuth: (url, instructions) => ctrl.onAuth({ url, instructions }),
-					onPrompt: ctrl.onPrompt,
-					onProgress: ctrl.onProgress,
-					signal: ctrl.signal,
-				});
-				break;
-			}
-			case "google-gemini-cli": {
-				const { loginGeminiCli } = await import("./utils/oauth/google-gemini-cli");
-				credentials = await loginGeminiCli({
-					...ctrl,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-				});
-				break;
-			}
-			case "google-antigravity": {
-				const { loginAntigravity } = await import("./utils/oauth/google-antigravity");
-				credentials = await loginAntigravity({
-					...ctrl,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-				});
-				break;
-			}
-			case "openai-codex": {
-				const { loginOpenAICodex } = await import("./utils/oauth/openai-codex");
-				credentials = await loginOpenAICodex({
-					...ctrl,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-				});
-				break;
-			}
-			case "openai-codex-device": {
-				// Device/headless flow — stores credentials under "openai-codex" so the
-				// provider can pick them up without a separate provider configuration.
-				const deviceCredentials = await loginOpenAICodexDevice(ctrl);
-				const newCredential: OAuthCredential = { type: "oauth", ...deviceCredentials };
-				await this.#upsertOAuthCredential("openai-codex", newCredential);
-				return;
-			}
-			case "gitlab-duo": {
-				const { loginGitLabDuo } = await import("./utils/oauth/gitlab-duo");
-				credentials = await loginGitLabDuo({
-					...ctrl,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-				});
-				break;
-			}
-			case "kimi-code": {
-				const { loginKimi } = await import("./utils/oauth/kimi");
-				credentials = await loginKimi(ctrl);
-				break;
-			}
-			case "kilo": {
-				const { loginKilo } = await import("./utils/oauth/kilo");
-				credentials = await loginKilo(ctrl);
-				break;
-			}
-			case "cursor": {
-				const { loginCursor } = await import("./utils/oauth/cursor");
-				credentials = await loginCursor(
-					url => ctrl.onAuth({ url }),
-					ctrl.onProgress ? () => ctrl.onProgress?.("Waiting for browser authentication...") : undefined,
-				);
-				break;
-			}
-			case "perplexity": {
-				const { loginPerplexity } = await import("./utils/oauth/perplexity");
-				credentials = await loginPerplexity(ctrl);
-				break;
-			}
-			case "huggingface": {
-				const { loginHuggingface } = await import("./utils/oauth/huggingface");
-				const apiKey = await loginHuggingface(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "opencode-zen":
-			case "opencode-go": {
-				const { loginOpenCode } = await import("./utils/oauth/opencode");
-				const apiKey = await loginOpenCode(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "lm-studio": {
-				const { loginLmStudio } = await import("./utils/oauth/lm-studio");
-				const apiKey = await loginLmStudio(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "ollama": {
-				const { loginOllama } = await import("./utils/oauth/ollama");
-				const apiKey = await loginOllama(ctrl);
-				if (!apiKey) {
-					return;
-				}
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "ollama-cloud": {
-				const { loginOllamaCloud } = await import("./utils/oauth/ollama-cloud");
-				const apiKey = await loginOllamaCloud(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "cerebras": {
-				const { loginCerebras } = await import("./utils/oauth/cerebras");
-				const apiKey = await loginCerebras(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "deepseek": {
-				const apiKey = await loginDeepSeek(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "fireworks": {
-				const { loginFireworks } = await import("./utils/oauth/fireworks");
-				const apiKey = await loginFireworks(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "firepass": {
-				const { loginFirepass } = await import("./utils/oauth/firepass");
-				const apiKey = await loginFirepass(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "wafer-pass": {
-				const { loginWaferPass } = await import("./utils/oauth/wafer");
-				const apiKey = await loginWaferPass(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "wafer-serverless": {
-				const { loginWaferServerless } = await import("./utils/oauth/wafer");
-				const apiKey = await loginWaferServerless(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "zai": {
-				const { loginZai } = await import("./utils/oauth/zai");
-				const apiKey = await loginZai(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "zhipu-coding-plan": {
-				const { loginZhipuCodingPlan } = await import("./utils/oauth/zhipu");
-				const apiKey = await loginZhipuCodingPlan(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "qianfan": {
-				const { loginQianfan } = await import("./utils/oauth/qianfan");
-				const apiKey = await loginQianfan(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "minimax-code": {
-				const { loginMiniMaxCode } = await import("./utils/oauth/minimax-code");
-				const apiKey = await loginMiniMaxCode(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "minimax-code-cn": {
-				const { loginMiniMaxCodeCn } = await import("./utils/oauth/minimax-code");
-				const apiKey = await loginMiniMaxCodeCn(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "synthetic": {
-				const { loginSynthetic } = await import("./utils/oauth/synthetic");
-				const apiKey = await loginSynthetic(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "tavily": {
-				const { loginTavily } = await import("./utils/oauth/tavily");
-				const apiKey = await loginTavily(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "venice": {
-				const { loginVenice } = await import("./utils/oauth/venice");
-				const apiKey = await loginVenice(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "litellm": {
-				const { loginLiteLLM } = await import("./utils/oauth/litellm");
-				const apiKey = await loginLiteLLM(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "moonshot": {
-				const { loginMoonshot } = await import("./utils/oauth/moonshot");
-				const apiKey = await loginMoonshot(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "kagi": {
-				const { loginKagi } = await import("./utils/oauth/kagi");
-				const apiKey = await loginKagi(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "nanogpt": {
-				const { loginNanoGPT } = await import("./utils/oauth/nanogpt");
-				const apiKey = await loginNanoGPT(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "openrouter": {
-				const { loginOpenRouter } = await import("./utils/oauth/openrouter");
-				const apiKey = await loginOpenRouter(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "together": {
-				const { loginTogether } = await import("./utils/oauth/together");
-				const apiKey = await loginTogether(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "cloudflare-ai-gateway": {
-				const { loginCloudflareAiGateway } = await import("./utils/oauth/cloudflare-ai-gateway");
-				const apiKey = await loginCloudflareAiGateway(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "vercel-ai-gateway": {
-				const { loginVercelAiGateway } = await import("./utils/oauth/vercel-ai-gateway");
-				const apiKey = await loginVercelAiGateway(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "vllm": {
-				const { loginVllm } = await import("./utils/oauth/vllm");
-				const apiKey = await loginVllm(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "parallel": {
-				const { loginParallel } = await import("./utils/oauth/parallel");
-				const apiKey = await loginParallel(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "qwen-portal": {
-				const { loginQwenPortal } = await import("./utils/oauth/qwen-portal");
-				const apiKey = await loginQwenPortal(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "nvidia": {
-				const { loginNvidia } = await import("./utils/oauth/nvidia");
-				const apiKey = await loginNvidia(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "xiaomi": {
-				const { loginXiaomi } = await import("./utils/oauth/xiaomi");
-				const apiKey = await loginXiaomi(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			case "zenmux": {
-				const { loginZenMux } = await import("./utils/oauth/zenmux");
-				const apiKey = await loginZenMux(ctrl);
-				await saveApiKeyCredential(apiKey);
-				return;
-			}
-			default: {
-				const customProvider = getOAuthProvider(provider);
-				if (!customProvider) {
-					throw new Error(`Unknown OAuth provider: ${provider}`);
-				}
-				const customLoginResult = await customProvider.login({
-					onAuth: info => ctrl.onAuth(info),
-					onProgress: ctrl.onProgress,
-					onPrompt: ctrl.onPrompt,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-					signal: ctrl.signal,
-				});
-				if (typeof customLoginResult === "string") {
-					await saveApiKeyCredential(customLoginResult);
-					return;
-				}
-				credentials = customLoginResult;
-				break;
-			}
-		}
-		const newCredential: OAuthCredential = { type: "oauth", ...credentials };
-		await this.#upsertOAuthCredential(provider, newCredential);
+		throw new Error(
+			`OAuth login is not available in this keyless build (${provider}). Set an API key environment variable instead.`,
+		);
 	}
 
 	/**

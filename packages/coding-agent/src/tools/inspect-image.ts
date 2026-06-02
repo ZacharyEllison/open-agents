@@ -1,7 +1,7 @@
-import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import { instrumentedCompleteSimple, resolveTelemetry } from "@oh-my-pi/pi-agent-core";
-import { type Api, completeSimple, type Model } from "@oh-my-pi/pi-ai";
-import { prompt } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@open-agents/agent";
+import { instrumentedCompleteSimple, resolveTelemetry } from "@open-agents/agent";
+import { type Api, completeSimple, type Model } from "@open-agents/ai";
+import { prompt } from "@open-agents/utils";
 import * as z from "zod/v4";
 import { extractTextContent } from "../commit/utils";
 import { expandRoleAlias, resolveModelFromString } from "../config/model-resolver";

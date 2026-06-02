@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { $env, isCompiledBinary, logger } from "@oh-my-pi/pi-utils";
+import { $env, isCompiledBinary, logger } from "@open-agents/utils";
 import type { Subprocess } from "bun";
 import { settings } from "../config/settings";
 import { tinyModelDeviceSettingToEnv } from "./device";
@@ -32,6 +32,7 @@ interface WorkerHandle {
 type PendingRequest =
 	| { kind: "generate"; modelKey: TinyTitleLocalModelKey; resolve: (title: string | null) => void }
 	| { kind: "complete"; modelKey: TinyMemoryLocalModelKey; resolve: (text: string | null) => void }
+	| { kind: "summarize"; modelKey: TinyMemoryLocalModelKey; resolve: (text: string | null) => void }
 	| { kind: "download"; modelKey: TinyLocalModelKey; resolve: (ok: boolean) => void };
 
 export interface TinyTitleDownloadOptions {
@@ -58,7 +59,7 @@ function readTinyModelSetting(path: "providers.tinyModelDevice" | "providers.tin
 }
 
 /**
- * Decide which `PI_TINY_DEVICE` / `PI_TINY_DTYPE` vars to overlay onto the worker
+ * Decide which `OA_TINY_DEVICE` / `OA_TINY_DTYPE` vars to overlay onto the worker
  * env. A present env var wins (left untouched); otherwise the mapped persisted
  * setting is used. Returns only the keys to add — never the default sentinel.
  * Pure for testability; see {@link tinyWorkerEnv} for the spawn-time glue.
@@ -70,19 +71,19 @@ export function tinyWorkerEnvOverlay(
 	dtypeSetting: string | undefined,
 ): Record<string, string> {
 	const overlay: Record<string, string> = {};
-	if (!env.PI_TINY_DEVICE) {
+	if (!env.OA_TINY_DEVICE) {
 		const device = tinyModelDeviceSettingToEnv(deviceSetting);
-		if (device) overlay.PI_TINY_DEVICE = device;
+		if (device) overlay.OA_TINY_DEVICE = device;
 	}
-	if (!env.PI_TINY_DTYPE) {
+	if (!env.OA_TINY_DTYPE) {
 		const dtype = tinyModelDtypeSettingToEnv(dtypeSetting);
-		if (dtype) overlay.PI_TINY_DTYPE = dtype;
+		if (dtype) overlay.OA_TINY_DTYPE = dtype;
 	}
 	return overlay;
 }
 
 /**
- * Env handed to the tiny-model subprocess. The `PI_TINY_DEVICE` / `PI_TINY_DTYPE`
+ * Env handed to the tiny-model subprocess. The `OA_TINY_DEVICE` / `OA_TINY_DTYPE`
  * env vars win; otherwise the persisted `providers.tinyModelDevice` /
  * `providers.tinyModelDtype` settings are mapped onto those vars so the
  * subprocess's env-based resolution picks them up. Resolved once at spawn
@@ -304,6 +305,27 @@ export class TinyTitleClient {
 		prompt: string,
 		options: { maxTokens?: number; signal?: AbortSignal } = {},
 	): Promise<string | null> {
+		return this.#runMemoryTextRequest("complete", modelKey, prompt, options);
+	}
+
+	/**
+	 * Context-compaction summarization via the shared tiny worker. Uses a higher
+	 * decode cap than {@link complete} (Mnemopi memory tasks).
+	 */
+	async summarize(
+		modelKey: string,
+		prompt: string,
+		options: { maxTokens?: number; signal?: AbortSignal } = {},
+	): Promise<string | null> {
+		return this.#runMemoryTextRequest("summarize", modelKey, prompt, options);
+	}
+
+	async #runMemoryTextRequest(
+		requestType: "complete" | "summarize",
+		modelKey: string,
+		prompt: string,
+		options: { maxTokens?: number; signal?: AbortSignal },
+	): Promise<string | null> {
 		if (!isTinyMemoryLocalModelKey(modelKey)) return null;
 		if (options.signal?.aborted) return null;
 
@@ -311,23 +333,23 @@ export class TinyTitleClient {
 			const worker = this.#ensureWorker();
 			const id = String(++this.#nextRequestId);
 			const { promise, resolve } = Promise.withResolvers<string | null>();
-			this.#pending.set(id, { kind: "complete", modelKey, resolve });
+			this.#pending.set(id, { kind: requestType, modelKey, resolve });
 			const abort = (): void => {
 				const pending = this.#pending.get(id);
-				if (pending?.kind !== "complete") return;
+				if (pending?.kind !== requestType) return;
 				this.#pending.delete(id);
 				pending.resolve(null);
 			};
 			options.signal?.addEventListener("abort", abort, { once: true });
 			try {
-				worker.send({ type: "complete", id, modelKey, prompt, maxTokens: options.maxTokens });
+				worker.send({ type: requestType, id, modelKey, prompt, maxTokens: options.maxTokens });
 				return await promise;
 			} finally {
 				options.signal?.removeEventListener("abort", abort);
 				this.#pending.delete(id);
 			}
 		} catch (error) {
-			logger.debug("tiny-model: local completion failed", {
+			logger.debug(`tiny-model: local ${requestType} failed`, {
 				modelKey,
 				error: error instanceof Error ? error.message : String(error),
 			});
@@ -379,8 +401,9 @@ export class TinyTitleClient {
 		this.#unsubscribeError = null;
 		for (const pending of this.#pending.values()) {
 			this.#emitProgress({ modelKey: pending.modelKey, status: "error" });
-			if (pending.kind === "generate" || pending.kind === "complete") pending.resolve(null);
-			else pending.resolve(false);
+			if (pending.kind === "generate" || pending.kind === "complete" || pending.kind === "summarize") {
+				pending.resolve(null);
+			} else pending.resolve(false);
 		}
 		this.#pending.clear();
 		try {
@@ -422,13 +445,14 @@ export class TinyTitleClient {
 			return;
 		}
 		if (message.type === "completion") {
-			if (pending.kind === "complete") pending.resolve(message.text);
+			if (pending.kind === "complete" || pending.kind === "summarize") pending.resolve(message.text);
 			return;
 		}
 		logger.debug("tiny-title: worker returned error", { error: message.error });
 		this.#emitProgress({ modelKey: pending.modelKey, status: "error" });
-		if (pending.kind === "generate" || pending.kind === "complete") pending.resolve(null);
-		else pending.resolve(false);
+		if (pending.kind === "generate" || pending.kind === "complete" || pending.kind === "summarize") {
+			pending.resolve(null);
+		} else pending.resolve(false);
 	}
 
 	#emitProgress(event: TinyTitleProgressEvent): void {
@@ -439,8 +463,9 @@ export class TinyTitleClient {
 		logger.warn("tiny-title: worker error", { error: error.message });
 		for (const pending of this.#pending.values()) {
 			this.#emitProgress({ modelKey: pending.modelKey, status: "error" });
-			if (pending.kind === "generate" || pending.kind === "complete") pending.resolve(null);
-			else pending.resolve(false);
+			if (pending.kind === "generate" || pending.kind === "complete" || pending.kind === "summarize") {
+				pending.resolve(null);
+			} else pending.resolve(false);
 		}
 		this.#pending.clear();
 		void this.terminate();

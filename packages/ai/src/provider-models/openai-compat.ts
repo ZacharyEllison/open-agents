@@ -1,21 +1,16 @@
+import { ensureLlamaCpp } from "../local/llama-cpp";
 import type { ModelManagerOptions } from "../model-manager";
 import { Effort } from "../model-thinking";
-import { getBundledModels } from "../models";
+import type { getBundledModels } from "../models";
 import type { Api, Model, ThinkingConfig } from "../types";
-import { isAnthropicOAuthToken, isRecord, toBoolean, toNumber, toPositiveNumber } from "../utils";
+import { isRecord, toNumber, toPositiveNumber } from "../utils";
 import {
 	fetchOpenAICompatibleModels,
 	type OpenAICompatibleModelMapperContext,
 	type OpenAICompatibleModelRecord,
 } from "../utils/discovery/openai-compatible";
-import { toFireworksPublicModelId } from "../utils/fireworks-model-id";
 import { getGitHubCopilotBaseUrl, OPENCODE_HEADERS, parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
 import { createBundledReferenceMap, createReferenceResolver } from "./bundled-references";
-
-const MODELS_DEV_URL = "https://models.dev/api.json";
-const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
-const ANTHROPIC_OAUTH_BETA =
-	"claude-code-20250219,oauth-2025-04-20,context-1m-2025-08-07,interleaved-thinking-2025-05-14,redact-thinking-2026-02-12,context-management-2025-06-27,prompt-caching-scope-2026-01-05,mid-conversation-system-2026-04-07,advanced-tool-use-2025-11-20,effort-2025-11-24,extended-cache-ttl-2025-04-11";
 
 export interface ModelsDevModel {
 	id?: string;
@@ -47,103 +42,6 @@ function toModelName(value: unknown, fallback: string): string {
 	return trimmed.length > 0 ? trimmed : fallback;
 }
 
-function toInputCapabilities(value: unknown): ("text" | "image")[] {
-	if (!Array.isArray(value)) {
-		return ["text"];
-	}
-	const supportsImage = value.some(item => item === "image");
-	return supportsImage ? ["text", "image"] : ["text"];
-}
-
-async function fetchModelsDevPayload(fetchImpl: typeof fetch = fetch): Promise<unknown> {
-	const response = await fetchImpl(MODELS_DEV_URL, {
-		method: "GET",
-		headers: { Accept: "application/json" },
-	});
-	if (!response.ok) {
-		throw new Error(`models.dev fetch failed: ${response.status}`);
-	}
-	return response.json();
-}
-
-function mapAnthropicModelsDev(payload: unknown, baseUrl: string): Model<"anthropic-messages">[] {
-	if (!isRecord(payload)) {
-		return [];
-	}
-	const anthropicPayload = payload.anthropic;
-	if (!isRecord(anthropicPayload)) {
-		return [];
-	}
-	const modelsValue = anthropicPayload.models;
-	if (!isRecord(modelsValue)) {
-		return [];
-	}
-
-	const models: Model<"anthropic-messages">[] = [];
-	for (const [modelId, rawModel] of Object.entries(modelsValue)) {
-		if (!isRecord(rawModel)) {
-			continue;
-		}
-		const model = rawModel as ModelsDevModel;
-		if (model.tool_call !== true) {
-			continue;
-		}
-		models.push({
-			id: modelId,
-			name: toModelName(model.name, modelId),
-			api: "anthropic-messages",
-			provider: "anthropic",
-			baseUrl,
-			reasoning: model.reasoning === true,
-			input: toInputCapabilities(model.modalities?.input),
-			cost: {
-				input: toNumber(model.cost?.input) ?? 0,
-				output: toNumber(model.cost?.output) ?? 0,
-				cacheRead: toNumber(model.cost?.cache_read) ?? 0,
-				cacheWrite: toNumber(model.cost?.cache_write) ?? 0,
-			},
-			contextWindow: toPositiveNumber(model.limit?.context, UNK_CONTEXT_WINDOW),
-			maxTokens: toPositiveNumber(model.limit?.output, UNK_MAX_TOKENS),
-		});
-	}
-
-	models.sort((left, right) => left.id.localeCompare(right.id));
-	return models;
-}
-
-function buildAnthropicDiscoveryHeaders(apiKey: string): Record<string, string> {
-	const oauthToken = isAnthropicOAuthToken(apiKey);
-	const headers: Record<string, string> = {
-		"anthropic-version": "2023-06-01",
-		"anthropic-dangerous-direct-browser-access": "true",
-		"anthropic-beta": ANTHROPIC_OAUTH_BETA,
-	};
-	if (oauthToken) {
-		headers.Authorization = `Bearer ${apiKey}`;
-	} else {
-		headers["x-api-key"] = apiKey;
-	}
-	return headers;
-}
-
-function buildAnthropicReferenceMap(
-	modelsDevModels: readonly Model<"anthropic-messages">[],
-): Map<string, Model<"anthropic-messages">> {
-	const merged = new Map<string, Model<"anthropic-messages">>();
-	for (const model of modelsDevModels) {
-		merged.set(model.id, model);
-	}
-	// Anthropic /v1/models does not carry token limits, so bundled metadata stays canonical
-	// for known models while models.dev only fills gaps for newly discovered ids.
-	const bundledModels = getBundledModels("anthropic").filter(
-		(model): model is Model<"anthropic-messages"> => model.api === "anthropic-messages",
-	);
-	for (const model of bundledModels) {
-		merged.set(model.id, model);
-	}
-	return merged;
-}
-
 function mapWithBundledReference<TApi extends Api>(
 	entry: OpenAICompatibleModelRecord,
 	defaults: Model<TApi>,
@@ -172,10 +70,6 @@ function normalizeAnthropicBaseUrl(baseUrl: string | undefined, fallback: string
 		return fallback;
 	}
 	return value.endsWith("/") ? value.slice(0, -1) : value;
-}
-
-function toAnthropicDiscoveryBaseUrl(baseUrl: string): string {
-	return baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
 }
 
 function normalizeOllamaBaseUrl(baseUrl?: string): string {
@@ -361,41 +255,6 @@ function createOllamaMetadataResolver(nativeBaseUrl: string): (modelId: string) 
 	};
 }
 
-const OPENAI_NON_RESPONSES_PREFIXES = [
-	"text-embedding",
-	"whisper-",
-	"tts-",
-	"omni-moderation",
-	"omni-transcribe",
-	"omni-speech",
-	"gpt-image-",
-	"gpt-realtime",
-] as const;
-
-function isLikelyOpenAIResponsesModelId(id: string, references: Map<string, Model<"openai-responses">>): boolean {
-	const trimmed = id.trim();
-	if (!trimmed) {
-		return false;
-	}
-	if (references.has(trimmed)) {
-		return true;
-	}
-	const normalized = trimmed.toLowerCase();
-	if (OPENAI_NON_RESPONSES_PREFIXES.some(prefix => normalized.startsWith(prefix))) {
-		return false;
-	}
-	if (normalized.includes("embedding")) {
-		return false;
-	}
-	return (
-		normalized.startsWith("gpt-") ||
-		normalized.startsWith("o1") ||
-		normalized.startsWith("o3") ||
-		normalized.startsWith("o4") ||
-		normalized.startsWith("chatgpt")
-	);
-}
-
 const NANO_GPT_NON_TEXT_MODEL_TOKENS = [
 	"embedding",
 	"image",
@@ -425,32 +284,6 @@ function isLikelyNanoGptTextModelId(id: string): boolean {
 
 type SimpleProviderConfig = { apiKey?: string; baseUrl?: string };
 
-function createSimpleOpenAICompletionsOptions(
-	providerId: Parameters<typeof getBundledModels>[0],
-	defaultBaseUrl: string,
-	config?: SimpleProviderConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? defaultBaseUrl;
-	const references = createBundledReferenceMap<"openai-completions">(providerId);
-	return {
-		providerId,
-		...(apiKey && {
-			fetchDynamicModels: () =>
-				fetchOpenAICompatibleModels({
-					api: "openai-completions",
-					provider: providerId,
-					baseUrl,
-					apiKey,
-					mapModel: (entry, defaults) => {
-						const reference = references.get(defaults.id);
-						return mapWithBundledReference(entry, defaults, reference);
-					},
-				}),
-		}),
-	};
-}
-
 function createSimpleOpenAIResponsesOptions(
 	providerId: Parameters<typeof getBundledModels>[0],
 	defaultBaseUrl: string,
@@ -475,141 +308,6 @@ function createSimpleOpenAIResponsesOptions(
 				}),
 		}),
 	};
-}
-
-function createSimpleAnthropicProviderOptions(
-	providerId: Parameters<typeof getBundledModels>[0],
-	defaultBaseUrlFallback: string,
-	config?: SimpleProviderConfig,
-): ModelManagerOptions<"anthropic-messages"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = normalizeAnthropicBaseUrl(config?.baseUrl, defaultBaseUrlFallback);
-	const discoveryBaseUrl = toAnthropicDiscoveryBaseUrl(baseUrl);
-	const references = createBundledReferenceMap<"anthropic-messages">(providerId);
-	return {
-		providerId,
-		...(apiKey && {
-			fetchDynamicModels: () =>
-				fetchOpenAICompatibleModels({
-					api: "anthropic-messages",
-					provider: providerId,
-					baseUrl: discoveryBaseUrl,
-					headers: buildAnthropicDiscoveryHeaders(apiKey),
-					mapModel: (entry, defaults) => {
-						const reference = references.get(defaults.id);
-						const model = mapWithBundledReference(entry, defaults, reference);
-						return {
-							...model,
-							name: toModelName(entry.display_name, model.name),
-							baseUrl,
-						};
-					},
-				}),
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 1. OpenAI
-// ---------------------------------------------------------------------------
-
-export interface OpenAIModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function openaiModelManagerOptions(config?: OpenAIModelManagerConfig): ModelManagerOptions<"openai-responses"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://api.openai.com/v1";
-	const references = createBundledReferenceMap<"openai-responses">("openai");
-	return {
-		providerId: "openai",
-		...(apiKey && {
-			fetchDynamicModels: () =>
-				fetchOpenAICompatibleModels({
-					api: "openai-responses",
-					provider: "openai",
-					baseUrl,
-					apiKey,
-					filterModel: (_entry, model) => isLikelyOpenAIResponsesModelId(model.id, references),
-					mapModel: (entry, defaults) => {
-						const reference = references.get(defaults.id);
-						return mapWithBundledReference(entry, defaults, reference);
-					},
-				}),
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 2. Groq
-// ---------------------------------------------------------------------------
-
-export interface GroqModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function groqModelManagerOptions(config?: GroqModelManagerConfig): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("groq", "https://api.groq.com/openai/v1", config);
-}
-
-// ---------------------------------------------------------------------------
-// 3. Cerebras
-// ---------------------------------------------------------------------------
-
-export interface CerebrasModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function cerebrasModelManagerOptions(
-	config?: CerebrasModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("cerebras", "https://api.cerebras.ai/v1", config);
-}
-
-// ---------------------------------------------------------------------------
-// 4. Hugging Face
-// ---------------------------------------------------------------------------
-
-export interface HuggingfaceModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function huggingfaceModelManagerOptions(
-	config?: HuggingfaceModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("huggingface", "https://router.huggingface.co/v1", config);
-}
-
-// ---------------------------------------------------------------------------
-// 5. NVIDIA
-// ---------------------------------------------------------------------------
-
-export interface NvidiaModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function nvidiaModelManagerOptions(
-	config?: NvidiaModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("nvidia", "https://integrate.api.nvidia.com/v1", config);
-}
-
-// ---------------------------------------------------------------------------
-// 6. xAI
-// ---------------------------------------------------------------------------
-
-export interface XaiModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function xaiModelManagerOptions(config?: XaiModelManagerConfig): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("xai", "https://api.x.ai/v1", config);
 }
 
 export interface XaiOAuthModelManagerConfig {
@@ -844,20 +542,6 @@ export function xaiOAuthModelManagerOptions(
 }
 
 // ---------------------------------------------------------------------------
-// 6.5 DeepSeek
-// ---------------------------------------------------------------------------
-
-export interface DeepSeekModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function deepseekModelManagerOptions(
-	config?: DeepSeekModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("deepseek", "https://api.deepseek.com", config);
-}
-// ---------------------------------------------------------------------------
 // 6.7 Zhipu Coding Plan
 // ---------------------------------------------------------------------------
 
@@ -920,122 +604,6 @@ const ZHIPU_REASONING_MODELS: Readonly<Record<string, true>> = {
 // (e.g. `glm-4v`, `glm-4.5v`, `glm-4v-plus`). The previous `id.includes("v")`
 // check matched anything with a `v` — including the non-vision `glm-5-preview`.
 const ZHIPU_VISION_PATTERN = /^glm-[45](?:\.\d+)?v(?:-|$)/;
-
-// ---------------------------------------------------------------------------
-// 7.5 Fireworks
-// ---------------------------------------------------------------------------
-
-export interface FireworksModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-function toFireworksModelName(entry: OpenAICompatibleModelRecord, fallback: string): string {
-	const name = toModelName(entry.name, "");
-	if (name) return name;
-	const id = typeof entry.id === "string" ? entry.id : fallback;
-	const shortName = id.split("/").at(-1) ?? fallback;
-	if (fallback !== id && fallback !== shortName) return fallback;
-	return shortName
-		.split("-")
-		.filter(Boolean)
-		.map(part => part.charAt(0).toUpperCase() + part.slice(1))
-		.join(" ");
-}
-
-function createModelsDevReferenceMap<TApi extends Api>(models: readonly Model<Api>[]): Map<string, Model<TApi>> {
-	const references = new Map<string, Model<TApi>>();
-	for (const model of models) {
-		const candidate = model as Model<TApi>;
-		const existing = references.get(candidate.id);
-		if (!existing) {
-			references.set(candidate.id, candidate);
-			continue;
-		}
-		if (candidate.contextWindow > existing.contextWindow) {
-			references.set(candidate.id, candidate);
-			continue;
-		}
-		if (candidate.contextWindow === existing.contextWindow && candidate.maxTokens > existing.maxTokens) {
-			references.set(candidate.id, candidate);
-		}
-	}
-	return references;
-}
-
-async function loadModelsDevReferences<TApi extends Api>(): Promise<Map<string, Model<TApi>>> {
-	try {
-		const payload = await fetchModelsDevPayload();
-		return createModelsDevReferenceMap<TApi>(
-			mapModelsDevToModels(payload as Record<string, unknown>, MODELS_DEV_PROVIDER_DESCRIPTORS),
-		);
-	} catch {
-		return new Map<string, Model<TApi>>();
-	}
-}
-export function fireworksModelManagerOptions(
-	config?: FireworksModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://api.fireworks.ai/inference/v1";
-	const bundledReferences = createReferenceResolver(createBundledReferenceMap<"openai-completions">("fireworks"));
-	return {
-		providerId: "fireworks",
-		...(apiKey && {
-			fetchDynamicModels: async () => {
-				const modelsDevReferences = await loadModelsDevReferences<"openai-completions">();
-				return fetchOpenAICompatibleModels({
-					api: "openai-completions",
-					provider: "fireworks",
-					baseUrl,
-					apiKey,
-					filterModel: entry =>
-						toBoolean(entry.supports_chat) === true && toBoolean(entry.supports_tools) === true,
-					mapModel: (entry, defaults) => {
-						const publicModelId = toFireworksPublicModelId(defaults.id);
-						const reference = modelsDevReferences.get(publicModelId) ?? bundledReferences(publicModelId);
-						const model = mapWithBundledReference(entry, defaults, reference);
-						return {
-							...model,
-							id: publicModelId,
-							api: "openai-completions",
-							provider: "fireworks",
-							baseUrl,
-							name: toFireworksModelName(entry, model.name),
-							input: toBoolean(entry.supports_image_input) === true ? ["text", "image"] : ["text"],
-							contextWindow: toPositiveNumber(entry.context_length, model.contextWindow),
-							maxTokens: toPositiveNumber(entry.max_completion_tokens, model.maxTokens),
-						};
-					},
-				});
-			},
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 7.6 Fire Pass (Fireworks Kimi K2.6 Turbo subscription)
-// ---------------------------------------------------------------------------
-
-export interface FirepassModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-/**
- * Fire Pass is a Fireworks subscription product that exposes a single router
- * model (Kimi K2.6 Turbo) under `accounts/fireworks/routers/kimi-k2p6-turbo`.
- * The dedicated `fpk_…` keys do not authorize `/v1/models`, so this manager
- * never performs dynamic discovery — the bundled catalog entry is canonical.
- * See https://docs.fireworks.ai/firepass.
- */
-export function firepassModelManagerOptions(
-	_config?: FirepassModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return {
-		providerId: "firepass",
-	};
-}
 
 // ---------------------------------------------------------------------------
 // 7.7 Wafer (Pass + Serverless)
@@ -1195,21 +763,6 @@ export function waferServerlessModelManagerOptions(
 }
 
 // ---------------------------------------------------------------------------
-// 7. Mistral
-// ---------------------------------------------------------------------------
-
-export interface MistralModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function mistralModelManagerOptions(
-	config?: MistralModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("mistral", "https://api.mistral.ai/v1", config);
-}
-
-// ---------------------------------------------------------------------------
 // 8. OpenCode
 // ---------------------------------------------------------------------------
 
@@ -1266,10 +819,6 @@ function openCodeModelManagerOptions(
 				}),
 		}),
 	};
-}
-
-export function opencodeZenModelManagerOptions(config?: OpenCodeModelManagerConfig): ModelManagerOptions<Api> {
-	return openCodeModelManagerOptions("opencode-zen", "https://opencode.ai/zen", config);
 }
 
 export function opencodeGoModelManagerOptions(config?: OpenCodeModelManagerConfig): ModelManagerOptions<Api> {
@@ -1338,348 +887,6 @@ export function ollamaModelManagerOptions(config?: OllamaModelManagerConfig): Mo
 }
 
 // ---------------------------------------------------------------------------
-// 10. OpenRouter
-// ---------------------------------------------------------------------------
-
-export interface OpenRouterModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function openrouterModelManagerOptions(
-	config?: OpenRouterModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://openrouter.ai/api/v1";
-	return {
-		providerId: "openrouter",
-		fetchDynamicModels: () =>
-			fetchOpenAICompatibleModels({
-				api: "openai-completions",
-				provider: "openrouter",
-				baseUrl,
-				apiKey,
-				filterModel: (entry: OpenAICompatibleModelRecord) => {
-					const params = entry.supported_parameters;
-					return Array.isArray(params) && params.includes("tools");
-				},
-				mapModel: (
-					entry: OpenAICompatibleModelRecord,
-					defaults: Model<"openai-completions">,
-					_context: OpenAICompatibleModelMapperContext<"openai-completions">,
-				): Model<"openai-completions"> => {
-					const pricing = entry.pricing as Record<string, unknown> | undefined;
-					const params = Array.isArray(entry.supported_parameters) ? (entry.supported_parameters as string[]) : [];
-					const modality = String((entry.architecture as Record<string, unknown> | undefined)?.modality ?? "");
-					const topProvider = entry.top_provider as Record<string, unknown> | undefined;
-
-					const supportsToolChoice = params.includes("tool_choice");
-
-					return {
-						...defaults,
-						reasoning: params.includes("reasoning"),
-						input: modality.includes("image") ? ["text", "image"] : ["text"],
-						cost: {
-							input: parseFloat(String(pricing?.prompt ?? "0")) * 1_000_000,
-							output: parseFloat(String(pricing?.completion ?? "0")) * 1_000_000,
-							cacheRead: parseFloat(String(pricing?.input_cache_read ?? "0")) * 1_000_000,
-							cacheWrite: parseFloat(String(pricing?.input_cache_write ?? "0")) * 1_000_000,
-						},
-						contextWindow:
-							typeof entry.context_length === "number" ? entry.context_length : defaults.contextWindow,
-						maxTokens:
-							typeof topProvider?.max_completion_tokens === "number"
-								? topProvider.max_completion_tokens
-								: defaults.maxTokens,
-						...(!supportsToolChoice && {
-							compat: { supportsToolChoice: false },
-						}),
-					};
-				},
-			}),
-	};
-}
-
-const ZENMUX_OPENAI_BASE_URL = "https://zenmux.ai/api/v1";
-const ZENMUX_ANTHROPIC_BASE_URL = "https://zenmux.ai/api/anthropic";
-
-function normalizeZenMuxOpenAiBaseUrl(baseUrl?: string): string {
-	const value = baseUrl?.trim();
-	if (!value) {
-		return ZENMUX_OPENAI_BASE_URL;
-	}
-	return value.endsWith("/") ? value.slice(0, -1) : value;
-}
-
-function toZenMuxAnthropicBaseUrl(openAiBaseUrl: string): string {
-	try {
-		const parsed = new URL(openAiBaseUrl);
-		const trimmedPath = parsed.pathname.replace(/\/+$/g, "");
-		parsed.pathname = trimmedPath.endsWith("/api/v1")
-			? `${trimmedPath.slice(0, -"/api/v1".length)}/api/anthropic`
-			: "/api/anthropic";
-		return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
-	} catch {
-		return ZENMUX_ANTHROPIC_BASE_URL;
-	}
-}
-
-function isZenMuxAnthropicModel(entry: OpenAICompatibleModelRecord, modelId: string): boolean {
-	if (typeof entry.owned_by === "string" && entry.owned_by.toLowerCase() === "anthropic") {
-		return true;
-	}
-	return modelId.toLowerCase().startsWith("anthropic/");
-}
-
-function getZenMuxPricingValue(pricings: Record<string, unknown> | undefined, key: string): number {
-	const bucket = pricings?.[key];
-	if (!Array.isArray(bucket)) {
-		return 0;
-	}
-	for (const item of bucket) {
-		if (!isRecord(item)) {
-			continue;
-		}
-		const value = toNumber(item.value);
-		if (value !== undefined) {
-			return value;
-		}
-	}
-	return 0;
-}
-
-function getZenMuxCacheWritePrice(pricings: Record<string, unknown> | undefined): number {
-	const oneHour = getZenMuxPricingValue(pricings, "input_cache_write_1_h");
-	if (oneHour > 0) {
-		return oneHour;
-	}
-	const fiveMinute = getZenMuxPricingValue(pricings, "input_cache_write_5_min");
-	if (fiveMinute > 0) {
-		return fiveMinute;
-	}
-	return getZenMuxPricingValue(pricings, "input_cache_write");
-}
-
-// ---------------------------------------------------------------------------
-// 10.5 ZenMux
-// ---------------------------------------------------------------------------
-
-export interface ZenMuxModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function zenmuxModelManagerOptions(config?: ZenMuxModelManagerConfig): ModelManagerOptions<Api> {
-	const apiKey = config?.apiKey;
-	const openAiBaseUrl = normalizeZenMuxOpenAiBaseUrl(config?.baseUrl);
-	const anthropicBaseUrl = toZenMuxAnthropicBaseUrl(openAiBaseUrl);
-	return {
-		providerId: "zenmux",
-		...(apiKey && {
-			fetchDynamicModels: () =>
-				fetchOpenAICompatibleModels<Api>({
-					api: "openai-completions",
-					provider: "zenmux",
-					baseUrl: openAiBaseUrl,
-					apiKey,
-					mapModel: (entry, defaults) => {
-						const pricings = isRecord(entry.pricings) ? entry.pricings : undefined;
-						const capabilities = isRecord(entry.capabilities) ? entry.capabilities : undefined;
-						const isAnthropicModel = isZenMuxAnthropicModel(entry, defaults.id);
-						return {
-							...defaults,
-							name: toModelName(entry.display_name, defaults.name),
-							api: isAnthropicModel ? "anthropic-messages" : "openai-completions",
-							baseUrl: isAnthropicModel ? anthropicBaseUrl : openAiBaseUrl,
-							reasoning: capabilities?.reasoning === true || defaults.reasoning,
-							input: toInputCapabilities(entry.input_modalities),
-							cost: {
-								input: getZenMuxPricingValue(pricings, "prompt"),
-								output: getZenMuxPricingValue(pricings, "completion"),
-								cacheRead: getZenMuxPricingValue(pricings, "input_cache_read"),
-								cacheWrite: getZenMuxCacheWritePrice(pricings),
-							},
-							contextWindow: toPositiveNumber(entry.context_length, defaults.contextWindow),
-							maxTokens: toPositiveNumber(entry.max_completion_tokens, defaults.maxTokens),
-						};
-					},
-				}),
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 10.6 Kilo Gateway
-// ---------------------------------------------------------------------------
-
-export interface KiloModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function kiloModelManagerOptions(config?: KiloModelManagerConfig): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://api.kilo.ai/api/gateway";
-	return {
-		providerId: "kilo",
-		fetchDynamicModels: () =>
-			fetchOpenAICompatibleModels({
-				api: "openai-completions",
-				provider: "kilo",
-				baseUrl,
-				apiKey,
-			}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// Alibaba Coding Plan
-// ---------------------------------------------------------------------------
-
-export interface AlibabaCodingPlanModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function alibabaCodingPlanModelManagerOptions(
-	config?: AlibabaCodingPlanModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://coding-intl.dashscope.aliyuncs.com/v1";
-	const references = createBundledReferenceMap<"openai-completions">("alibaba-coding-plan");
-	return {
-		providerId: "alibaba-coding-plan",
-		fetchDynamicModels: () =>
-			fetchOpenAICompatibleModels({
-				api: "openai-completions",
-				provider: "alibaba-coding-plan",
-				baseUrl,
-				apiKey,
-				mapModel: (entry, defaults) => {
-					const reference = references.get(defaults.id);
-					return mapWithBundledReference(entry, defaults, reference);
-				},
-			}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 11. Vercel AI Gateway
-// ---------------------------------------------------------------------------
-
-export interface VercelAiGatewayModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-function normalizeVercelAiGatewayBaseUrls(rawBaseUrl: string | undefined): { baseUrl: string; catalogBaseUrl: string } {
-	const baseUrl = (rawBaseUrl === undefined ? "https://ai-gateway.vercel.sh" : rawBaseUrl.trim()).replace(/\/+$/, "");
-	const catalogBaseUrl = baseUrl === "" || baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
-
-	return {
-		baseUrl: baseUrl.endsWith("/v1") ? baseUrl.slice(0, -3) : baseUrl,
-		catalogBaseUrl,
-	};
-}
-
-export function vercelAiGatewayModelManagerOptions(
-	config?: VercelAiGatewayModelManagerConfig,
-): ModelManagerOptions<"anthropic-messages"> {
-	const apiKey = config?.apiKey;
-	const { baseUrl, catalogBaseUrl } = normalizeVercelAiGatewayBaseUrls(config?.baseUrl);
-	return {
-		providerId: "vercel-ai-gateway",
-		fetchDynamicModels: () =>
-			fetchOpenAICompatibleModels({
-				api: "anthropic-messages",
-				provider: "vercel-ai-gateway",
-				baseUrl: catalogBaseUrl,
-				apiKey,
-				filterModel: (entry: OpenAICompatibleModelRecord) => {
-					const tags = entry.tags;
-					return Array.isArray(tags) && tags.includes("tool-use");
-				},
-				mapModel: (
-					entry: OpenAICompatibleModelRecord,
-					defaults: Model<"anthropic-messages">,
-					_context: OpenAICompatibleModelMapperContext<"anthropic-messages">,
-				): Model<"anthropic-messages"> => {
-					const pricing = entry.pricing as Record<string, unknown> | undefined;
-					const tags = Array.isArray(entry.tags) ? (entry.tags as string[]) : [];
-
-					return {
-						...defaults,
-						baseUrl,
-						reasoning: tags.includes("reasoning"),
-						input: tags.includes("vision") ? ["text", "image"] : ["text"],
-						cost: {
-							input: (toNumber(pricing?.input) ?? 0) * 1_000_000,
-							output: (toNumber(pricing?.output) ?? 0) * 1_000_000,
-							cacheRead: (toNumber(pricing?.input_cache_read) ?? 0) * 1_000_000,
-							cacheWrite: (toNumber(pricing?.input_cache_write) ?? 0) * 1_000_000,
-						},
-						contextWindow:
-							typeof entry.context_window === "number" ? entry.context_window : defaults.contextWindow,
-						maxTokens: typeof entry.max_tokens === "number" ? entry.max_tokens : defaults.maxTokens,
-					};
-				},
-			}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 12. Kimi Code
-// ---------------------------------------------------------------------------
-
-export interface KimiCodeModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function kimiCodeModelManagerOptions(
-	config?: KimiCodeModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://api.kimi.com/coding/v1";
-	return {
-		providerId: "kimi-code",
-		...(apiKey && {
-			fetchDynamicModels: () =>
-				fetchOpenAICompatibleModels({
-					api: "openai-completions",
-					provider: "kimi-code",
-					baseUrl,
-					apiKey,
-					headers: {
-						"User-Agent": "KimiCLI/1.0",
-						"X-Msh-Platform": "kimi_cli",
-					},
-					mapModel: (
-						entry: OpenAICompatibleModelRecord,
-						defaults: Model<"openai-completions">,
-						_context: OpenAICompatibleModelMapperContext<"openai-completions">,
-					): Model<"openai-completions"> => {
-						const id = defaults.id;
-						return {
-							...defaults,
-							name: typeof entry.display_name === "string" ? entry.display_name : defaults.name,
-							reasoning: entry.supports_reasoning === true || id.includes("thinking"),
-							input: entry.supports_image_in === true || id.includes("k2.5") ? ["text", "image"] : ["text"],
-							contextWindow: typeof entry.context_length === "number" ? entry.context_length : 262144,
-							maxTokens: 32000,
-							compat: {
-								thinkingFormat: "zai",
-								reasoningContentField: "reasoning_content",
-								supportsDeveloperRole: false,
-							},
-						};
-					},
-				}),
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
 // 12.5. LM Studio
 // ---------------------------------------------------------------------------
 
@@ -1708,197 +915,6 @@ export function lmStudioModelManagerOptions(
 				},
 			}),
 	};
-}
-
-// ---------------------------------------------------------------------------
-// 13. Synthetic
-// ---------------------------------------------------------------------------
-
-export interface SyntheticModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function syntheticModelManagerOptions(
-	config?: SyntheticModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://api.synthetic.new/openai/v1";
-	const references = new Map(
-		(getBundledModels("synthetic") as Model<"openai-completions">[]).map(model => [model.id, model]),
-	);
-	return {
-		providerId: "synthetic",
-		dynamicModelsAuthoritative: true,
-		...(apiKey && {
-			fetchDynamicModels: () =>
-				fetchOpenAICompatibleModels({
-					api: "openai-completions",
-					provider: "synthetic",
-					baseUrl,
-					apiKey,
-					mapModel: (
-						entry: OpenAICompatibleModelRecord,
-						defaults: Model<"openai-completions">,
-						_context: OpenAICompatibleModelMapperContext<"openai-completions">,
-					): Model<"openai-completions"> => {
-						const reference = references.get(defaults.id);
-						const referenceSupportsImage = reference?.input.includes("image") ?? false;
-						return {
-							...(reference ? { ...reference, id: defaults.id, baseUrl } : defaults),
-							name: toModelName(entry.name, reference?.name ?? defaults.name),
-							reasoning: entry.supports_reasoning === true || (reference?.reasoning ?? false),
-							input: entry.supports_vision === true || referenceSupportsImage ? ["text", "image"] : ["text"],
-							contextWindow: toPositiveNumber(
-								entry.context_length,
-								reference?.contextWindow ?? defaults.contextWindow,
-							),
-							maxTokens: toPositiveNumber(entry.max_tokens, reference?.maxTokens ?? 8192),
-						};
-					},
-				}),
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 14. Venice
-// ---------------------------------------------------------------------------
-
-export interface VeniceModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function veniceModelManagerOptions(
-	config?: VeniceModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://api.venice.ai/api/v1";
-	const references = createBundledReferenceMap<"openai-completions">("venice");
-	return {
-		providerId: "venice",
-		fetchDynamicModels: () =>
-			fetchOpenAICompatibleModels({
-				api: "openai-completions",
-				provider: "venice",
-				baseUrl,
-				apiKey,
-				mapModel: (entry, defaults) => {
-					const reference = references.get(defaults.id);
-					const model = mapWithBundledReference(entry, defaults, reference);
-					return {
-						...model,
-						compat: { ...model.compat, supportsUsageInStreaming: false },
-					};
-				},
-			}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 15. Together
-// ---------------------------------------------------------------------------
-
-export interface TogetherModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function togetherModelManagerOptions(
-	config?: TogetherModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("together", "https://api.together.xyz/v1", config);
-}
-
-// ---------------------------------------------------------------------------
-// 16. Moonshot
-// ---------------------------------------------------------------------------
-
-export interface MoonshotModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function moonshotModelManagerOptions(
-	config?: MoonshotModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "https://api.moonshot.ai/v1";
-	const references = createBundledReferenceMap<"openai-completions">("moonshot");
-	return {
-		providerId: "moonshot",
-		...(apiKey && {
-			fetchDynamicModels: () =>
-				fetchOpenAICompatibleModels({
-					api: "openai-completions",
-					provider: "moonshot",
-					baseUrl,
-					apiKey,
-					mapModel: (entry, defaults) => {
-						const reference = references.get(defaults.id);
-						const model = mapWithBundledReference(entry, defaults, reference);
-						const id = model.id.toLowerCase();
-						const isThinking = id.includes("thinking");
-						const isVision = id.includes("vision") || id.includes("vl") || id.includes("k2.5");
-						return {
-							...model,
-							reasoning: isThinking || model.reasoning,
-							input: isVision ? ["text", "image"] : model.input,
-						};
-					},
-				}),
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// 17. Qwen Portal
-// ---------------------------------------------------------------------------
-
-export interface QwenPortalModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function qwenPortalModelManagerOptions(
-	config?: QwenPortalModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("qwen-portal", "https://portal.qwen.ai/v1", config);
-}
-
-// ---------------------------------------------------------------------------
-// 18. Qianfan
-// ---------------------------------------------------------------------------
-
-export interface QianfanModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function qianfanModelManagerOptions(
-	config?: QianfanModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	return createSimpleOpenAICompletionsOptions("qianfan", "https://qianfan.baidubce.com/v2", config);
-}
-
-// ---------------------------------------------------------------------------
-// 19. Cloudflare AI Gateway
-// ---------------------------------------------------------------------------
-
-export interface CloudflareAiGatewayModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function cloudflareAiGatewayModelManagerOptions(
-	config?: CloudflareAiGatewayModelManagerConfig,
-): ModelManagerOptions<"anthropic-messages"> {
-	return createSimpleAnthropicProviderOptions(
-		"cloudflare-ai-gateway",
-		"https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic",
-		config,
-	);
 }
 
 // ---------------------------------------------------------------------------
@@ -1960,36 +976,6 @@ export function xiaomiModelManagerOptions(
 		}),
 	};
 }
-// ---------------------------------------------------------------------------
-// 21. LiteLLM
-// ---------------------------------------------------------------------------
-
-export interface LiteLLMModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function litellmModelManagerOptions(
-	config?: LiteLLMModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? "http://localhost:4000/v1";
-	const references = createBundledReferenceMap<"openai-completions">("litellm");
-	return {
-		providerId: "litellm",
-		fetchDynamicModels: () =>
-			fetchOpenAICompatibleModels({
-				api: "openai-completions",
-				provider: "litellm",
-				baseUrl,
-				apiKey,
-				mapModel: (entry, defaults) => {
-					const reference = references.get(defaults.id);
-					return mapWithBundledReference(entry, defaults, reference);
-				},
-			}),
-	};
-}
 
 // ---------------------------------------------------------------------------
 // 22. vLLM
@@ -2020,6 +1006,158 @@ export function vllmModelManagerOptions(config?: VllmModelManagerConfig): ModelM
 					};
 				},
 			}),
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Local-first runtimes: LocalAI, Jan, llamafile, TabbyAPI, llama.cpp
+// ---------------------------------------------------------------------------
+
+export interface LocalAiModelManagerConfig {
+	apiKey?: string;
+	baseUrl?: string;
+}
+
+/** LocalAI — OpenAI drop-in, default http://127.0.0.1:8080/v1. */
+export function localaiModelManagerOptions(
+	config?: LocalAiModelManagerConfig,
+): ModelManagerOptions<"openai-completions"> {
+	const apiKey = config?.apiKey;
+	const baseUrl = config?.baseUrl ?? Bun.env.LOCALAI_BASE_URL ?? "http://127.0.0.1:8080/v1";
+	const references = createBundledReferenceMap<"openai-completions">(
+		"localai" as Parameters<typeof getBundledModels>[0],
+	);
+	return {
+		providerId: "localai",
+		fetchDynamicModels: () =>
+			fetchOpenAICompatibleModels({
+				api: "openai-completions",
+				provider: "localai",
+				baseUrl,
+				apiKey,
+				mapModel: (entry, defaults) => mapWithBundledReference(entry, defaults, references.get(defaults.id)),
+			}),
+	};
+}
+
+export interface JanModelManagerConfig {
+	apiKey?: string;
+	baseUrl?: string;
+}
+
+/** Jan — desktop app API, default http://127.0.0.1:1337/v1. */
+export function janModelManagerOptions(config?: JanModelManagerConfig): ModelManagerOptions<"openai-completions"> {
+	const apiKey = config?.apiKey;
+	const baseUrl = config?.baseUrl ?? Bun.env.JAN_BASE_URL ?? "http://127.0.0.1:1337/v1";
+	const references = createBundledReferenceMap<"openai-completions">("jan" as Parameters<typeof getBundledModels>[0]);
+	return {
+		providerId: "jan",
+		fetchDynamicModels: () =>
+			fetchOpenAICompatibleModels({
+				api: "openai-completions",
+				provider: "jan",
+				baseUrl,
+				apiKey,
+				mapModel: (entry, defaults) => mapWithBundledReference(entry, defaults, references.get(defaults.id)),
+			}),
+	};
+}
+
+export interface LlamafileModelManagerConfig {
+	apiKey?: string;
+	baseUrl?: string;
+}
+
+/** llamafile — single-file executables, default http://127.0.0.1:8080/v1. */
+export function llamafileModelManagerOptions(
+	config?: LlamafileModelManagerConfig,
+): ModelManagerOptions<"openai-responses"> {
+	const apiKey = config?.apiKey;
+	const baseUrl = config?.baseUrl ?? Bun.env.LLAMAFILE_BASE_URL ?? "http://127.0.0.1:8080/v1";
+	const references = createBundledReferenceMap<"openai-responses">(
+		"llamafile" as Parameters<typeof getBundledModels>[0],
+	);
+	return {
+		providerId: "llamafile",
+		fetchDynamicModels: () =>
+			fetchOpenAICompatibleModels({
+				api: "openai-responses",
+				provider: "llamafile",
+				baseUrl,
+				apiKey,
+				mapModel: (entry, defaults) => mapWithBundledReference(entry, defaults, references.get(defaults.id)),
+			}),
+	};
+}
+
+export interface TabbyApiModelManagerConfig {
+	apiKey?: string;
+	baseUrl?: string;
+}
+
+/** TabbyAPI — ExLlamaV2, default http://127.0.0.1:5000/v1. */
+export function tabbyapiModelManagerOptions(
+	config?: TabbyApiModelManagerConfig,
+): ModelManagerOptions<"openai-completions"> {
+	const apiKey = config?.apiKey;
+	const baseUrl = config?.baseUrl ?? Bun.env.TABBYAPI_BASE_URL ?? "http://127.0.0.1:5000/v1";
+	const references = createBundledReferenceMap<"openai-completions">(
+		"tabbyapi" as Parameters<typeof getBundledModels>[0],
+	);
+	return {
+		providerId: "tabbyapi",
+		fetchDynamicModels: () =>
+			fetchOpenAICompatibleModels({
+				api: "openai-completions",
+				provider: "tabbyapi",
+				baseUrl,
+				apiKey,
+				mapModel: (entry, defaults) => mapWithBundledReference(entry, defaults, references.get(defaults.id)),
+			}),
+	};
+}
+
+export interface LlamaCppModelManagerConfig {
+	apiKey?: string;
+	baseUrl?: string;
+	executablePath?: string;
+	modelPath?: string;
+	contextSize?: number;
+	threads?: number;
+	autoStart?: boolean;
+}
+
+/**
+ * llama.cpp — manages a `llama-server` lifecycle via {@link ensureLlamaCpp}
+ * before listing models. Default http://127.0.0.1:8080.
+ */
+export function llamaCppModelManagerOptions(
+	config?: LlamaCppModelManagerConfig,
+): ModelManagerOptions<"openai-responses"> {
+	const apiKey = config?.apiKey;
+	const baseUrl = config?.baseUrl ?? "http://127.0.0.1:8080";
+	const references = createBundledReferenceMap<"openai-responses">(
+		"llama.cpp" as Parameters<typeof getBundledModels>[0],
+	);
+	return {
+		providerId: "llama.cpp",
+		fetchDynamicModels: async () => {
+			const handle = await ensureLlamaCpp({
+				baseUrl,
+				executablePath: config?.executablePath,
+				modelPath: config?.modelPath,
+				contextSize: config?.contextSize,
+				threads: config?.threads,
+				autoStart: config?.autoStart,
+			});
+			return fetchOpenAICompatibleModels({
+				api: "openai-responses",
+				provider: "llama.cpp",
+				baseUrl: `${handle.baseUrl.replace(/\/$/, "")}/v1`,
+				apiKey,
+				mapModel: (entry, defaults) => mapWithBundledReference(entry, defaults, references.get(defaults.id)),
+			});
+		},
 	};
 }
 
@@ -2221,67 +1359,6 @@ export function githubCopilotModelManagerOptions(config?: GithubCopilotModelMana
 }
 
 // ---------------------------------------------------------------------------
-// 24. Anthropic
-// ---------------------------------------------------------------------------
-
-export interface AnthropicModelManagerConfig {
-	apiKey?: string;
-	baseUrl?: string;
-}
-
-export function anthropicModelManagerOptions(
-	config?: AnthropicModelManagerConfig,
-): ModelManagerOptions<"anthropic-messages"> {
-	const apiKey = config?.apiKey;
-	const baseUrl = config?.baseUrl ?? ANTHROPIC_BASE_URL;
-	return {
-		providerId: "anthropic",
-		modelsDev: {
-			fetch: fetchModelsDevPayload,
-			map: payload => mapAnthropicModelsDev(payload, baseUrl),
-		},
-		...(apiKey && {
-			fetchDynamicModels: async () => {
-				const modelsDevModels = await fetchModelsDevPayload()
-					.then(payload => mapAnthropicModelsDev(payload, baseUrl))
-					.catch(() => []);
-				const references = buildAnthropicReferenceMap(modelsDevModels);
-				return (
-					fetchOpenAICompatibleModels({
-						api: "anthropic-messages",
-						provider: "anthropic",
-						baseUrl,
-						headers: buildAnthropicDiscoveryHeaders(apiKey),
-						mapModel: (
-							entry: OpenAICompatibleModelRecord,
-							defaults: Model<"anthropic-messages">,
-							_context: OpenAICompatibleModelMapperContext<"anthropic-messages">,
-						): Model<"anthropic-messages"> => {
-							const discoveredName = typeof entry.display_name === "string" ? entry.display_name : defaults.name;
-							const reference = references.get(defaults.id);
-							if (!reference) {
-								return {
-									...defaults,
-									name: discoveredName,
-								};
-							}
-							return {
-								...reference,
-								id: defaults.id,
-								name: discoveredName,
-								api: "anthropic-messages",
-								provider: "anthropic",
-								baseUrl,
-							};
-						},
-					}) ?? null
-				);
-			},
-		}),
-	};
-}
-
-// ---------------------------------------------------------------------------
 // Models.dev provider descriptors for generate-models.ts
 // ---------------------------------------------------------------------------
 
@@ -2322,68 +1399,6 @@ export interface ModelsDevProviderDescriptor {
 	 * If not provided, uses the `api` field.
 	 */
 	resolveApi?: (modelId: string, raw: ModelsDevModel) => { api: Api; baseUrl: string } | null;
-}
-
-/** Generic mapper that converts models.dev data using provider descriptors. */
-export function mapModelsDevToModels(
-	data: Record<string, unknown>,
-	descriptors: readonly ModelsDevProviderDescriptor[],
-): Model<Api>[] {
-	const models: Model<Api>[] = [];
-	for (const desc of descriptors) {
-		const providerData = (data as Record<string, Record<string, unknown>>)[desc.modelsDevKey];
-		if (!isRecord(providerData) || !isRecord(providerData.models)) continue;
-
-		for (const [modelId, rawModel] of Object.entries(providerData.models)) {
-			if (!isRecord(rawModel)) continue;
-			const m = rawModel as ModelsDevModel;
-
-			// Default filter: tool_call must be true
-			if (desc.filterModel) {
-				if (!desc.filterModel(modelId, m)) continue;
-			} else {
-				if (m.tool_call !== true) continue;
-			}
-
-			// Resolve API and baseUrl (may be per-model for providers like OpenCode)
-			const resolved = desc.resolveApi?.(modelId, m) ?? { api: desc.api, baseUrl: desc.baseUrl };
-			if (!resolved) continue;
-
-			const mapped: Model<Api> = {
-				id: modelId,
-				name: toModelName(m.name, modelId),
-				api: resolved.api,
-				provider: desc.providerId as Model<Api>["provider"],
-				baseUrl: resolved.baseUrl,
-				reasoning: m.reasoning === true,
-				input: toInputCapabilities(m.modalities?.input),
-				cost: {
-					input: toNumber(m.cost?.input) ?? 0,
-					output: toNumber(m.cost?.output) ?? 0,
-					cacheRead: toNumber(m.cost?.cache_read) ?? 0,
-					cacheWrite: toNumber(m.cost?.cache_write) ?? 0,
-				},
-				contextWindow: toPositiveNumber(m.limit?.context, desc.defaultContextWindow ?? UNK_CONTEXT_WINDOW),
-				maxTokens: toPositiveNumber(m.limit?.output, desc.defaultMaxTokens ?? UNK_MAX_TOKENS),
-				...(desc.compat && { compat: desc.compat }),
-				...(desc.headers && { headers: { ...desc.headers } }),
-			};
-
-			// Apply per-model transform
-			if (desc.transformModel) {
-				const result = desc.transformModel(mapped, modelId, m);
-				if (result === null) continue;
-				if (Array.isArray(result)) {
-					models.push(...result);
-				} else {
-					models.push(result);
-				}
-			} else {
-				models.push(mapped);
-			}
-		}
-	}
-	return models;
 }
 
 // Bedrock cross-region prefix helpers
@@ -2732,6 +1747,9 @@ const MODELS_DEV_PROVIDER_DESCRIPTORS_GOOGLE_VERTEX: readonly ModelsDevProviderD
 		resolveApi: resolveGoogleVertexApi,
 	}),
 ];
+
+const ZENMUX_OPENAI_BASE_URL = "https://zenmux.ai/api/v1";
+const ZENMUX_ANTHROPIC_BASE_URL = "https://zenmux.ai/api/anthropic";
 
 const MODELS_DEV_PROVIDER_DESCRIPTORS_SPECIALIZED: readonly ModelsDevProviderDescriptor[] = [
 	// --- Cloudflare AI Gateway ---

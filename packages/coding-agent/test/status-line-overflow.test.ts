@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { visibleWidth } from "@oh-my-pi/pi-tui";
-import { getProjectDir, setProjectDir } from "@oh-my-pi/pi-utils";
+import { visibleWidth } from "@open-agents/tui";
+import { getProjectDir, setProjectDir } from "@open-agents/utils";
 import { resetSettingsForTest, Settings } from "../src/config/settings";
 import type { StatusLineSegmentId } from "../src/config/settings-schema";
 import { StatusLineComponent } from "../src/modes/components/status-line";
@@ -94,7 +94,7 @@ describe("status line session accent", () => {
 		const component = new StatusLineComponent(createStatusLineSession("Named session"));
 		component.updateSettings({
 			preset: "custom",
-			leftSegments: ["pi"],
+			leftSegments: ["agent"],
 			rightSegments: ["session_name"],
 			separator: "powerline-thin",
 			sessionAccent,

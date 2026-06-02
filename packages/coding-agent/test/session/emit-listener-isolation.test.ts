@@ -5,15 +5,15 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Agent, type AgentEvent } from "@oh-my-pi/pi-agent-core";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
-import { createMockModel } from "@oh-my-pi/pi-ai/providers/mock";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { Snowflake } from "@oh-my-pi/pi-utils";
+import { Agent, type AgentEvent } from "@open-agents/agent";
+import { getBundledModel } from "@open-agents/ai";
+import { createMockModel } from "@open-agents/ai/providers/mock";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { Snowflake } from "@open-agents/utils";
 
 function makeEvent(): AgentEvent {
 	return { type: "tool_execution_start", toolCallId: "probe-1", toolName: "probe", args: {} };

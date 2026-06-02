@@ -1,8 +1,8 @@
 /**
  * Centralized path helpers for omp config directories.
  *
- * Uses PI_CONFIG_DIR (default ".omp") for the config root and
- * PI_CODING_AGENT_DIR to override the agent directory.
+ * Uses OA_CONFIG_DIR (default ".omp") for the config root and
+ * OA_AGENT_DIR to override the agent directory.
  *
  * On Linux, if XDG_DATA_HOME / XDG_STATE_HOME / XDG_CACHE_HOME environment
  * variables are set, paths are redirected to XDG-compliant locations under
@@ -17,10 +17,13 @@ import * as path from "node:path";
 import { engines, version } from "../package.json" with { type: "json" };
 
 /** App name (e.g. "omp") */
-export const APP_NAME: string = "omp";
+export const APP_NAME: string = "open-agent";
 
-/** Config directory name (e.g. ".omp") */
-export const CONFIG_DIR_NAME: string = ".omp";
+/** Config directory name (e.g. ".open-agent") */
+export const CONFIG_DIR_NAME: string = ".open-agent";
+
+/** Legacy config directory from the omp / oh-my-pi era (`~/.omp`). */
+export const LEGACY_CONFIG_DIR_NAME = ".omp";
 
 /** Version (e.g. "1.0.0") */
 export const VERSION: string = version;
@@ -89,12 +92,12 @@ export function setProjectDir(dir: string): void {
 	process.chdir(projectDir);
 }
 
-/** Get the config directory name relative to home (e.g. ".omp" or PI_CONFIG_DIR override). */
+/** Get the config directory name relative to home (e.g. ".omp" or OA_CONFIG_DIR override). */
 export function getConfigDirName(): string {
-	return process.env.PI_CONFIG_DIR || CONFIG_DIR_NAME;
+	return process.env.OA_CONFIG_DIR || CONFIG_DIR_NAME;
 }
 
-/** Get the config agent directory name relative to home (e.g. ".omp/agent" or PI_CONFIG_DIR + "/agent"). */
+/** Get the config agent directory name relative to home (e.g. ".omp/agent" or OA_CONFIG_DIR + "/agent"). */
 export function getConfigAgentDirName(): string {
 	return `${getConfigDirName()}/agent`;
 }
@@ -190,7 +193,33 @@ class DirResolver {
 	}
 }
 
-let dirs = new DirResolver(process.env.PI_CODING_AGENT_DIR);
+/**
+ * On first launch after the open-agent rebrand, move `~/.omp` → `~/.open-agent`
+ * when the new directory does not exist yet. Skipped when `OA_CONFIG_DIR` is set.
+ * Must run before {@link DirResolver} is constructed (and before `env.ts` loads
+ * config-root `.env` files).
+ */
+export function migrateLegacyConfigDirIfNeeded(homeDir: string = os.homedir()): boolean {
+	if (process.env.OA_CONFIG_DIR) return false;
+	if (CONFIG_DIR_NAME === LEGACY_CONFIG_DIR_NAME) return false;
+
+	const legacyRoot = path.join(homeDir, LEGACY_CONFIG_DIR_NAME);
+	const newRoot = path.join(homeDir, CONFIG_DIR_NAME);
+	if (legacyRoot === newRoot) return false;
+	if (fs.existsSync(newRoot)) return false;
+	if (!fs.existsSync(legacyRoot)) return false;
+
+	try {
+		fs.renameSync(legacyRoot, newRoot);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+migrateLegacyConfigDirIfNeeded();
+
+let dirs = new DirResolver(process.env.OA_AGENT_DIR);
 
 // Anchor home for the resolver. Captured at module load to stay stable across
 // test mocks of `os.homedir()`. `getPluginsDir(home)` compares against this so
@@ -210,7 +239,7 @@ export function getConfigRootDir(): string {
 /** Set the coding agent directory. Creates a fresh resolver, invalidating all cached paths. */
 export function setAgentDir(dir: string): void {
 	dirs = new DirResolver(dir);
-	process.env.PI_CODING_AGENT_DIR = dir;
+	process.env.OA_AGENT_DIR = dir;
 }
 
 /** Get the agent config directory (~/.omp/agent). */
@@ -269,9 +298,9 @@ export function getPluginsPackageJson(home?: string): string {
 	return path.join(getPluginsDir(home), "package.json");
 }
 
-/** Plugin lock file (~/.omp/plugins/omp-plugins.lock.json). */
+/** Plugin lock file (~/.omp/plugins/open-agent-plugins.lock.json). */
 export function getPluginsLockfile(home?: string): string {
-	return path.join(getPluginsDir(home), "omp-plugins.lock.json");
+	return path.join(getPluginsDir(home), "open-agent-plugins.lock.json");
 }
 
 /** Get the remote mount directory (~/.omp/remote). */
@@ -334,11 +363,11 @@ export function getGpuCachePath(): string {
 
 /**
  * Get the GitHub view cache database path (~/.omp/cache/github-cache.db).
- * Honors the `OMP_GITHUB_CACHE_DB` env var when set so tests can isolate the
+ * Honors the `OA_GITHUB_CACHE_DB` env var when set so tests can isolate the
  * cache file without touching the rest of the config root.
  */
 export function getGithubCacheDbPath(): string {
-	const override = process.env.OMP_GITHUB_CACHE_DB;
+	const override = process.env.OA_GITHUB_CACHE_DB;
 	if (override) return override;
 	return dirs.rootSubdir(path.join("cache", "github-cache.db"), "cache");
 }
@@ -447,9 +476,9 @@ export function getTerminalSessionsDir(agentDir?: string): string {
 	return dirs.agentSubdir(agentDir, "terminal-sessions", "state");
 }
 
-/** Get the crash log path (~/.omp/agent/omp-crash.log). */
+/** Get the crash log path (~/.omp/agent/open-agent-crash.log). */
 export function getCrashLogPath(agentDir?: string): string {
-	return dirs.agentSubdir(agentDir, "omp-crash.log", "state");
+	return dirs.agentSubdir(agentDir, "open-agent-crash.log", "state");
 }
 
 /** Get the debug log path (~/.omp/agent/omp-debug.log). */

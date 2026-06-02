@@ -14,7 +14,7 @@ import type {
 	ToolChoice,
 	ToolResultMessage,
 	TSchema,
-} from "@oh-my-pi/pi-ai";
+} from "@open-agents/ai";
 import type { AppendOnlyContextManager } from "./append-only-context";
 import type { HarmonyAuditEvent } from "./harmony-leak";
 import type { AgentRunCoverage, AgentRunSummary } from "./run-collector";
@@ -25,11 +25,60 @@ export type StreamFn = (
 	...args: Parameters<typeof streamSimple>
 ) => AssistantMessageEventStream | Promise<AssistantMessageEventStream>;
 
+/** Model capability tier in the 3-tier architecture. */
+export type ModelTier = "interface" | "worker" | "compactor";
+
+export interface ModelTierInfo {
+	tag: string;
+	name: string;
+	color: string;
+}
+
+export const MODEL_TIERS: Record<ModelTier, ModelTierInfo> = {
+	interface: { tag: "INTERFACE", name: "Interface", color: "success" },
+	worker: { tag: "WORKER", name: "Worker", color: "accent" },
+	compactor: { tag: "COMPACT", name: "Compactor", color: "dim" },
+};
+
+export const MODEL_TIER_IDS: ModelTier[] = ["interface", "worker", "compactor"];
+
+/** Resolved models for each tier. */
+export interface ModelTierConfig {
+	interface: Model;
+	worker: Model;
+	compactor: Model;
+}
+
+/** Active model for the current agent-loop turn. */
+export function getActiveModel(config: AgentLoopConfig): Model {
+	if (config.tiers) {
+		const tier = config.activeTier ?? "interface";
+		return config.tiers[tier];
+	}
+	if (config.model) {
+		return config.model;
+	}
+	throw new Error("AgentLoopConfig requires tiers or model");
+}
+
+/** Active tier for tool gating; defaults to interface when only `model` is set. */
+export function getActiveTier(config: AgentLoopConfig): ModelTier {
+	return config.activeTier ?? "interface";
+}
+
 /**
  * Configuration for the agent loop.
  */
 export interface AgentLoopConfig extends SimpleStreamOptions {
-	model: Model;
+	/** Models for each tier; the active tier drives streaming and tool policy. */
+	tiers?: ModelTierConfig;
+	/** Which tier is currently driving the loop (interface for user-facing turns). */
+	activeTier?: ModelTier;
+	/**
+	 * Legacy single-model config (tests and transitional callers).
+	 * When `tiers` is omitted, all tiers resolve to this model.
+	 */
+	model?: Model;
 
 	/**
 	 * When to interrupt tool execution for steering messages.
@@ -443,6 +492,12 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 
 	/** Capability tier declaration used by approval gates. Omitted means "exec". */
 	approval?: ToolApproval;
+
+	/**
+	 * Which model tiers may invoke this tool. Defaults to all tiers.
+	 * Write/exec tools should restrict to `worker` so the interface tier delegates via `task`.
+	 */
+	allowedTiers?: ModelTier[];
 
 	/** Lines appended after the standard approval prompt header. */
 	formatApprovalDetails?: (args: unknown) => string | string[] | undefined;

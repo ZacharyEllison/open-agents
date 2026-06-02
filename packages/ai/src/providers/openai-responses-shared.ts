@@ -1,4 +1,4 @@
-import { structuredCloneJSON } from "@oh-my-pi/pi-utils";
+import { structuredCloneJSON } from "@open-agents/utils";
 import type OpenAI from "openai";
 import type {
 	ResponseCustomToolCall,

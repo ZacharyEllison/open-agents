@@ -1,7 +1,7 @@
-import { INTENT_FIELD } from "@oh-my-pi/pi-agent-core";
-import { calculatePromptTokens } from "@oh-my-pi/pi-agent-core/compaction/compaction";
-import type { AssistantMessage, ImageContent } from "@oh-my-pi/pi-ai";
-import { type Component, Loader, TERMINAL, Text } from "@oh-my-pi/pi-tui";
+import { INTENT_FIELD } from "@open-agents/agent";
+import { calculatePromptTokens } from "@open-agents/agent/compaction/compaction";
+import type { AssistantMessage, ImageContent } from "@open-agents/ai";
+import { type Component, Loader, TERMINAL, Text } from "@open-agents/tui";
 import { settings } from "../../config/settings";
 import { getFileSnapshotStore } from "../../edit/file-snapshot-store";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";

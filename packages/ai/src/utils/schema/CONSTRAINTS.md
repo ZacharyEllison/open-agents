@@ -6,7 +6,7 @@ This document is the operational contract for schema normalization/strictness in
 
 - Applies to provider-facing tool schemas produced by:
   - `normalize.ts` — Google, CCA, MCP, OpenAI Responses, and OpenAI strict-mode (sanitize + enforce) sanitization. All schema walkers live here.
-  - `adapt.ts` — thin composer wrapping `tryEnforceStrictSchema` for provider call sites, plus the `PI_NO_STRICT` env flag callers consult to opt out of strict mode.
+  - `adapt.ts` — thin composer wrapping `tryEnforceStrictSchema` for provider call sites, plus the `OA_NO_STRICT` env flag callers consult to opt out of strict mode.
   - `fields.ts` — keyword classification sets used by the walkers.
 - Covers OpenAI-style strict mode, OpenAI Responses `oneOf` rejection, Google schema constraints, and Cloud Code Assist Claude constraints.
 ---

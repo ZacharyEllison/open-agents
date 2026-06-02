@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 import * as fs from "node:fs/promises";
 import type { FetchImpl } from "../types";
 
-const REQUEST_DEBUG_ENV = "PI_REQ_DEBUG";
+const REQUEST_DEBUG_ENV = "OA_REQ_DEBUG";
 const DEBUG_FETCH_MARKER = Symbol("omp.requestDebugFetch");
 const textEncoder = new TextEncoder();
 const utf8Decoder = new TextDecoder("utf-8", { fatal: true });

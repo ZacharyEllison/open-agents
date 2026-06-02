@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as url from "node:url";
-import { isCompiledBinary } from "@oh-my-pi/pi-utils";
+import { isCompiledBinary } from "@open-agents/utils";
 
 const IS_COMPILED_BINARY = isCompiledBinary();
 
@@ -114,7 +114,7 @@ const TYPEBOX_SHIM_PATH = BUNFS_PACKAGE_ROOT
 // longer satisfies those imports. The override below redirects only the bare
 // pi-ai package root onto a sibling shim that re-exports the canonical surface
 // plus the borrowed `Type` runtime from the Zod-backed TypeBox shim. Subpath
-// imports such as `@oh-my-pi/pi-ai/utils/oauth` continue to resolve directly
+// imports such as `@open-agents/ai/utils/oauth` continue to resolve directly
 // against the bundled pi-ai package.
 const LEGACY_PI_AI_SHIM_PATH = BUNFS_PACKAGE_ROOT
 	? bunfsPath("coding-agent", "src", "extensibility", "legacy-pi-ai-shim.js")

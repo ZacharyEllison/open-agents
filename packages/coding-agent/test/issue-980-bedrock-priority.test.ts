@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { Model } from "@oh-my-pi/pi-ai";
+import type { Model } from "@open-agents/ai";
 import {
 	resolveCliModel,
 	resolveModelFromSettings,
 	resolveModelRoleValue,
-} from "@oh-my-pi/pi-coding-agent/config/model-resolver";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
+} from "@open-agents/coding-agent/config/model-resolver";
+import { Settings } from "@open-agents/coding-agent/config/settings";
 
 function model(provider: string, id: string): Model<"anthropic-messages"> {
 	return {
@@ -26,7 +26,7 @@ describe("issue #980 provider-qualified model resolution", () => {
 	test("prefers the explicit anthropic provider when the exact pair exists", () => {
 		const availableModels = [model("amazon-bedrock", "claude-3-7-sonnet"), model("anthropic", "claude-3-7-sonnet")];
 		const settings = Settings.isolated({
-			modelRoles: { default: "anthropic/claude-3-7-sonnet" },
+			modelTiers: { default: "anthropic/claude-3-7-sonnet" },
 		});
 
 		const resolved = resolveModelFromSettings({ settings, availableModels });
@@ -37,7 +37,7 @@ describe("issue #980 provider-qualified model resolution", () => {
 	test("does not silently fall back to bedrock when a provider-qualified role misses", () => {
 		const availableModels = [model("amazon-bedrock", "claude-3-7-sonnet"), model("anthropic", "claude-sonnet-4-5")];
 		const settings = Settings.isolated({
-			modelRoles: { default: "anthropic/claude-3-7-sonnet" },
+			modelTiers: { default: "anthropic/claude-3-7-sonnet" },
 		});
 
 		const roleValue = settings.getModelRole("default");

@@ -5,7 +5,7 @@
  * cleaned content.
  */
 
-import { type AuthStorage, getEnvApiKey } from "@oh-my-pi/pi-ai";
+import { type AuthStorage, getEnvApiKey } from "@open-agents/ai";
 import type { SearchResponse, SearchSource } from "../../../web/search/types";
 import { SearchProviderError } from "../../../web/search/types";
 import type { SearchParams } from "./base";

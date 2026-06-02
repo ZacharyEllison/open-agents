@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { substitutePluginRoot } from "@oh-my-pi/pi-coding-agent/discovery/substitute-plugin-root";
+import { substitutePluginRoot } from "@open-agents/coding-agent/discovery/substitute-plugin-root";
 
 // Use concatenation to avoid noTemplateCurlyInString lint rule on literal placeholder names
 const CLAUDE_VAR = "$" + "{CLAUDE_PLUGIN_ROOT}";
-const OMP_VAR = "$" + "{OMP_PLUGIN_ROOT}";
+const OMP_VAR = "$" + "{OA_PLUGIN_ROOT}";
 
 describe("substitutePluginRoot", () => {
 	const ROOT = "/plugins/my-plugin";
@@ -12,7 +12,7 @@ describe("substitutePluginRoot", () => {
 		expect(substitutePluginRoot(`${CLAUDE_VAR}/bin/server`, ROOT)).toBe("/plugins/my-plugin/bin/server");
 	});
 
-	it("replaces OMP_PLUGIN_ROOT in strings", () => {
+	it("replaces OA_PLUGIN_ROOT in strings", () => {
 		expect(substitutePluginRoot(`${OMP_VAR}/bin/server`, ROOT)).toBe("/plugins/my-plugin/bin/server");
 	});
 

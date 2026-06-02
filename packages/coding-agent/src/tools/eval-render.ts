@@ -8,9 +8,9 @@
  * is still initializing, which previously crashed module load with a TDZ
  * `Cannot access 'evalToolRenderer' before initialization`.
  */
-import type { Component } from "@oh-my-pi/pi-tui";
-import { Markdown, Text } from "@oh-my-pi/pi-tui";
-import { formatNumber } from "@oh-my-pi/pi-utils";
+import type { Component } from "@open-agents/tui";
+import { Markdown, Text } from "@open-agents/tui";
+import { formatNumber } from "@open-agents/utils";
 import { settings } from "../config/settings";
 import type { EvalCellResult, EvalLanguage, EvalStatusEvent, EvalToolDetails } from "../eval/types";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";

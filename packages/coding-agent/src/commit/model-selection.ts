@@ -1,14 +1,8 @@
-import type { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { Api, Model } from "@oh-my-pi/pi-ai";
-import { MODEL_ROLE_IDS } from "../config/model-registry";
-import {
-	type ModelLookupRegistry,
-	parseModelPattern,
-	resolveModelRoleValue,
-	resolveRoleSelection,
-} from "../config/model-resolver";
+import type { ThinkingLevel } from "@open-agents/agent";
+import type { Api, Model } from "@open-agents/ai";
+import { MODEL_TIER_IDS } from "../config/model-registry";
+import { type ModelLookupRegistry, resolveModelRoleValue, resolveRoleSelection } from "../config/model-resolver";
 import type { Settings } from "../config/settings";
-import MODEL_PRIO from "../priority.json" with { type: "json" };
 
 export interface ResolvedCommitModel {
 	model: Model<Api>;
@@ -29,7 +23,7 @@ export async function resolvePrimaryModel(
 	const matchPreferences = { usageOrder: settings.getStorage()?.getModelUsageOrder() };
 	const resolved = override
 		? resolveModelRoleValue(override, available, { settings, matchPreferences, modelRegistry })
-		: resolveRoleSelection(["commit", "smol", ...MODEL_ROLE_IDS], settings, available, modelRegistry);
+		: resolveRoleSelection(["compactor", ...MODEL_TIER_IDS], settings, available, modelRegistry);
 	const model = resolved?.model;
 	if (!model) {
 		throw new Error("No model available for commit generation");
@@ -48,18 +42,12 @@ export async function resolveSmolModel(
 	fallbackApiKey: string,
 ): Promise<ResolvedCommitModel> {
 	const available = modelRegistry.getAvailable();
-	const resolvedSmol = resolveRoleSelection(["smol"], settings, available, modelRegistry);
-	if (resolvedSmol?.model) {
-		const apiKey = await modelRegistry.getApiKey(resolvedSmol.model);
-		if (apiKey) return { model: resolvedSmol.model, apiKey, thinkingLevel: resolvedSmol.thinkingLevel };
-	}
-
-	const matchPreferences = { usageOrder: settings.getStorage()?.getModelUsageOrder() };
-	for (const pattern of MODEL_PRIO.smol) {
-		const candidate = parseModelPattern(pattern, available, matchPreferences, { modelRegistry }).model;
-		if (!candidate) continue;
-		const apiKey = await modelRegistry.getApiKey(candidate);
-		if (apiKey) return { model: candidate, apiKey };
+	const resolvedCompactor = resolveRoleSelection(["compactor"], settings, available, modelRegistry);
+	if (resolvedCompactor?.model) {
+		const apiKey = await modelRegistry.getApiKey(resolvedCompactor.model);
+		if (apiKey) {
+			return { model: resolvedCompactor.model, apiKey, thinkingLevel: resolvedCompactor.thinkingLevel };
+		}
 	}
 
 	return { model: fallbackModel, apiKey: fallbackApiKey };

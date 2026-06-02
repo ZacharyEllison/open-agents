@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Effort } from "@oh-my-pi/pi-ai";
+import { Effort } from "@open-agents/ai";
 import { parseArgs } from "../src/cli/args";
 
 describe("parseArgs — --hide-thinking flag", () => {

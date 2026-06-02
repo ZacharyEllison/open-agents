@@ -4,20 +4,20 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as url from "node:url";
 import * as zlib from "node:zlib";
-import type { AgentToolContext } from "@oh-my-pi/pi-agent-core";
-import { AsyncJobManager } from "@oh-my-pi/pi-coding-agent/async";
-import { DEFAULT_BASH_INTERCEPTOR_RULES, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { EditTool } from "@oh-my-pi/pi-coding-agent/edit";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { BashTool } from "@oh-my-pi/pi-coding-agent/tools/bash";
-import { FindTool } from "@oh-my-pi/pi-coding-agent/tools/find";
-import { JobTool } from "@oh-my-pi/pi-coding-agent/tools/job";
-import { wrapToolWithMetaNotice } from "@oh-my-pi/pi-coding-agent/tools/output-meta";
-import { ReadTool } from "@oh-my-pi/pi-coding-agent/tools/read";
-import { DEFAULT_FILE_LIMIT, MULTI_FILE_PER_FILE_MATCHES, SearchTool } from "@oh-my-pi/pi-coding-agent/tools/search";
-import { WriteTool } from "@oh-my-pi/pi-coding-agent/tools/write";
-import { $which, Snowflake } from "@oh-my-pi/pi-utils";
+import type { AgentToolContext } from "@open-agents/agent";
+import { AsyncJobManager } from "@open-agents/coding-agent/async";
+import { DEFAULT_BASH_INTERCEPTOR_RULES, Settings } from "@open-agents/coding-agent/config/settings";
+import { EditTool } from "@open-agents/coding-agent/edit";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { BashTool } from "@open-agents/coding-agent/tools/bash";
+import { FindTool } from "@open-agents/coding-agent/tools/find";
+import { JobTool } from "@open-agents/coding-agent/tools/job";
+import { wrapToolWithMetaNotice } from "@open-agents/coding-agent/tools/output-meta";
+import { ReadTool } from "@open-agents/coding-agent/tools/read";
+import { DEFAULT_FILE_LIMIT, MULTI_FILE_PER_FILE_MATCHES, SearchTool } from "@open-agents/coding-agent/tools/search";
+import { WriteTool } from "@open-agents/coding-agent/tools/write";
+import { $which, Snowflake } from "@open-agents/utils";
 import { unzipSync } from "fflate";
 
 // Helper to extract text from content blocks
@@ -231,8 +231,8 @@ describe("Coding Agent Tools", () => {
 
 	beforeEach(() => {
 		// Force replace mode for edit tool tests using old_text/new_text
-		originalEditVariant = Bun.env.PI_EDIT_VARIANT;
-		Bun.env.PI_EDIT_VARIANT = "replace";
+		originalEditVariant = Bun.env.OA_EDIT_VARIANT;
+		Bun.env.OA_EDIT_VARIANT = "replace";
 
 		// Create a unique temporary directory for each test
 		testDir = path.join(os.tmpdir(), `coding-agent-test-${Snowflake.next()}`);
@@ -256,9 +256,9 @@ describe("Coding Agent Tools", () => {
 
 		// Restore original edit variant
 		if (originalEditVariant === undefined) {
-			delete Bun.env.PI_EDIT_VARIANT;
+			delete Bun.env.OA_EDIT_VARIANT;
 		} else {
-			Bun.env.PI_EDIT_VARIANT = originalEditVariant;
+			Bun.env.OA_EDIT_VARIANT = originalEditVariant;
 		}
 		AsyncJobManager.resetForTests();
 	});
@@ -1381,7 +1381,7 @@ function b() {
 
 			const output = getTextOutput(result);
 			expect(output).not.toContain("# example.txt");
-			// PI_EDIT_VARIANT=replace in beforeEach disables hashlines; expect line-number mode
+			// OA_EDIT_VARIANT=replace in beforeEach disables hashlines; expect line-number mode
 			expect(output).toMatch(/\*2\|match line/);
 		});
 
@@ -1826,8 +1826,8 @@ describe("edit tool CRLF handling", () => {
 
 	beforeEach(() => {
 		// Force replace mode for edit tool tests using old_text/new_text
-		originalEditVariant = Bun.env.PI_EDIT_VARIANT;
-		Bun.env.PI_EDIT_VARIANT = "replace";
+		originalEditVariant = Bun.env.OA_EDIT_VARIANT;
+		Bun.env.OA_EDIT_VARIANT = "replace";
 
 		testDir = path.join(os.tmpdir(), `coding-agent-crlf-test-${Snowflake.next()}`);
 		fs.mkdirSync(testDir, { recursive: true });
@@ -1839,9 +1839,9 @@ describe("edit tool CRLF handling", () => {
 
 		// Restore original edit variant
 		if (originalEditVariant === undefined) {
-			delete Bun.env.PI_EDIT_VARIANT;
+			delete Bun.env.OA_EDIT_VARIANT;
 		} else {
-			Bun.env.PI_EDIT_VARIANT = originalEditVariant;
+			Bun.env.OA_EDIT_VARIANT = originalEditVariant;
 		}
 	});
 

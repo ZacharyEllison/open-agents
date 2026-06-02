@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import { Agent } from "@oh-my-pi/pi-agent-core";
-import { type Api, Effort, getBundledModel, type Model } from "@oh-my-pi/pi-ai";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { type CreateAgentSessionResult, createAgentSession } from "@oh-my-pi/pi-coding-agent/sdk";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import { Agent } from "@open-agents/agent";
+import { type Api, Effort, getBundledModel, type Model } from "@open-agents/ai";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { type CreateAgentSessionResult, createAgentSession } from "@open-agents/coding-agent/sdk";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { TempDir } from "@open-agents/utils";
 
 describe("AgentSession model persistence", () => {
 	let tempDir: TempDir;
@@ -77,7 +77,7 @@ describe("AgentSession model persistence", () => {
 	async function createSession(options?: {
 		initialModel?: Model<Api>;
 		selectInitialModel?: (availableModels: Model<Api>[]) => Model<Api>;
-		modelRoles?: Record<string, string>;
+		modelTiers?: Record<string, string>;
 		persist?: boolean;
 	}): Promise<{ modelRegistry: ModelRegistry; settings: Settings; session: AgentSession }> {
 		const authStorage = await AuthStorage.create(path.join(tempDir.path(), `testauth-${authStorages.length}.db`));
@@ -102,10 +102,10 @@ describe("AgentSession model persistence", () => {
 		});
 
 		sessionSettings = Settings.isolated();
-		const modelRoles = options?.modelRoles;
-		if (modelRoles) {
-			for (const role in modelRoles) {
-				const modelRoleValue = modelRoles[role];
+		const modelTiers = options?.modelTiers;
+		if (modelTiers) {
+			for (const role in modelTiers) {
+				const modelRoleValue = modelTiers[role];
 				if (modelRoleValue !== undefined) {
 					sessionSettings.setModelRole(role, modelRoleValue);
 				}
@@ -161,7 +161,7 @@ describe("AgentSession model persistence", () => {
 
 		const created = await createSession({
 			initialModel: defaultModel,
-			modelRoles: { default: defaultRoleValue },
+			modelTiers: { default: defaultRoleValue },
 		});
 
 		await created.session.setModel(nextModel);
@@ -176,7 +176,7 @@ describe("AgentSession model persistence", () => {
 
 		const created = await createSession({
 			initialModel: defaultModel,
-			modelRoles: { default: modelValue(defaultModel) },
+			modelTiers: { default: modelValue(defaultModel) },
 		});
 
 		await created.session.setModel(nextModel, "default", { persist: true });
@@ -193,7 +193,7 @@ describe("AgentSession model persistence", () => {
 
 		const created = await createSession({
 			initialModel: defaultModel,
-			modelRoles: {
+			modelTiers: {
 				default: defaultRoleValue,
 				slow: slowRoleValue,
 			},
@@ -216,7 +216,7 @@ describe("AgentSession model persistence", () => {
 
 		const created = await createSession({
 			initialModel: defaultModel,
-			modelRoles: {
+			modelTiers: {
 				default: defaultRoleValue,
 				slow: slowRoleValue,
 			},
@@ -266,7 +266,7 @@ describe("AgentSession model persistence", () => {
 
 		const created = await createSession({
 			initialModel: defaultModel,
-			modelRoles: { default: defaultRoleValue, smol: smolRoleValue },
+			modelTiers: { default: defaultRoleValue, smol: smolRoleValue },
 			persist: true,
 		});
 
@@ -294,7 +294,7 @@ describe("AgentSession model persistence", () => {
 
 		const created = await createSession({
 			initialModel: previousModel,
-			modelRoles: { default: defaultRoleValue },
+			modelTiers: { default: defaultRoleValue },
 			persist: true,
 		});
 
@@ -310,7 +310,7 @@ describe("AgentSession model persistence", () => {
 
 		const created = await createSession({
 			initialModel: temporaryModel,
-			modelRoles: { default: defaultRoleValue },
+			modelTiers: { default: defaultRoleValue },
 			persist: true,
 		});
 

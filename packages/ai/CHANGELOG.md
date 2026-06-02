@@ -49,7 +49,7 @@
 
 ### Fixed
 
-- Fixed OpenAI-family first-event timeouts so `PI_OPENAI_STREAM_IDLE_TIMEOUT_MS` cannot be undercut by a lower generic `PI_STREAM_FIRST_EVENT_TIMEOUT_MS` while local OpenAI-compatible servers are still processing large prompts. `PI_OPENAI_STREAM_FIRST_EVENT_TIMEOUT_MS` is now available for an explicit OpenAI-specific first-event override. ([#1603](https://github.com/can1357/oh-my-pi/issues/1603))
+- Fixed OpenAI-family first-event timeouts so `OA_OPENAI_STREAM_IDLE_TIMEOUT_MS` cannot be undercut by a lower generic `OA_STREAM_FIRST_EVENT_TIMEOUT_MS` while local OpenAI-compatible servers are still processing large prompts. `OA_OPENAI_STREAM_FIRST_EVENT_TIMEOUT_MS` is now available for an explicit OpenAI-specific first-event override. ([#1603](https://github.com/can1357/oh-my-pi/issues/1603))
 
 ## [15.7.4] - 2026-05-31
 
@@ -75,7 +75,7 @@
 
 ### Added
 
-- Added `PI_REQ_DEBUG=1` request/response recording for provider transports. Each request writes `rr-session-N.json`; each received response writes `rr-session-N.res.log` with response headers followed by raw body bytes.
+- Added `OA_REQ_DEBUG=1` request/response recording for provider transports. Each request writes `rr-session-N.json`; each received response writes `rr-session-N.res.log` with response headers followed by raw body bytes.
 
 ### Fixed
 
@@ -176,14 +176,14 @@
 - Added `PI_CODEX_WEBSOCKET_PING_INTERVAL_MS` to configure the interval for Codex WebSocket protocol ping heartbeats
 - Added `PI_CODEX_WEBSOCKET_PONG_TIMEOUT_MS` to configure the Codex WebSocket pong timeout used to detect unresponsive connections
 - Added `PI_CODEX_WEBSOCKET_MESSAGE_QUEUE_CAPACITY` to configure the maximum buffered Codex WebSocket inbound queue size before transport fallback
-- Added `parseStreamingJsonThrottled` to `@oh-my-pi/pi-ai/utils/json-parse` — a per-delta wrapper around `parseStreamingJson` that skips re-parses until the buffer has grown by `minGrowthBytes` (default 256). Wired into the streaming hot path of every provider's tool-call argument accumulator (`anthropic`, `amazon-bedrock`, `openai-completions`, `openai-codex-responses`, `openai-responses-shared`) so per-delta cost is O(N) in total buffer length instead of O(N²). Each provider's `toolcall_end` still runs a final unthrottled parse, so the published `block.arguments` is unchanged.
+- Added `parseStreamingJsonThrottled` to `@open-agents/ai/utils/json-parse` — a per-delta wrapper around `parseStreamingJson` that skips re-parses until the buffer has grown by `minGrowthBytes` (default 256). Wired into the streaming hot path of every provider's tool-call argument accumulator (`anthropic`, `amazon-bedrock`, `openai-completions`, `openai-codex-responses`, `openai-responses-shared`) so per-delta cost is O(N) in total buffer length instead of O(N²). Each provider's `toolcall_end` still runs a final unthrottled parse, so the published `block.arguments` is unchanged.
 - Added named-tool routing support to Google providers: `GoogleSharedStreamOptions.toolChoice` and `GoogleGeminiCliOptions.toolChoice` now accept `{ mode: "ANY"; allowedFunctionNames: [string, ...string[]] }` in addition to the string forms. `mapGoogleToolChoice` converts `ToolChoice` objects of shape `{ type: "tool" | "function", name }` to the wire form. Mirrors the equivalent Anthropic mapper.
 
 ### Changed
 
 - Improved Codex WebSocket timeout diagnostics to include last event type and time since last progress event
 - Enhanced Codex WebSocket error classification to recognize ping, pong, send, and queue-overflow failures as retryable
-- Changed `mapGoogleToolChoice` to be exported from `@oh-my-pi/pi-ai/stream` so callers can build the wire-shape allow-list directly without re-deriving it.
+- Changed `mapGoogleToolChoice` to be exported from `@open-agents/ai/stream` so callers can build the wire-shape allow-list directly without re-deriving it.
 
 ### Fixed
 
@@ -230,7 +230,7 @@
 - Added per-provider stream watchdog overrides via `getStreamIdleTimeoutMs(fallbackMs)` and `getStreamFirstEventTimeoutMs(idleTimeoutMs, fallbackMs)` to allow providers like Google Gemini CLI to extend first-event timeouts without affecting global defaults
 - Added `promptCacheKey` to `StreamOptions` and passed it through stream option mapping so callers can specify an explicit prompt-cache key separate from `sessionId`
 - Added `promptCacheKey` support to the native server option whitelist so `promptCacheKey` is accepted by `pi-native-server` streams
-- Restored the per-provider stream watchdog (`iterateWithIdleTimeout`) on top of the abortable iterator. The lazy stream forwarder in `register-builtins` now wraps every provider's event stream with the first-event + steady-state idle watchdog (`PI_STREAM_FIRST_EVENT_TIMEOUT_MS`, `PI_STREAM_IDLE_TIMEOUT_MS`; aliases honored), and Anthropic / OpenAI Completions / OpenAI Responses / Azure OpenAI Responses / Codex SSE re-emit their per-provider progress predicates so empty keepalive frames cannot keep a stalled stream alive. Reverts the partial regression from #1392 that left Codex WebSocket subagent runs hanging silently for hours when the broker dropped frames between deltas. The Codex WebSocket transport additionally now resets `lastProgressAt` only on progress events (not keepalives), giving the 300s WS-internal idle ceiling the same liveness semantics as the SSE path.
+- Restored the per-provider stream watchdog (`iterateWithIdleTimeout`) on top of the abortable iterator. The lazy stream forwarder in `register-builtins` now wraps every provider's event stream with the first-event + steady-state idle watchdog (`OA_STREAM_FIRST_EVENT_TIMEOUT_MS`, `OA_STREAM_IDLE_TIMEOUT_MS`; aliases honored), and Anthropic / OpenAI Completions / OpenAI Responses / Azure OpenAI Responses / Codex SSE re-emit their per-provider progress predicates so empty keepalive frames cannot keep a stalled stream alive. Reverts the partial regression from #1392 that left Codex WebSocket subagent runs hanging silently for hours when the broker dropped frames between deltas. The Codex WebSocket transport additionally now resets `lastProgressAt` only on progress events (not keepalives), giving the 300s WS-internal idle ceiling the same liveness semantics as the SSE path.
 
 ### Changed
 
@@ -400,9 +400,9 @@
 ### Breaking Changes
 
 - Changed `AuthBrokerClient.fetchSnapshot()` to return status-based results (`200` or `304`) instead of always returning a raw snapshot body, so callers now need to branch on `status`
-- Renamed public schema utilities in `@oh-my-pi/pi-ai/utils/schema` by replacing `sanitizeSchemaForGoogle`, `sanitizeSchemaForCCA`, `prepareSchemaForCCA`, and `sanitizeSchemaForMCP` with `normalizeSchemaForGoogle`, `normalizeSchemaForCCA`, and `normalizeSchemaForMCP`
+- Renamed public schema utilities in `@open-agents/ai/utils/schema` by replacing `sanitizeSchemaForGoogle`, `sanitizeSchemaForCCA`, `prepareSchemaForCCA`, and `sanitizeSchemaForMCP` with `normalizeSchemaForGoogle`, `normalizeSchemaForCCA`, and `normalizeSchemaForMCP`
 - Added MCP schema normalization via `normalizeSchemaForMCP` for compatibility checks
-- Removed the `StringEnum` helper from `@oh-my-pi/pi-ai/utils/schema`. Use `z.enum([...])` directly; Zod's emitted JSON Schema is already wire-compatible with Google and other providers.
+- Removed the `StringEnum` helper from `@open-agents/ai/utils/schema`. Use `z.enum([...])` directly; Zod's emitted JSON Schema is already wire-compatible with Google and other providers.
 - Renamed the concrete SQLite credential store class from `AuthCredentialStore` to `SqliteAuthCredentialStore`. `AuthCredentialStore` is now the persistence interface implemented by both the SQLite store and the new `RemoteAuthCredentialStore`. Update `new AuthCredentialStore(db)` / `AuthCredentialStore.open(...)` call-sites to `SqliteAuthCredentialStore`; type-position uses (`store: AuthCredentialStore`) continue to work unchanged.
 
 ### Added
@@ -419,7 +419,7 @@
 - Added per-model `additional_rate_limits` parsing to `openaiCodexUsageProvider`. The Codex `wham/usage` endpoint surfaces a separate `GPT-5.3-Codex-Spark` rate limit (`metered_feature: codex_bengalfox`) on Pro accounts; these now emit dedicated `openai-codex:spark:{primary,secondary}` `UsageLimit` entries with `scope.tier = "spark"`, mirroring how Anthropic exposes `anthropic:7d:sonnet` separately from the umbrella `anthropic:7d` bucket. The osx-widgets client already keyed spark detection off `limit.id.includes("spark")`; this populates that contract end-to-end.
 - Added `GET /v1/usage` to the auth-broker API to expose aggregated usage reports from `AuthStorage.fetchUsageReports`
 - Added auth-broker usage polling response handling that returns normalized usage reports plus generation timestamp for clients (5-min per-credential cache via `AuthStorage`)
-- Added the auth-broker subsystem (`@oh-my-pi/pi-ai/auth-broker`) for sharing OAuth credentials across machines without leaking refresh tokens.
+- Added the auth-broker subsystem (`@open-agents/ai/auth-broker`) for sharing OAuth credentials across machines without leaking refresh tokens.
 - `startAuthBroker(...)` boots a `Bun.serve` HTTP server exposing `GET /v1/healthz`, `GET /v1/snapshot`, `POST /v1/credential` (upsert), `POST /v1/credential/:id/refresh`, and `POST /v1/credential/:id/disable`.
 - `AuthBrokerClient` is the matching HTTP client used by remote clients.
 - `RemoteAuthCredentialStore` is a client-side `AuthCredentialStore` that mirrors a broker snapshot in memory; mutating methods (`replace*`, `upsert*`, `delete*ForProvider`) throw because writes are server-side only.
@@ -428,14 +428,14 @@
 - Added `AuthStorageOptions.refreshOAuthCredential` override so a remote-store client can route every OAuth refresh through the broker instead of the local OAuth endpoint.
 - Added `REMOTE_REFRESH_SENTINEL` (`"__remote__"`) — the wire placeholder substituted for OAuth refresh tokens in broker snapshots; clients never see the real refresh token.
 - Exposed the OAuth provider catalog (`getOAuthProviders`, `OAuthProvider`, `OAuthProviderInfo`) and `refreshOAuthToken` through the package barrel so the coding-agent CLI can target them without reaching into `utils/oauth`.
-- Added the auth-gateway subsystem (`@oh-my-pi/pi-ai/auth-gateway`) — a forward-proxy that sits between unauthenticated clients (the macOS usage widget, llm-git, robomp containers, …) and the broker. Clients send standard provider-format requests; the gateway parses them into omp's canonical `Context`, dispatches through pi-ai's `streamSimple()`, and translates the canonical event stream back to the matching wire format. `Authorization` is injected server-side so access tokens never leave the gateway host. Wire surface:
+- Added the auth-gateway subsystem (`@open-agents/ai/auth-gateway`) — a forward-proxy that sits between unauthenticated clients (the macOS usage widget, llm-git, robomp containers, …) and the broker. Clients send standard provider-format requests; the gateway parses them into omp's canonical `Context`, dispatches through pi-ai's `streamSimple()`, and translates the canonical event stream back to the matching wire format. `Authorization` is injected server-side so access tokens never leave the gateway host. Wire surface:
 - `GET  /healthz` — unauth liveness.
 - `GET  /v1/usage` — aggregated provider usage; 5-min per-credential cache via `AuthStorage.fetchUsageReports`.
 - `GET  /v1/models` — model catalog (scoped to providers with credentials).
 - `POST /v1/chat/completions` — OpenAI chat-completions in/out.
 - `POST /v1/messages` — Anthropic messages in/out (text + thinking + tool_use blocks, SSE event taxonomy preserved).
 - `POST /v1/responses` — OpenAI Responses in/out (reasoning items + function_call output items, SSE pass-through).
-- Added exports from `@oh-my-pi/pi-ai/auth-gateway`: `startAuthGateway`, `AuthGatewayServerOptions`, `AuthGatewayBootOptions`, `AuthGatewayServerHandle`, `ModelResolver`, `DEFAULT_AUTH_GATEWAY_BIND`. Per-format `parseRequest` / `encodeResponse` / `encodeStream` triples are reachable via the `./providers/*` subpath as `openai-chat-server`, `anthropic-messages-server`, and `openai-responses-server`.
+- Added exports from `@open-agents/ai/auth-gateway`: `startAuthGateway`, `AuthGatewayServerOptions`, `AuthGatewayBootOptions`, `AuthGatewayServerHandle`, `ModelResolver`, `DEFAULT_AUTH_GATEWAY_BIND`. Per-format `parseRequest` / `encodeResponse` / `encodeStream` triples are reachable via the `./providers/*` subpath as `openai-chat-server`, `anthropic-messages-server`, and `openai-responses-server`.
 - Added `listProvidersWithEnvKey()` to enumerate every provider with an env-var fallback (used by the new migrate command in coding-agent).
 
 ### Changed
@@ -511,7 +511,7 @@
 
 ### Breaking Changes
 
-- Removed TypeBox root exports (`Type`, `Static`, and `TSchema`) from the package entrypoint, so callers importing those symbols from `@oh-my-pi/pi-ai` must migrate to `zod` or `@oh-my-pi/pi-ai/types`
+- Removed TypeBox root exports (`Type`, `Static`, and `TSchema`) from the package entrypoint, so callers importing those symbols from `@open-agents/ai` must migrate to `zod` or `@open-agents/ai/types`
 
 ### Added
 
@@ -527,7 +527,7 @@
 - Changed Azure OpenAI Responses tool schema conversion to sanitize tool parameter schemas and rewrite `oneOf` branches as `anyOf` so tool calls remain compatible with Azure's schema expectations
 - Changed `Static<S>` to extract a schema object’s `static` type when present, improving inferred tool argument types for non-Zod parameter definitions
 - Changed `Static` typing behavior so it now infers argument types from Zod schemas and defaults to `unknown` for non-Zod JSON Schema parameter definitions
-- Restored the default steady-state stream idle timeout to 120s (regressed in 15.0.0). 30s was too aggressive for reasoning models, slow proxies, and tool-call planning gaps, surfacing as repeated `Provider stream stalled while waiting for the next event` errors. Existing `PI_STREAM_IDLE_TIMEOUT_MS` / `PI_OPENAI_STREAM_IDLE_TIMEOUT_MS` overrides are unchanged.
+- Restored the default steady-state stream idle timeout to 120s (regressed in 15.0.0). 30s was too aggressive for reasoning models, slow proxies, and tool-call planning gaps, surfacing as repeated `Provider stream stalled while waiting for the next event` errors. Existing `OA_STREAM_IDLE_TIMEOUT_MS` / `OA_OPENAI_STREAM_IDLE_TIMEOUT_MS` overrides are unchanged.
 
 ### Fixed
 
@@ -599,12 +599,12 @@
 - Added `AuthStorage` `onCredentialDisabled` callback (sync or async) so embedders can react when a credential is automatically disabled (e.g. OAuth refresh fails with `invalid_grant`) — useful for surfacing a banner or auto-launching a re-login flow instead of letting the credential silently disappear. Sync throws and async rejections are both caught and logged so a misbehaving subscriber cannot break the disable path.
 - Added Anthropic OAuth `account.uuid` and `account.email_address` extraction from the `/v1/oauth/token` exchange and refresh responses; both `AnthropicOAuthFlow.exchangeToken()` and `refreshAnthropicToken()` now populate `OAuthCredentials.{accountId, email}` so downstream consumers can attribute requests to the authenticated account without a separate `/api/oauth/profile` round-trip.
 - Added `onSseEvent` stream diagnostics so HTTP SSE providers can expose raw SSE frames without changing parsed model output.
-- Added `streamIdleTimeoutMs` option (and `PI_STREAM_IDLE_TIMEOUT_MS` env override; `PI_OPENAI_STREAM_IDLE_TIMEOUT_MS` remains a backward-compatible alias) for a steady-state inter-event watchdog. Set to `0` to disable.
+- Added `streamIdleTimeoutMs` option (and `OA_STREAM_IDLE_TIMEOUT_MS` env override; `OA_OPENAI_STREAM_IDLE_TIMEOUT_MS` remains a backward-compatible alias) for a steady-state inter-event watchdog. Set to `0` to disable.
 - Added a semantic-progress predicate to OpenAI Responses and Codex SSE/WebSocket transports so `response.in_progress`-style keepalives no longer reset the idle deadline on stalled tool calls.
 
 ### Changed
 
-- Anthropic streams now enforce a steady-state idle timeout (defaults to 120s, same control as `PI_STREAM_IDLE_TIMEOUT_MS`) in addition to the first-event watchdog. Long-running responses that go fully silent between events will now surface as `Anthropic stream stalled while waiting for the next event` instead of hanging.
+- Anthropic streams now enforce a steady-state idle timeout (defaults to 120s, same control as `OA_STREAM_IDLE_TIMEOUT_MS`) in addition to the first-event watchdog. Long-running responses that go fully silent between events will now surface as `Anthropic stream stalled while waiting for the next event` instead of hanging.
 - Fixed `resolveAnthropicMetadataUserId()` to accept JSON-format `user_id` values that match real Claude Code's payload shape (`{ device_id, account_uuid, session_id, ... }` from `services/api/claude.ts:getAPIMetadata`). Previously only the synthetic `user_<hex>_account_<uuid>_session_<uuid>` cloaking format was accepted on OAuth, which caused stable session-keyed metadata supplied by callers to be discarded and replaced with fresh random entropy on every request — defeating session-count attribution on the Claude OAuth path.
 
 ## [14.8.0] - 2026-05-09
@@ -973,7 +973,7 @@
 
 - Added `thinkingSignature` field to thinking content blocks to preserve the original reasoning field name (e.g., `reasoning_text`, `reasoning_content`) for accurate follow-up requests
 - Added first-event timeout detection for streaming responses to abort stuck requests before user-visible content arrives
-- Added `PI_STREAM_FIRST_EVENT_TIMEOUT_MS` environment variable to configure first-event timeout (defaults to 15 seconds or idle timeout, whichever is lower)
+- Added `OA_STREAM_FIRST_EVENT_TIMEOUT_MS` environment variable to configure first-event timeout (defaults to 15 seconds or idle timeout, whichever is lower)
 - Added Vercel AI Gateway to `/login` providers for interactive API key setup
 
 ### Changed
@@ -1619,7 +1619,7 @@
 ### Changed
 
 - Enhanced `getModelMapping()` to support both GitLab Duo alias IDs (e.g., `duo-chat-gpt-5-codex`) and canonical model IDs (e.g., `gpt-5-codex`) for improved model resolution flexibility
-- Migrated `AuthCredentialStore` and `AuthStorage` into `@oh-my-pi/pi-ai` as shared credential primitives for downstream packages
+- Migrated `AuthCredentialStore` and `AuthStorage` into `@open-agents/ai` as shared credential primitives for downstream packages
 - Moved Anthropic auth helpers (`findAnthropicAuth`, `isOAuthToken`, `buildAnthropicSearchHeaders`, `buildAnthropicUrl`) into shared AI utilities for reuse across providers
 - Replaced `CliAuthStorage` with `AuthCredentialStore` for improved credential management with multiple credentials per provider
 - Updated models.json pricing for Claude 3.5 Sonnet (input: 0.23→0.45, output: 3→2.2, added cache read: 0.225) and Claude 3 Opus (input: 0.3→0.95)
@@ -2088,7 +2088,7 @@
 
 ### Added
 
-- Added Bedrock cache retention support with `PI_CACHE_RETENTION` env var and per-request `cacheRetention` option
+- Added Bedrock cache retention support with `OA_CACHE_RETENTION` env var and per-request `cacheRetention` option
 - Added adaptive thinking support for Bedrock Opus 4.6+ models
 - Added `AWS_BEDROCK_SKIP_AUTH` env var to support unauthenticated Bedrock proxies
 - Added `AWS_BEDROCK_FORCE_HTTP1` env var to force HTTP/1.1 for custom Bedrock endpoints
@@ -2114,7 +2114,7 @@
 - Added `maxRetryDelayMs` option to cap server-requested retry delays and fail fast when delays exceed the limit
 - Added `effort` option for Anthropic Opus 4.6+ models to control adaptive thinking effort levels ('low', 'medium', 'high', 'max')
 - Added support for Anthropic Opus 4.6+ adaptive thinking mode that lets Claude decide when and how much to think
-- Added `PI_AI_ANTIGRAVITY_VERSION` environment variable to customize Antigravity sandbox endpoint version
+- Added `OA_AI_ANTIGRAVITY_VERSION` environment variable to customize Antigravity sandbox endpoint version
 - Exported `convertAnthropicMessages` function for converting message formats to Anthropic API
 - Automatic fallback for Anthropic assistant-prefill requests: appends synthetic user "Continue." message when conversation ends with assistant turn to maintain API compatibility
 
@@ -2155,8 +2155,8 @@
 
 ### Changed
 
-- Replaced direct `Bun.env` access with `getEnv()` utility from `@oh-my-pi/pi-utils` for consistent environment variable handling across all providers
-- Updated environment variable names from `OMP_*` prefix to `PI_*` prefix for consistency (e.g., `OMP_CODING_AGENT_DIR` → `PI_CODING_AGENT_DIR`)
+- Replaced direct `Bun.env` access with `getEnv()` utility from `@open-agents/utils` for consistent environment variable handling across all providers
+- Updated environment variable names from `OMP_*` prefix to `PI_*` prefix for consistency (e.g., `OMP_CODING_AGENT_DIR` → `OA_AGENT_DIR`)
 
 ### Removed
 
@@ -2199,7 +2199,7 @@
 - Added 4 new free models via OpenCode: glm-4.7-free, kimi-k2.5-free, minimax-m2.1-free, trinity-large-preview-free
 - Added glm-4.7-flash model via Zai provider
 - Added Kimi Code provider with OpenAI and Anthropic API format support
-- Added prompt cache retention support with PI_CACHE_RETENTION env var
+- Added prompt cache retention support with OA_CACHE_RETENTION env var
 - Added overflow patterns for Bedrock, MiniMax, Kimi; reclassified 429 as rate limiting
 - Added profile endpoint integration to resolve user emails with 24-hour caching
 - Added automatic token refresh for expired Kimi OAuth credentials
@@ -2731,7 +2731,7 @@
 
 ### Breaking Changes
 
-- **Agent API moved**: All agent functionality (`agentLoop`, `agentLoopContinue`, `AgentContext`, `AgentEvent`, `AgentTool`, `AgentToolResult`, etc.) has moved to `@mariozechner/pi-agent-core`. Import from that package instead of `@oh-my-pi/pi-ai`.
+- **Agent API moved**: All agent functionality (`agentLoop`, `agentLoopContinue`, `AgentContext`, `AgentEvent`, `AgentTool`, `AgentToolResult`, etc.) has moved to `@mariozechner/pi-agent-core`. Import from that package instead of `@open-agents/ai`.
 
 ### Added
 

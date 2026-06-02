@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { createAgentSession } from "@oh-my-pi/pi-coding-agent/sdk";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { Snowflake } from "@oh-my-pi/pi-utils";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import { createAgentSession } from "@open-agents/coding-agent/sdk";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { Snowflake } from "@open-agents/utils";
 import { YAML } from "bun";
 
 /**
@@ -48,7 +48,7 @@ describe("issue #1022 — path-scoped enabledModels respected by default fallbac
 			YAML.stringify({
 				enabledModels: [{ path: privatePath, models: ["openai-codex"] }],
 				disabledProviders: [{ path: privatePath, providers: ["github-copilot"] }],
-				modelRoles: { default: "github-copilot/gpt-5.5" },
+				modelTiers: { default: "github-copilot/gpt-5.5" },
 			}),
 		);
 

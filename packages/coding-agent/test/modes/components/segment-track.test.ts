@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import { renderSegmentTrack, type TrackSegment } from "@oh-my-pi/pi-coding-agent/modes/components/segment-track";
-import { initTheme, type ThemeColor, theme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
+import { renderSegmentTrack, type TrackSegment } from "@open-agents/coding-agent/modes/components/segment-track";
+import { initTheme, type ThemeColor, theme } from "@open-agents/coding-agent/modes/theme/theme";
 
 beforeAll(async () => {
 	await initTheme();

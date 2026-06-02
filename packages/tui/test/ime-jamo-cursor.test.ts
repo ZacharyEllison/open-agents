@@ -31,9 +31,9 @@
  *     follow-up; will tighten this test once the Rust crate is rebuilt.
  */
 import { describe, expect, it } from "bun:test";
-import { CURSOR_MARKER } from "@oh-my-pi/pi-tui";
-import { Input } from "@oh-my-pi/pi-tui/components/input";
-import { visibleWidth } from "@oh-my-pi/pi-tui/utils";
+import { CURSOR_MARKER } from "@open-agents/tui";
+import { Input } from "@open-agents/tui/components/input";
+import { visibleWidth } from "@open-agents/tui/utils";
 
 /**
  * Drive `text` through `Input.handleInput()` one Unicode code point at a

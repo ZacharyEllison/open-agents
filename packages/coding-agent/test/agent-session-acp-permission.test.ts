@@ -6,22 +6,22 @@
  * behavior they have in the TUI.
  */
 import { afterEach, beforeEach, expect, it, spyOn } from "bun:test";
-import { Agent, type AgentTool } from "@oh-my-pi/pi-agent-core";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
-import { createMockModel, type MockModelOptions } from "@oh-my-pi/pi-ai/providers/mock";
-import { AssistantMessageEventStream } from "@oh-my-pi/pi-ai/utils/event-stream";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { EditTool } from "@oh-my-pi/pi-coding-agent/edit";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
+import { Agent, type AgentTool } from "@open-agents/agent";
+import { getBundledModel } from "@open-agents/ai";
+import { createMockModel, type MockModelOptions } from "@open-agents/ai/providers/mock";
+import { AssistantMessageEventStream } from "@open-agents/ai/utils/event-stream";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { EditTool } from "@open-agents/coding-agent/edit";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
 import type {
 	ClientBridge,
 	ClientBridgePermissionOutcome,
 	ClientBridgePermissionToolCall,
-} from "@oh-my-pi/pi-coding-agent/session/client-bridge";
-import { convertToLlm } from "@oh-my-pi/pi-coding-agent/session/messages";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { TempDir } from "@oh-my-pi/pi-utils";
+} from "@open-agents/coding-agent/session/client-bridge";
+import { convertToLlm } from "@open-agents/coding-agent/session/messages";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { TempDir } from "@open-agents/utils";
 import * as z from "zod/v4";
 
 // ---------------------------------------------------------------------------

@@ -7,12 +7,9 @@ import {
 	enrichModelThinking,
 	getBundledModels,
 	getBundledProviders,
-	googleAntigravityModelManagerOptions,
-	googleGeminiCliModelManagerOptions,
 	type Model,
 	type ModelManagerOptions,
 	type ModelRefreshStrategy,
-	openaiCodexModelManagerOptions,
 	PROVIDER_DESCRIPTORS,
 	readModelCache,
 	registerCustomApi,
@@ -21,7 +18,7 @@ import {
 	UNK_CONTEXT_WINDOW,
 	UNK_MAX_TOKENS,
 	unregisterCustomApis,
-} from "@oh-my-pi/pi-ai";
+} from "@open-agents/ai";
 
 // Sentinel for local-only OAuth token (LM Studio, vLLM) — declared inline to avoid loading
 // any provider module at startup. Must match `DEFAULT_LOCAL_TOKEN` in oauth/lm-studio.ts.
@@ -64,12 +61,12 @@ const STARTUP_MODEL_CACHE_PROVIDER_IDS: readonly string[] = [
 	...SPECIAL_MODEL_MANAGER_PROVIDER_IDS,
 ];
 
-import { registerOAuthProvider, unregisterOAuthProviders } from "@oh-my-pi/pi-ai/utils/oauth";
-import type { OAuthCredentials, OAuthLoginCallbacks } from "@oh-my-pi/pi-ai/utils/oauth/types";
-import { isRecord, logger } from "@oh-my-pi/pi-utils";
+import { registerOAuthProvider, unregisterOAuthProviders } from "@open-agents/ai/utils/oauth";
+import type { OAuthCredentials, OAuthLoginCallbacks } from "@open-agents/ai/utils/oauth/types";
+import { isRecord, logger } from "@open-agents/utils";
 import { parseModelString, resolveProviderModelReference } from "../config/model-resolver";
 import { isValidThemeColor, type ThemeColor } from "../modes/theme/theme";
-import type { AuthStorage, OAuthCredential } from "../session/auth-storage";
+import type { AuthStorage } from "../session/auth-storage";
 import { type ConfigError, ConfigFile } from "./config-file";
 import {
 	buildCanonicalModelIndex,
@@ -85,6 +82,7 @@ import {
 	getModelLikeIdSegments,
 	stripBracketedModelIdAffixes,
 } from "./model-id-affixes";
+import { LEGACY_MODEL_ROLE_TO_TIER } from "./model-tier-legacy";
 import {
 	type ModelOverride,
 	type ModelsConfig,
@@ -102,72 +100,80 @@ export function isAuthenticated(apiKey: string | undefined | null): apiKey is st
 	return Boolean(apiKey) && apiKey !== kNoAuth;
 }
 
-export type ModelRole = "default" | "smol" | "slow" | "vision" | "plan" | "designer" | "commit" | "task";
+import type { ModelTier, ModelTierInfo } from "@open-agents/agent";
+import { MODEL_TIER_IDS, MODEL_TIERS } from "@open-agents/agent";
 
-export interface ModelRoleInfo {
+export type { ModelTier, ModelTierInfo };
+export { MODEL_TIER_IDS, MODEL_TIERS };
+
+/** @deprecated Use ModelTier */
+export type ModelRole = ModelTier;
+
+/** @deprecated Use ModelTierInfo */
+export type ModelRoleInfo = ModelTierInfo & { color?: ThemeColor };
+
+/** @deprecated Use MODEL_TIERS */
+export const MODEL_ROLES = MODEL_TIERS as Record<ModelTier, ModelRoleInfo>;
+
+/** @deprecated Use MODEL_TIER_IDS */
+export const MODEL_ROLE_IDS = MODEL_TIER_IDS;
+
+/** Tier/role metadata for the model selector (color is theme-scoped when present). */
+export interface RoleInfo {
 	tag?: string;
 	name: string;
 	color?: ThemeColor;
 }
 
-export const MODEL_ROLES: Record<ModelRole, ModelRoleInfo> = {
-	default: { tag: "DEFAULT", name: "Default", color: "success" },
-	smol: { tag: "SMOL", name: "Fast", color: "warning" },
-	slow: { tag: "SLOW", name: "Thinking", color: "accent" },
-	vision: { tag: "VISION", name: "Vision", color: "error" },
-	plan: { tag: "PLAN", name: "Architect", color: "muted" },
-	designer: { tag: "DESIGNER", name: "Designer", color: "muted" },
-	commit: { tag: "COMMIT", name: "Commit", color: "dim" },
-	task: { tag: "TASK", name: "Subtask", color: "muted" },
-};
-
-export const MODEL_ROLE_IDS: ModelRole[] = ["default", "smol", "slow", "vision", "plan", "designer", "commit", "task"];
-
-/** Alias for ModelRoleInfo - used for both built-in and custom roles */
-export type RoleInfo = ModelRoleInfo;
-
 /**
- * Return the canonical set of known roles for selector/carousel UI.
- *
- * Built-ins always come first. Configured cycle order, model assignments, and
- * tag metadata can introduce additional custom roles without requiring duplicate
- * entries across settings.
+ * Return the canonical set of known tiers for selector UI.
  */
+export function getKnownTierIds(_settings?: Settings): ModelTier[] {
+	return [...MODEL_TIER_IDS];
+}
+
+/** @deprecated Use getKnownTierIds */
 export function getKnownRoleIds(settings: Settings): string[] {
-	const roles = [...MODEL_ROLE_IDS] as string[];
-	const seen = new Set<string>(roles);
-	const addRole = (role: string) => {
-		if (seen.has(role)) return;
-		seen.add(role);
-		roles.push(role);
-	};
-
-	for (const role of settings.get("cycleOrder")) addRole(role);
-	for (const role of Object.keys(settings.getModelRoles())) addRole(role);
-	for (const role of Object.keys(settings.get("modelTags"))) addRole(role);
-
-	return roles;
+	return getKnownTierIds(settings);
 }
 
 /**
- * Get role info for a role name (built-in or custom).
+ * Get tier info for a tier name.
  * Configured metadata overrides built-in defaults when present.
  */
-export function getRoleInfo(role: string, settings: Settings): RoleInfo {
-	const builtIn = role in MODEL_ROLES ? MODEL_ROLES[role as ModelRole] : undefined;
-	const configured = settings.get("modelTags")[role];
+export function getTierInfo(tier: ModelTier | string, settings: Settings): RoleInfo {
+	const builtIn = tier in MODEL_TIERS ? MODEL_TIERS[tier as ModelTier] : undefined;
+	const configured = settings.get("modelTags")[tier];
 
 	if (configured) {
 		return {
 			tag: builtIn?.tag,
-			name: configured.name || builtIn?.name || role,
-			color: configured.color && isValidThemeColor(configured.color) ? configured.color : builtIn?.color,
+			name: configured.name || builtIn?.name || tier,
+			color:
+				configured.color && isValidThemeColor(configured.color)
+					? configured.color
+					: (builtIn?.color as ThemeColor | undefined),
 		};
 	}
 
-	if (builtIn) return builtIn;
+	if (builtIn) {
+		return {
+			tag: builtIn.tag,
+			name: builtIn.name,
+			color: isValidThemeColor(builtIn.color) ? (builtIn.color as ThemeColor) : undefined,
+		};
+	}
 
-	return { name: role, color: "muted" };
+	return { name: tier, color: "muted" };
+}
+
+const LEGACY_ROLE_TO_TIER: Record<string, ModelTier> = LEGACY_MODEL_ROLE_TO_TIER;
+
+/** @deprecated Use getTierInfo */
+export function getRoleInfo(role: string, settings: Settings): RoleInfo {
+	const tier = LEGACY_ROLE_TO_TIER[role] ?? (role in MODEL_TIERS ? (role as ModelTier) : undefined);
+	if (tier) return getTierInfo(tier, settings);
+	return getTierInfo(role, settings);
 }
 
 type ProviderValidationMode = "models-config" | "runtime-register";
@@ -479,48 +485,6 @@ function extractLlamaCppInputCapabilities(payload: Record<string, unknown>): ("t
 		return undefined;
 	}
 	return modalities.vision === true ? ["text", "image"] : ["text"];
-}
-
-function extractGoogleOAuthToken(value: string | undefined): string | undefined {
-	if (!isAuthenticated(value)) return undefined;
-	try {
-		const parsed = JSON.parse(value) as { token?: unknown };
-		if (Object.hasOwn(parsed, "token")) {
-			if (typeof parsed.token !== "string") {
-				return undefined;
-			}
-			const token = parsed.token.trim();
-			return token.length > 0 ? token : undefined;
-		}
-	} catch {
-		// OAuth values for Google providers are expected to be JSON, but custom setups may already provide raw token.
-	}
-	return value;
-}
-
-function getOAuthCredentialsForProvider(authStorage: AuthStorage, provider: string): OAuthCredential[] {
-	const providerEntry = authStorage.getAll()[provider];
-	if (!providerEntry) {
-		return [];
-	}
-	const entries = Array.isArray(providerEntry) ? providerEntry : [providerEntry];
-	return entries.filter((entry): entry is OAuthCredential => entry.type === "oauth");
-}
-
-function resolveOAuthAccountIdForAccessToken(
-	authStorage: AuthStorage,
-	provider: string,
-	accessToken: string,
-): string | undefined {
-	const oauthCredentials = getOAuthCredentialsForProvider(authStorage, provider);
-	const matchingCredential = oauthCredentials.find(credential => credential.access === accessToken);
-	if (matchingCredential) {
-		return matchingCredential.accountId;
-	}
-	if (oauthCredentials.length === 1) {
-		return oauthCredentials[0].accountId;
-	}
-	return undefined;
 }
 
 function mergeCompat<TBase extends object, TOverride extends object>(
@@ -1304,7 +1268,7 @@ export class ModelRegistry {
 					headers: providerConfig.headers,
 					apiKey: providerConfig.apiKey,
 					authHeader: providerConfig.authHeader,
-					compat: mergeCompat(providerConfig.compat, disableStrictCompat),
+					compat: mergeCompat(providerConfig.compat, disableStrictCompat) as Model<Api>["compat"],
 					transport: providerConfig.transport,
 				});
 			}
@@ -1324,7 +1288,7 @@ export class ModelRegistry {
 					api: (providerConfig.api ?? "openai-completions") as Api,
 					baseUrl: providerConfig.baseUrl,
 					headers: providerConfig.headers,
-					compat: mergeCompat(providerConfig.compat, disableStrictCompat),
+					compat: mergeCompat(providerConfig.compat, disableStrictCompat) as Model<Api>["compat"],
 					discovery: providerConfig.discovery,
 					optional: false,
 				});
@@ -1542,41 +1506,14 @@ export class ModelRegistry {
 	}
 
 	async #collectBuiltInModelManagerOptions(): Promise<ModelManagerOptions<Api>[]> {
+		// Local-first: all built-in providers are local runtimes described by
+		// PROVIDER_DESCRIPTORS. Cloud "special" providers (google-antigravity,
+		// google-gemini-cli, openai-codex) were removed in the local-first refactor.
 		const specialProviderDescriptors: Array<{
 			providerId: string;
 			resolveKey: (value: string | undefined) => string | undefined;
 			createOptions: (key: string) => ModelManagerOptions<Api>;
-		}> = [
-			{
-				providerId: "google-antigravity",
-				resolveKey: extractGoogleOAuthToken,
-				createOptions: oauthToken =>
-					googleAntigravityModelManagerOptions({
-						oauthToken,
-						endpoint: this.getProviderBaseUrl("google-antigravity"),
-					}),
-			},
-			{
-				providerId: "google-gemini-cli",
-				resolveKey: extractGoogleOAuthToken,
-				createOptions: oauthToken =>
-					googleGeminiCliModelManagerOptions({
-						oauthToken,
-						endpoint: this.getProviderBaseUrl("google-gemini-cli"),
-					}),
-			},
-			{
-				providerId: "openai-codex",
-				resolveKey: value => value,
-				createOptions: accessToken => {
-					const accountId = resolveOAuthAccountIdForAccessToken(this.authStorage, "openai-codex", accessToken);
-					return openaiCodexModelManagerOptions({
-						accessToken,
-						accountId,
-					});
-				},
-			},
-		];
+		}> = [];
 		const disabledProviders = getDisabledProviderIdsFromSettings();
 		const standardProviderDescriptors = PROVIDER_DESCRIPTORS.filter(
 			descriptor => !disabledProviders.has(descriptor.providerId),
@@ -2103,9 +2040,11 @@ export class ModelRegistry {
 				if (resolved) this.authStorage.setConfigApiKey(providerName, resolved);
 			}
 			for (const modelDef of modelDefs) {
-				const providerCompat = providerConfig.disableStrictTools
-					? mergeCompat(providerConfig.compat, { disableStrictTools: true })
-					: providerConfig.compat;
+				const providerCompat = (
+					providerConfig.disableStrictTools
+						? mergeCompat(providerConfig.compat, { disableStrictTools: true })
+						: providerConfig.compat
+				) as Model<Api>["compat"];
 				const model = buildCustomModelOverlay(
 					providerName,
 					providerConfig.baseUrl!,

@@ -14,7 +14,7 @@ import {
 	TUI,
 	truncateToWidth,
 	visibleWidth,
-} from "@oh-my-pi/pi-tui";
+} from "@open-agents/tui";
 import { VirtualTerminal } from "./virtual-terminal";
 
 const BASE_SEEDS = [

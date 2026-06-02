@@ -1,8 +1,8 @@
 import * as os from "node:os";
 import * as path from "node:path";
-import { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import { TERMINAL } from "@oh-my-pi/pi-tui";
-import { formatDuration, formatNumber, getProjectDir, pathIsWithin, relativePathWithinRoot } from "@oh-my-pi/pi-utils";
+import { ThinkingLevel } from "@open-agents/agent";
+import { TERMINAL } from "@open-agents/tui";
+import { formatDuration, formatNumber, getProjectDir, pathIsWithin, relativePathWithinRoot } from "@open-agents/utils";
 import { type ThemeColor, theme } from "../../../modes/theme/theme";
 import { shortenPath } from "../../../tools/render-utils";
 import { getSessionAccentAnsi, getSessionAccentHex } from "../../../utils/session-color";
@@ -63,10 +63,10 @@ function classifyProjectDir(pwd: string): { scratch: boolean; relative: string |
 // Segment Implementations
 // ═══════════════════════════════════════════════════════════════════════════
 
-const piSegment: StatusLineSegment = {
-	id: "pi",
+const agentSegment: StatusLineSegment = {
+	id: "agent",
 	render(_ctx) {
-		const content = theme.icon.pi ? `${theme.icon.pi} ` : "";
+		const content = theme.icon.agent ? `${theme.icon.agent} ` : "";
 		return { content: theme.fg("accent", content), visible: true };
 	},
 };
@@ -547,7 +547,8 @@ const usageSegment: StatusLineSegment = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
-	pi: piSegment,
+	agent: agentSegment,
+	pi: agentSegment,
 	model: modelSegment,
 	mode: modeSegment,
 	path: pathSegment,

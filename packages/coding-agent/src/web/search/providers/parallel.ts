@@ -1,4 +1,4 @@
-import { type AuthStorage, getEnvApiKey } from "@oh-my-pi/pi-ai";
+import { type AuthStorage, getEnvApiKey } from "@open-agents/ai";
 import type { SearchResponse } from "../../../web/search/types";
 import { SearchProviderError } from "../../../web/search/types";
 import { ParallelApiError, type ParallelSearchResult, type ParallelSearchSource } from "../../parallel";

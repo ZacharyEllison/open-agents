@@ -13,12 +13,12 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AssistantMessage } from "@oh-my-pi/pi-ai";
-import { resetSettingsForTest, Settings, settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { EventController } from "@oh-my-pi/pi-coding-agent/modes/controllers/event-controller";
-import { initTheme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import type { InteractiveModeContext } from "@oh-my-pi/pi-coding-agent/modes/types";
-import { TERMINAL } from "@oh-my-pi/pi-tui";
+import type { AssistantMessage } from "@open-agents/ai";
+import { resetSettingsForTest, Settings, settings } from "@open-agents/coding-agent/config/settings";
+import { EventController } from "@open-agents/coding-agent/modes/controllers/event-controller";
+import { initTheme } from "@open-agents/coding-agent/modes/theme/theme";
+import type { InteractiveModeContext } from "@open-agents/coding-agent/modes/types";
+import { TERMINAL } from "@open-agents/tui";
 
 beforeAll(() => {
 	initTheme();

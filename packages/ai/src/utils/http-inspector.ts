@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { extractHttpStatusFromError, getLogsDir } from "@oh-my-pi/pi-utils";
+import { extractHttpStatusFromError, getLogsDir } from "@open-agents/utils";
 import { isCopilotTransientModelError } from "./retry.js";
 import { formatErrorMessageWithRetryAfter } from "./retry-after.js";
 

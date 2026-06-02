@@ -17,7 +17,7 @@
  * regression sanity check.
  */
 import { describe, expect, it } from "bun:test";
-import { Ellipsis, sliceWithWidth, truncateToWidth, visibleWidth } from "@oh-my-pi/pi-tui/utils";
+import { Ellipsis, sliceWithWidth, truncateToWidth, visibleWidth } from "@open-agents/tui/utils";
 
 // The macOS-only correction (see PR #1410) keeps jamo at 1 cell on darwin;
 // every other platform follows UAX#11 and reports 2 cells per jamo.

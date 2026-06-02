@@ -16,7 +16,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
+import type { AgentMessage } from "@open-agents/agent";
 import {
 	type Component,
 	Container,
@@ -31,8 +31,8 @@ import {
 	truncateToWidth,
 	visibleWidth,
 	wrapTextWithAnsi,
-} from "@oh-my-pi/pi-tui";
-import { isEnoent, prompt } from "@oh-my-pi/pi-utils";
+} from "@open-agents/tui";
+import { isEnoent, prompt } from "@open-agents/utils";
 import { YAML } from "bun";
 import { getConfigDirs } from "../../config";
 import type { ModelRegistry } from "../../config/model-registry";
@@ -390,8 +390,6 @@ export class AgentDashboard extends Container {
 			const activeTabId = this.#tabs[this.#activeTabIndex]?.id ?? "all";
 			const { agents } = await discoverAgents(this.cwd);
 			const disabled = new Set((this.#settingsManager?.get("task.disabledAgents") as string[] | undefined) ?? []);
-			const overrides = this.#settingsManager?.get("task.agentModelOverrides") ?? {};
-
 			this.#allAgents = agents
 				.slice()
 				.sort((a, b) => {
@@ -402,7 +400,6 @@ export class AgentDashboard extends Container {
 				.map(agent => ({
 					...agent,
 					disabled: disabled.has(agent.name),
-					overrideModel: overrides[agent.name]?.trim() || undefined,
 				}));
 
 			this.#tabs = this.#buildTabs(this.#allAgents);
@@ -498,15 +495,7 @@ export class AgentDashboard extends Container {
 	}
 
 	#persistModelOverrides(): void {
-		if (!this.#settingsManager) return;
-		const overrides: Record<string, string> = {};
-		for (const agent of this.#allAgents) {
-			const value = agent.overrideModel?.trim();
-			if (value) {
-				overrides[agent.name] = value;
-			}
-		}
-		this.#settingsManager.set("task.agentModelOverrides", overrides);
+		// Per-agent model overrides removed; delegated work uses modelTiers.worker.
 	}
 
 	#toggleSelectedAgent(): void {

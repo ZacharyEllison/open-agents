@@ -5,7 +5,7 @@
  */
 import * as path from "node:path";
 import * as url from "node:url";
-import { getProjectDir, logger, withTimeout } from "@oh-my-pi/pi-utils";
+import { getProjectDir, logger, withTimeout } from "@open-agents/utils";
 import { describeMCPTimeout, isMCPTimeoutEnabled, resolveMCPTimeoutMs } from "./timeout";
 import { createHttpTransport } from "./transports/http";
 import { createStdioTransport } from "./transports/stdio";
@@ -127,7 +127,7 @@ async function initializeConnection(
 /**
  * Connect to an MCP server.
  * Has a 30 second timeout by default to prevent blocking startup.
- * Set OMP_MCP_TIMEOUT_MS=0 to disable MCP client-side timeouts.
+ * Set OA_MCP_TIMEOUT_MS=0 to disable MCP client-side timeouts.
  */
 export async function connectToServer(
 	name: string,

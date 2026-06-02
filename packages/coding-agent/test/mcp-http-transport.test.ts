@@ -69,23 +69,23 @@ describe("HTTP MCP transport", () => {
 	});
 
 	describe("resolveSSEConnectTimeoutMs", () => {
-		const originalEnv = process.env.OMP_MCP_TIMEOUT_MS;
+		const originalEnv = process.env.OA_MCP_TIMEOUT_MS;
 
 		beforeEach(() => {
-			delete process.env.OMP_MCP_TIMEOUT_MS;
+			delete process.env.OA_MCP_TIMEOUT_MS;
 		});
 
 		afterEach(() => {
-			if (originalEnv === undefined) delete process.env.OMP_MCP_TIMEOUT_MS;
-			else process.env.OMP_MCP_TIMEOUT_MS = originalEnv;
+			if (originalEnv === undefined) delete process.env.OA_MCP_TIMEOUT_MS;
+			else process.env.OA_MCP_TIMEOUT_MS = originalEnv;
 		});
 
 		it("returns 0 when the server config disables the MCP timeout", () => {
 			expect(resolveSSEConnectTimeoutMs(0)).toBe(0);
 		});
 
-		it("returns 0 when OMP_MCP_TIMEOUT_MS disables the MCP timeout", () => {
-			process.env.OMP_MCP_TIMEOUT_MS = "0";
+		it("returns 0 when OA_MCP_TIMEOUT_MS disables the MCP timeout", () => {
+			process.env.OA_MCP_TIMEOUT_MS = "0";
 			expect(resolveSSEConnectTimeoutMs(undefined)).toBe(0);
 		});
 

@@ -2,16 +2,16 @@ import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
 import {
 	buildSearchDateQualifier,
 	GithubTool,
 	parsePrUnifiedDiff,
 	parseSearchDateBound,
-} from "@oh-my-pi/pi-coding-agent/tools/gh";
-import * as git from "@oh-my-pi/pi-coding-agent/utils/git";
-import { getAgentDir, hashPath, setAgentDir } from "@oh-my-pi/pi-utils";
+} from "@open-agents/coding-agent/tools/gh";
+import * as git from "@open-agents/coding-agent/utils/git";
+import { getAgentDir, hashPath, setAgentDir } from "@open-agents/utils";
 import * as z from "zod/v4";
 
 // Isolate every `git` invocation in this file from the developer's host

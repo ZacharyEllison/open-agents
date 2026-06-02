@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
-import * as ai from "@oh-my-pi/pi-ai";
-import { type Api, type AssistantMessage, getBundledModel, type Model } from "@oh-my-pi/pi-ai";
+import * as ai from "@open-agents/ai";
+import { type Api, type AssistantMessage, getBundledModel, type Model } from "@open-agents/ai";
 import { isSubcommand } from "../src/cli-commands";
 import { getDefault, getEnumValues, getUi } from "../src/config/settings-schema";
 import { TinyTitleDownloadProgressComponent } from "../src/modes/components/tiny-title-download-progress";
@@ -317,8 +317,8 @@ describe("tiny title download progress UI", () => {
 	});
 });
 
-describe("tiny-models CLI", () => {
-	it("registers tiny-models as a top-level subcommand", () => {
-		expect(isSubcommand("tiny-models")).toBe(true);
+describe("models CLI", () => {
+	it("registers models as a top-level subcommand", () => {
+		expect(isSubcommand("models")).toBe(true);
 	});
 });

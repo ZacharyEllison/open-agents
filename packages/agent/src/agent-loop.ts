@@ -8,13 +8,14 @@ import {
 	type Context,
 	EventStream,
 	isZodSchema,
+	type Model,
 	streamSimple,
 	type ToolResultMessage,
 	type TSchema,
 	validateToolArguments,
 	zodToWireSchema,
-} from "@oh-my-pi/pi-ai";
-import { sanitizeText } from "@oh-my-pi/pi-utils";
+} from "@open-agents/ai";
+import { sanitizeText } from "@open-agents/utils";
 import {
 	createHarmonyAuditEvent,
 	detectHarmonyLeakInAssistantMessage,
@@ -48,8 +49,10 @@ import type {
 	AgentMessage,
 	AgentTool,
 	AgentToolResult,
+	ModelTier,
 	StreamFn,
 } from "./types";
+import { getActiveModel, getActiveTier } from "./types";
 import { yieldIfDue } from "./utils/yield";
 
 /** Sentinel returned by the abort race in `streamAssistantResponse`. */
@@ -303,10 +306,7 @@ function createDetailedCapture(config: AgentLoopConfig): {
 	};
 }
 
-function normalizeMessagesForProvider(
-	messages: Context["messages"],
-	model: AgentLoopConfig["model"],
-): Context["messages"] {
+function normalizeMessagesForProvider(messages: Context["messages"], model: Model): Context["messages"] {
 	if (model.provider !== "cerebras") {
 		return messages;
 	}
@@ -367,7 +367,7 @@ function injectIntentIntoSchema(schema: unknown, mode: "require" | "optional" = 
 }
 
 export function normalizeTools(tools: AgentContext["tools"], injectIntent: boolean): Context["tools"] {
-	injectIntent = injectIntent && Bun.env.PI_NO_INTENT !== "1";
+	injectIntent = injectIntent && Bun.env.OA_NO_INTENT !== "1";
 	return tools?.map(t => {
 		const intentMode = resolveIntentMode(t.intent);
 		let parameters: TSchema = t.parameters;
@@ -411,7 +411,7 @@ async function runLoop(
 	streamFn?: StreamFn,
 ): Promise<void> {
 	const telemetry = resolveTelemetry(config.telemetry, config.sessionId);
-	const invokeAgentSpan = startInvokeAgentSpan(telemetry, config.model);
+	const invokeAgentSpan = startInvokeAgentSpan(telemetry, getActiveModel(config));
 	const stepCounter = { count: 0 };
 	let caughtError: unknown;
 	try {
@@ -673,7 +673,7 @@ async function emitHarmonyAudit(
 		createHarmonyAuditEvent({
 			action,
 			detection: interruption.detection,
-			model: config.model,
+			model: getActiveModel(config),
 			retryN,
 			removed: interruption.removed,
 		}),
@@ -703,7 +703,8 @@ async function streamAssistantResponse(
 
 	// Convert to LLM-compatible messages (AgentMessage[] → Message[])
 	const llmMessages = await config.convertToLlm(messages);
-	const normalizedMessages = normalizeMessagesForProvider(llmMessages, config.model);
+	const activeModel = getActiveModel(config);
+	const normalizedMessages = normalizeMessagesForProvider(llmMessages, activeModel);
 
 	// Build LLM context — append-only mode caches system prompt + tools
 	// AND keeps an append-only message log so prior-turn bytes are stable.
@@ -725,15 +726,15 @@ async function streamAssistantResponse(
 	// metadata so that the session-sticky credential recorded by getApiKey is
 	// visible to metadataResolver (e.g. for the correct account_uuid in metadata.user_id).
 	const resolvedApiKey =
-		(config.getApiKey ? await config.getApiKey(config.model.provider) : undefined) || config.apiKey;
+		(config.getApiKey ? await config.getApiKey(activeModel.provider) : undefined) || config.apiKey;
 
 	// Re-resolve metadata after credential selection so the per-request value
 	// reflects the credential actually used, not the snapshot from AgentLoopConfig construction.
-	const resolvedMetadata = config.metadataResolver ? config.metadataResolver(config.model.provider) : config.metadata;
+	const resolvedMetadata = config.metadataResolver ? config.metadataResolver(activeModel.provider) : config.metadata;
 
 	const dynamicToolChoice = config.getToolChoice?.();
 	const dynamicReasoning = config.getReasoning?.();
-	const harmonyMitigationEnabled = isHarmonyLeakMitigationTarget(config.model);
+	const harmonyMitigationEnabled = isHarmonyLeakMitigationTarget(activeModel);
 	const harmonyAbortController = harmonyMitigationEnabled ? new AbortController() : undefined;
 	const maxToolCallsPerTurn = normalizeMaxToolCallsPerTurn(config.maxToolCallsPerTurn);
 	const toolCallCapAbortController = maxToolCallsPerTurn === undefined ? undefined : new AbortController();
@@ -754,7 +755,7 @@ async function streamAssistantResponse(
 
 	const chatStepNumber = stepCounter.count;
 	stepCounter.count += 1;
-	const chatSpan = startChatSpan(telemetry, config.model, {
+	const chatSpan = startChatSpan(telemetry, activeModel, {
 		parent: invokeAgentSpan,
 		stepNumber: chatStepNumber,
 		request: {
@@ -787,13 +788,13 @@ async function streamAssistantResponse(
 			stepNumber: chatStepNumber,
 			serviceTier: config.serviceTier,
 			responseHeaders: capturedHeaders,
-			baseUrl: config.model.baseUrl,
+			baseUrl: activeModel.baseUrl,
 		});
 	};
 
 	try {
 		return await runInActiveSpan(chatSpan, async () => {
-			const response = await streamFunction(config.model, llmContext, {
+			const response = await streamFunction(activeModel, llmContext, {
 				...config,
 				apiKey: resolvedApiKey,
 				metadata: resolvedMetadata,
@@ -973,7 +974,7 @@ async function streamAssistantResponse(
 		failChatSpan(telemetry, chatSpan, {
 			errorObject: err,
 			responseHeaders: capturedHeaders,
-			baseUrl: config.model.baseUrl,
+			baseUrl: activeModel.baseUrl,
 		});
 		throw err;
 	}
@@ -992,9 +993,9 @@ function emitAbortedAssistantMessage(
 		: {
 				role: "assistant",
 				content: [],
-				api: config.model.api,
-				provider: config.model.provider,
-				model: config.model.id,
+				api: getActiveModel(config).api,
+				provider: getActiveModel(config).provider,
+				model: getActiveModel(config).id,
 				usage: {
 					input: 0,
 					output: 0,
@@ -1020,6 +1021,17 @@ function emitAbortedAssistantMessage(
 /**
  * Execute tool calls from an assistant message.
  */
+function isToolAllowedForTier(tool: AgentTool | undefined, tier: ModelTier): boolean {
+	if (!tool) return true;
+	const allowed = tool.allowedTiers;
+	if (!allowed || allowed.length === 0) return true;
+	return allowed.includes(tier);
+}
+
+function tierDeniedToolMessage(toolName: string): string {
+	return `Tool '${toolName}' requires the worker tier. Use the 'task' tool to delegate this work.`;
+}
+
 async function executeToolCalls(
 	currentContext: AgentContext,
 	assistantMessage: AssistantMessage,
@@ -1030,6 +1042,7 @@ async function executeToolCalls(
 	invokeAgentSpan: Span | undefined,
 ): Promise<{ toolResults: ToolResultMessage[]; steeringMessages?: AgentMessage[] }> {
 	const tools = currentContext.tools;
+	const activeTier = getActiveTier(config);
 	const {
 		getSteeringMessages,
 		interruptMode = "immediate",
@@ -1188,6 +1201,9 @@ async function executeToolCalls(
 		await runInActiveSpan(toolSpan, async () => {
 			try {
 				if (!tool) throw new Error(`Tool ${toolCall.name} not found`);
+				if (!isToolAllowedForTier(tool, activeTier)) {
+					throw new Error(tierDeniedToolMessage(toolCall.name));
+				}
 
 				let effectiveArgs: Record<string, unknown>;
 				try {

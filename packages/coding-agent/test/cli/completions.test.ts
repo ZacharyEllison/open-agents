@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import type { CliConfig, CommandCtor } from "@oh-my-pi/pi-utils/cli";
+import type { CliConfig, CommandCtor } from "@open-agents/utils/cli";
 import { buildSpec, type CompletionSpec, generateCompletion } from "../../src/cli/completion-gen";
 
 const repoRoot = path.resolve(import.meta.dir, "..", "..", "..", "..");
@@ -194,7 +194,7 @@ describe("omp completions (integration / drift)", () => {
 			cwd: repoRoot,
 			stdout: "pipe",
 			stderr: "pipe",
-			env: { ...process.env, NO_COLOR: "1", PI_NO_TITLE: "1" },
+			env: { ...process.env, NO_COLOR: "1", OA_NO_TITLE: "1" },
 		});
 		const [stdout, , exitCode] = await Promise.all([
 			new Response(proc.stdout).text(),

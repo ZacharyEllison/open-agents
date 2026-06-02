@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import { getThemeByName } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import { borderSegmentHeadCol, renderOutputBlock } from "@oh-my-pi/pi-coding-agent/tui";
+import { getThemeByName } from "@open-agents/coding-agent/modes/theme/theme";
+import { borderSegmentHeadCol, renderOutputBlock } from "@open-agents/coding-agent/tui";
 
 // Matches both truecolor (38;2;r;g;b) and 256-color (38;5;n) foreground escapes
 // so the assertions hold regardless of the detected terminal color mode.

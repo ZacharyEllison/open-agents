@@ -1,7 +1,7 @@
-import { INTENT_FIELD, type ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { Api, Model } from "@oh-my-pi/pi-ai";
-import { Markdown } from "@oh-my-pi/pi-tui";
-import { prompt } from "@oh-my-pi/pi-utils";
+import { INTENT_FIELD, type ThinkingLevel } from "@open-agents/agent";
+import type { Api, Model } from "@open-agents/ai";
+import { Markdown } from "@open-agents/tui";
+import { prompt } from "@open-agents/utils";
 import chalk from "chalk";
 import typesDescriptionPrompt from "../../commit/prompts/types-description.md" with { type: "text" };
 import type { ModelRegistry } from "../../config/model-registry";

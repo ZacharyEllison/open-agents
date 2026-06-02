@@ -75,10 +75,13 @@ export function parseEnvFile(filePath: string): Record<string, string> {
 		// File doesn't exist or can't be read - return empty result
 	}
 
-	// OMP_ overrides PI_
+	// Legacy OMP_ / PI_ keys mirror to OA_
 	for (const k in result) {
 		if (k.startsWith("OMP_")) {
-			result[`PI_${k.slice(4)}`] = result[k];
+			result[`OA_${k.slice(4)}`] = result[k];
+		}
+		if (k.startsWith("PI_")) {
+			result[`OA_${k.slice(3)}`] = result[k];
 		}
 	}
 
@@ -109,7 +112,7 @@ for (const file of [projectEnv, agentEnv, piEnv, homeEnv]) {
 /**
  * Intentional re-export of Bun.env.
  *
- * All users should import this env module (import { $env } from "@oh-my-pi/pi-utils")
+ * All users should import this env module (import { $env } from "@open-agents/utils")
  * before using environment variables. This ensures that .env files have been loaded and
  * overrides (project, home) have been applied, so $env always reflects the correct values.
  */
@@ -152,11 +155,11 @@ export function isBunTestRuntime(): boolean {
  * binary. Detects via the embedded virtual-filesystem path markers
  * (`$bunfs`, `~BUN`, or its URL-encoded form `%7EBUN`) in `import.meta.url`,
  * which Bun rewrites for every module bundled into the executable. The
- * `PI_COMPILED` env var (set by the build script's `--define`) is checked
+ * `OA_COMPILED` env var (set by the build script's `--define`) is checked
  * first for cheap fast-path detection.
  */
 export function isCompiledBinary(): boolean {
-	if (Bun.env.PI_COMPILED) return true;
+	if (Bun.env.OA_COMPILED) return true;
 	const url = import.meta.url;
 	return url.includes("$bunfs") || url.includes("~BUN") || url.includes("%7EBUN");
 }

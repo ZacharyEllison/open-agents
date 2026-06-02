@@ -1,5 +1,5 @@
-import type { SnapshotStore } from "@oh-my-pi/hashline";
-import type { AgentTool } from "@oh-my-pi/pi-agent-core";
+import type { AgentTool } from "@open-agents/agent";
+import type { SnapshotStore } from "@open-agents/hashline";
 import {
 	Box,
 	type Component,
@@ -12,8 +12,8 @@ import {
 	TERMINAL,
 	Text,
 	type TUI,
-} from "@oh-my-pi/pi-tui";
-import { getProjectDir, logger, sanitizeText } from "@oh-my-pi/pi-utils";
+} from "@open-agents/tui";
+import { getProjectDir, logger, sanitizeText } from "@open-agents/utils";
 import { EDIT_MODE_STRATEGIES, type EditMode, type PerFileDiffPreview } from "../../edit";
 import { shimmerEnabled } from "../../modes/theme/shimmer";
 import type { Theme } from "../../modes/theme/theme";

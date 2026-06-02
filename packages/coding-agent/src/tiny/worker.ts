@@ -7,7 +7,7 @@ import type {
 	TextGenerationStringOutput,
 	StoppingCriteria as TransformersStoppingCriteria,
 } from "@huggingface/transformers";
-import { getTinyModelsCacheDir, isCompiledBinary, prompt } from "@oh-my-pi/pi-utils";
+import { getTinyModelsCacheDir, isCompiledBinary, prompt } from "@open-agents/utils";
 import packageJson from "../../package.json" with { type: "json" };
 import tinyTitleSystemPrompt from "../prompts/system/tiny-title-system.md" with { type: "text" };
 import { resolveTinyModelDevicePreference, type TinyModelDevice, tinyModelDeviceLoadOrder } from "./device";
@@ -26,6 +26,8 @@ const TITLE_CLOSE = "</title>";
 const TITLE_MAX_NEW_TOKENS = 20;
 const STOP_DECODE_WINDOW_TOKENS = 32;
 const MEMORY_COMPLETION_MAX_NEW_TOKENS = 256;
+/** Compaction summaries need a larger decode budget than Mnemopi memory tasks. */
+const COMPACTION_SUMMARY_MAX_NEW_TOKENS = 2048;
 const TINY_TITLE_SYSTEM_PROMPT = prompt.render(tinyTitleSystemPrompt);
 const TRANSFORMERS_PACKAGE = "@huggingface/transformers";
 const sourceRequire = createRequire(import.meta.url);
@@ -477,11 +479,12 @@ async function generateCompletion(
 	modelKey: TinyLocalModelKey,
 	promptText: string,
 	maxTokens: number | undefined,
+	tokenCap: number,
 ): Promise<string | null> {
 	const generator = await loadPipeline(modelKey, transport, requestId);
 	const text = buildCompletionPrompt(generator, promptText);
-	const requested = maxTokens ?? MEMORY_COMPLETION_MAX_NEW_TOKENS;
-	const maxNewTokens = Math.min(Math.max(1, requested), MEMORY_COMPLETION_MAX_NEW_TOKENS);
+	const requested = maxTokens ?? tokenCap;
+	const maxNewTokens = Math.min(Math.max(1, requested), tokenCap);
 	const output = (await generator(text, {
 		max_new_tokens: maxNewTokens,
 		do_sample: false,
@@ -493,7 +496,7 @@ async function generateCompletion(
 
 function enqueueRequest(
 	transport: TinyTitleTransport,
-	request: Extract<TinyTitleWorkerInbound, { type: "generate" | "complete" | "download" }>,
+	request: Extract<TinyTitleWorkerInbound, { type: "generate" | "complete" | "summarize" | "download" }>,
 ): void {
 	generateQueue = generateQueue.then(
 		async () => {
@@ -507,7 +510,7 @@ function enqueueRequest(
 
 async function handleQueuedRequest(
 	transport: TinyTitleTransport,
-	request: Extract<TinyTitleWorkerInbound, { type: "generate" | "complete" | "download" }>,
+	request: Extract<TinyTitleWorkerInbound, { type: "generate" | "complete" | "summarize" | "download" }>,
 ): Promise<void> {
 	try {
 		if (request.type === "download") {
@@ -522,6 +525,19 @@ async function handleQueuedRequest(
 				request.modelKey,
 				request.prompt,
 				request.maxTokens,
+				MEMORY_COMPLETION_MAX_NEW_TOKENS,
+			);
+			transport.send({ type: "completion", id: request.id, text });
+			return;
+		}
+		if (request.type === "summarize") {
+			const text = await generateCompletion(
+				transport,
+				request.id,
+				request.modelKey,
+				request.prompt,
+				request.maxTokens,
+				COMPACTION_SUMMARY_MAX_NEW_TOKENS,
 			);
 			transport.send({ type: "completion", id: request.id, text });
 			return;

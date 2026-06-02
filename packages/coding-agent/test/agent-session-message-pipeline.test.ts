@@ -1,21 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import { Agent, type AgentMessage } from "@oh-my-pi/pi-agent-core";
+import { Agent, type AgentMessage } from "@open-agents/agent";
 import {
 	clearCustomApis,
 	type Message,
 	type Model,
 	registerCustomApi,
 	type SimpleStreamOptions,
-} from "@oh-my-pi/pi-ai";
-import { AssistantMessageEventStream } from "@oh-my-pi/pi-ai/utils/event-stream";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
+} from "@open-agents/ai";
+import { AssistantMessageEventStream } from "@open-agents/ai/utils/event-stream";
+import { Settings } from "@open-agents/coding-agent/config/settings";
 import {
 	AgentSession,
 	type AgentSessionEvent,
 	ANTHROPIC_TOOL_CALL_BATCH_CAP,
 	resolveToolCallBatchCapForModel,
-} from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
+} from "@open-agents/coding-agent/session/agent-session";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
 import { createAssistantMessage } from "./helpers/agent-session-setup";
 
 function createAgent(): Agent {

@@ -4,7 +4,7 @@
  * Handles `omp setup` for onboarding and `omp setup <component>` for optional dependencies.
  */
 import * as path from "node:path";
-import { $which, APP_NAME, getPythonEnvDir } from "@oh-my-pi/pi-utils";
+import { $which, APP_NAME, getPythonEnvDir } from "@open-agents/utils";
 import { $ } from "bun";
 import chalk from "chalk";
 import { theme } from "../modes/theme/theme";

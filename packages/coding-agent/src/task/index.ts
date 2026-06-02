@@ -15,12 +15,12 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import path from "node:path";
-import type { AgentTool, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import type { Usage } from "@oh-my-pi/pi-ai";
-import { $env, prompt, Snowflake } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolResult, AgentToolUpdateCallback } from "@open-agents/agent";
+import type { Usage } from "@open-agents/ai";
+import { $env, prompt, Snowflake } from "@open-agents/utils";
 import type { ToolSession } from "..";
 import { AsyncJobManager } from "../async";
-import { resolveAgentModelPatterns } from "../config/model-resolver";
+import { resolveConfiguredModelPatterns } from "../config/model-resolver";
 import { MCPManager } from "../mcp/manager";
 import type { Theme } from "../modes/theme/theme";
 import planModeSubagentPrompt from "../prompts/system/plan-mode-subagent.md" with { type: "text" };
@@ -271,7 +271,7 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 		private readonly session: ToolSession,
 		discoveredAgents: AgentDefinition[],
 	) {
-		this.#blockedAgent = $env.PI_BLOCKED_AGENT;
+		this.#blockedAgent = $env.OA_BLOCKED_AGENT;
 		this.#discoveredAgents = discoveredAgents;
 	}
 
@@ -645,17 +645,11 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 				}
 			: agent;
 
-		// Apply per-agent model override from settings (highest priority)
-		const agentModelOverrides = this.session.settings.get("task.agentModelOverrides");
-		const settingsModelOverride = agentModelOverrides[agentName];
 		const parentActiveModelPattern = this.session.getActiveModelString?.();
-		const modelOverride = resolveAgentModelPatterns({
-			settingsOverride: settingsModelOverride,
-			agentModel: effectiveAgent.model,
-			settings: this.session.settings,
-			activeModelPattern: parentActiveModelPattern,
-			fallbackModelPattern: this.session.getModelString?.(),
-		});
+
+		// Delegated work always routes to the worker tier model.
+		const workerPattern = this.session.settings.getModelTier("worker");
+		const modelOverride = workerPattern ? resolveConfiguredModelPatterns(workerPattern, this.session.settings) : [];
 		const thinkingLevelOverride = effectiveAgent.thinkingLevel;
 
 		// Output schema priority: task call > agent frontmatter > inherited parent session.

@@ -9,7 +9,7 @@ import {
 	getProjectPluginOverridesPath,
 	isEnoent,
 	logger,
-} from "@oh-my-pi/pi-utils";
+} from "@open-agents/utils";
 import { type GitSource, parseGitUrl } from "./git-url";
 import { extractPackageName, parsePluginSpec } from "./parser";
 import type {

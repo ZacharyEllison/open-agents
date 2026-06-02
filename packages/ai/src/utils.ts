@@ -1,10 +1,10 @@
-import { $env } from "@oh-my-pi/pi-utils";
+import { $env } from "@open-agents/utils";
 import type { ResponseInput } from "openai/resources/responses/responses";
 import type { CacheRetention, OpenAIResponsesHistoryPayload, ProviderPayload } from "./types";
 
 type OpenAIResponsesReplayItem = ResponseInput[number];
 
-export { isRecord } from "@oh-my-pi/pi-utils";
+export { isRecord } from "@open-agents/utils";
 export function normalizeSystemPrompts(systemPrompt: readonly string[] | string | undefined | null): string[] {
 	if (systemPrompt === undefined || systemPrompt === null) return [];
 	const prompts = Array.isArray(systemPrompt) ? systemPrompt : typeof systemPrompt === "string" ? [systemPrompt] : [];
@@ -153,11 +153,11 @@ export function getOpenAIResponsesHistoryItems(
 
 /**
  * Resolve cache retention preference.
- * Defaults to "short" and uses PI_CACHE_RETENTION for backward compatibility.
+ * Defaults to "short" and uses OA_CACHE_RETENTION for backward compatibility.
  */
 export function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
 	if (cacheRetention) return cacheRetention;
-	if ($env.PI_CACHE_RETENTION === "long") return "long";
+	if ($env.OA_CACHE_RETENTION === "long") return "long";
 	return "short";
 }
 

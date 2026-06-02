@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import * as ai from "@oh-my-pi/pi-ai";
-import { type Api, getBundledModel, type Model } from "@oh-my-pi/pi-ai";
+import * as ai from "@open-agents/ai";
+import { type Api, getBundledModel, type Model } from "@open-agents/ai";
 import { generateSessionTitle } from "../src/utils/title-generator";
 
 function getModelOrThrow(id: string): Model<Api> {

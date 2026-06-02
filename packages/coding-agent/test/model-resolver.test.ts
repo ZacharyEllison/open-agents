@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Effort, type Model } from "@oh-my-pi/pi-ai";
+import { Effort, type Model } from "@open-agents/ai";
 import {
 	expandRoleAlias,
 	parseModelPattern,
@@ -10,8 +10,8 @@ import {
 	resolveModelOverride,
 	resolveModelRoleValue,
 	resolveModelScope,
-} from "@oh-my-pi/pi-coding-agent/config/model-resolver";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
+} from "@open-agents/coding-agent/config/model-resolver";
+import { Settings } from "@open-agents/coding-agent/config/settings";
 
 // Mock models for testing
 const mockModels: Model<"anthropic-messages">[] = [
@@ -481,7 +481,7 @@ describe("resolveModelRoleValue", () => {
 describe("resolveAgentModelPatterns", () => {
 	test("falls back to the active session model when pi/task is unset", () => {
 		const settings = Settings.isolated({
-			modelRoles: { default: "anthropic/claude-sonnet-4-5" },
+			modelTiers: { default: "anthropic/claude-sonnet-4-5" },
 		});
 
 		const result = resolveAgentModelPatterns({
@@ -495,7 +495,7 @@ describe("resolveAgentModelPatterns", () => {
 
 	test("uses the configured task role before falling back to the session model", () => {
 		const settings = Settings.isolated({
-			modelRoles: {
+			modelTiers: {
 				default: "openai/gpt-4o",
 				task: "anthropic/claude-sonnet-4-5:high",
 			},
@@ -512,7 +512,7 @@ describe("resolveAgentModelPatterns", () => {
 
 	test("expands pi/designer to priority defaults", () => {
 		const settings = Settings.isolated({
-			modelRoles: {
+			modelTiers: {
 				default: "anthropic/claude-sonnet-4-5",
 			},
 		});
@@ -534,7 +534,7 @@ describe("resolveAgentModelPatterns", () => {
 
 	test("prefers configured designer role override over priority defaults", () => {
 		const settings = Settings.isolated({
-			modelRoles: {
+			modelTiers: {
 				default: "anthropic/claude-sonnet-4-5",
 				designer: "openai/gpt-4o",
 			},

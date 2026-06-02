@@ -6,7 +6,7 @@
  * Requests per-result summaries via `contents.summary` and synthesizes
  * them into a combined `answer` string on the SearchResponse.
  */
-import { type AuthStorage, getEnvApiKey } from "@oh-my-pi/pi-ai";
+import { type AuthStorage, getEnvApiKey } from "@open-agents/ai";
 import { settings } from "../../../config/settings";
 
 import type { SearchResponse, SearchSource } from "../../../web/search/types";

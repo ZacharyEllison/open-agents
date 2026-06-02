@@ -11,8 +11,8 @@
  * The call is oneshot and toolless from the model's perspective — pure text
  * in, text (or, with `schema`, a structured object) out.
  */
-import { instrumentedCompleteSimple, resolveTelemetry } from "@oh-my-pi/pi-agent-core";
-import { type Api, Effort, getSupportedEfforts, type Model, type Tool } from "@oh-my-pi/pi-ai";
+import { instrumentedCompleteSimple, resolveTelemetry } from "@open-agents/agent";
+import { type Api, Effort, getSupportedEfforts, type Model, type Tool } from "@open-agents/ai";
 import * as z from "zod/v4";
 import { extractTextContent, extractToolCall, parseJsonPayload } from "../commit/utils";
 import { expandRoleAlias, formatModelString, resolveModelFromString } from "../config/model-resolver";

@@ -3,9 +3,9 @@ import { HookEditorComponent, HookInputComponent, HookSelectorComponent } from "
 // Core session management
 
 // Re-export TUI components for custom tool rendering
-export { Container, Markdown, Spacer, Text } from "@oh-my-pi/pi-tui";
+export { Container, Markdown, Spacer, Text } from "@open-agents/tui";
 // Logging
-export { getAgentDir, logger, VERSION } from "@oh-my-pi/pi-utils";
+export { getAgentDir, logger, VERSION } from "@open-agents/utils";
 export * from "./config/keybindings";
 export * from "./config/model-registry";
 // Prompt templates

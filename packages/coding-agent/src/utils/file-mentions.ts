@@ -7,12 +7,12 @@
  */
 import * as fs from "node:fs/promises";
 import path from "node:path";
-import { formatHashlineHeader, formatNumberedLines, type SnapshotStore } from "@oh-my-pi/hashline";
-import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import type { ImageContent } from "@oh-my-pi/pi-ai";
-import { glob } from "@oh-my-pi/pi-natives";
-import { fuzzyMatch } from "@oh-my-pi/pi-tui";
-import { formatAge, formatBytes, readImageMetadata } from "@oh-my-pi/pi-utils";
+import type { AgentMessage } from "@open-agents/agent";
+import type { ImageContent } from "@open-agents/ai";
+import { formatHashlineHeader, formatNumberedLines, type SnapshotStore } from "@open-agents/hashline";
+import { glob } from "@open-agents/natives";
+import { fuzzyMatch } from "@open-agents/tui";
+import { formatAge, formatBytes, readImageMetadata } from "@open-agents/utils";
 import { normalizeToLF } from "../edit/normalize";
 import type { FileMentionMessage } from "../session/messages";
 import {

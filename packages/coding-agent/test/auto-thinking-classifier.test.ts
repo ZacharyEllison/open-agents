@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import { Effort, getBundledModel } from "@oh-my-pi/pi-ai";
+import { ThinkingLevel } from "@open-agents/agent";
+import { Effort, getBundledModel } from "@open-agents/ai";
 import {
 	AUTO_THINKING,
 	clampAutoThinkingEffort,
 	parseConfiguredThinkingLevel,
 	parseThinkingLevel,
-} from "@oh-my-pi/pi-coding-agent/thinking";
+} from "@open-agents/coding-agent/thinking";
 import { parseDifficultyBucket, parseDifficultyLevel } from "../src/auto-thinking/classifier";
 
 describe("auto thinking classifier helpers", () => {

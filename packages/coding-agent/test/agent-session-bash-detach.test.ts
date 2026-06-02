@@ -41,17 +41,17 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Agent, type AgentMessage, type AgentTool } from "@oh-my-pi/pi-agent-core";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
-import { createMockModel, type MockResponse } from "@oh-my-pi/pi-ai/providers/mock";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { convertToLlm } from "@oh-my-pi/pi-coding-agent/session/messages";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { BashTool, type ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { Snowflake } from "@oh-my-pi/pi-utils";
+import { Agent, type AgentMessage, type AgentTool } from "@open-agents/agent";
+import { getBundledModel } from "@open-agents/ai";
+import { createMockModel, type MockResponse } from "@open-agents/ai/providers/mock";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { convertToLlm } from "@open-agents/coding-agent/session/messages";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { BashTool, type ToolSession } from "@open-agents/coding-agent/tools";
+import { Snowflake } from "@open-agents/utils";
 
 /** Scripted assistant turn that issues a single `bash` tool call. */
 function bashCall(command: string, callId: string): MockResponse {

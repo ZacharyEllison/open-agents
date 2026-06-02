@@ -14,8 +14,8 @@ try {
  * CLI entry point — registers all commands explicitly and delegates to the
  * lightweight CLI runner from pi-utils.
  */
-import { type CliConfig, run } from "@oh-my-pi/pi-utils/cli";
-import { APP_NAME, MIN_BUN_VERSION, VERSION } from "@oh-my-pi/pi-utils/dirs";
+import { type CliConfig, run } from "@open-agents/utils/cli";
+import { APP_NAME, MIN_BUN_VERSION, VERSION } from "@open-agents/utils/dirs";
 import { commands, isSubcommand } from "./cli-commands";
 
 if (Bun.semver.order(Bun.version, MIN_BUN_VERSION) < 0) {
@@ -28,7 +28,7 @@ if (Bun.semver.order(Bun.version, MIN_BUN_VERSION) < 0) {
 process.title = APP_NAME;
 
 async function showHelp(config: CliConfig): Promise<void> {
-	const { renderRootHelp } = await import("@oh-my-pi/pi-utils/cli");
+	const { renderRootHelp } = await import("@open-agents/utils/cli");
 	const { getExtraHelpText } = await import("./cli/args");
 	renderRootHelp(config);
 	const extra = getExtraHelpText();
@@ -47,7 +47,7 @@ async function showHelp(config: CliConfig): Promise<void> {
  * tarball installs all exercise it on every CI run.
  */
 async function runSmokeTest(): Promise<void> {
-	const { smokeTestSyncWorker } = await import("@oh-my-pi/omp-stats");
+	const { smokeTestSyncWorker } = await import("@open-agents/stats");
 	const { smokeTestTinyTitleWorker } = await import("./tiny/title-client");
 	await smokeTestSyncWorker();
 	await smokeTestTinyTitleWorker();

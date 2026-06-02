@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
-import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import type { AutocompleteProvider, SlashCommand } from "@oh-my-pi/pi-tui";
-import { $env, sanitizeText } from "@oh-my-pi/pi-utils";
+import type { AgentMessage } from "@open-agents/agent";
+import type { AutocompleteProvider, SlashCommand } from "@open-agents/tui";
+import { $env, sanitizeText } from "@open-agents/utils";
 import { getRoleInfo } from "../../config/model-registry";
 import { isSettingsInitialized, settings } from "../../config/settings";
 import { renderSegmentTrack } from "../../modes/components/segment-track";
@@ -378,7 +378,7 @@ export class InputController {
 
 			// Generate session title on first message
 			const hasUserMessages = this.ctx.session.messages.some((m: AgentMessage) => m.role === "user");
-			if (!hasUserMessages && !this.ctx.sessionManager.getSessionName() && !$env.PI_NO_TITLE) {
+			if (!hasUserMessages && !this.ctx.sessionManager.getSessionName() && !$env.OA_NO_TITLE) {
 				this.#showTinyTitleDownloadProgress(this.ctx.settings.get("providers.tinyModel"));
 				const registry = this.ctx.session.modelRegistry;
 				generateSessionTitle(
@@ -770,8 +770,8 @@ export class InputController {
 
 	async cycleRoleModel(direction: "forward" | "backward" = "forward"): Promise<void> {
 		try {
-			const cycleOrder = settings.get("cycleOrder");
-			const result = await this.ctx.session.cycleRoleModels(cycleOrder, direction);
+			const tierOrder = ["interface", "worker", "compactor"] as const;
+			const result = await this.ctx.session.cycleRoleModels(tierOrder, direction);
 			if (!result) {
 				this.ctx.showStatus("Only one role model available");
 				return;
@@ -783,8 +783,8 @@ export class InputController {
 			// the cycle status is just a status-line-style chip track (active role
 			// filled), matching the plan-approval model slider.
 			const track = renderSegmentTrack(
-				cycleOrder.map(role => ({ label: role, color: getRoleInfo(role, settings).color })),
-				cycleOrder.indexOf(result.role),
+				tierOrder.map(tier => ({ label: tier, color: getRoleInfo(tier, settings).color })),
+				tierOrder.indexOf(result.role as (typeof tierOrder)[number]),
 			);
 			this.ctx.showStatus(track, { dim: false });
 		} catch (error) {

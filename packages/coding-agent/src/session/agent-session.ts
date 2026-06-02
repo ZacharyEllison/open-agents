@@ -13,12 +13,10 @@
  * Modes use this class and add their own I/O layer on top.
  */
 
-import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scheduler } from "node:timers/promises";
 import { isPromise } from "node:util/types";
-import type { InMemorySnapshotStore } from "@oh-my-pi/hashline";
 import {
 	type AfterToolCallContext,
 	type AfterToolCallResult,
@@ -31,7 +29,7 @@ import {
 	AppendOnlyContextManager,
 	resolveTelemetry,
 	ThinkingLevel,
-} from "@oh-my-pi/pi-agent-core";
+} from "@open-agents/agent";
 import {
 	AGGRESSIVE_SHAKE_CONFIG,
 	AUTO_HANDOFF_THRESHOLD_FOCUS,
@@ -53,8 +51,8 @@ import {
 	type ShakeRegion,
 	type SummaryOptions,
 	shouldCompact,
-} from "@oh-my-pi/pi-agent-core/compaction";
-import { DEFAULT_PRUNE_CONFIG, pruneToolOutputs } from "@oh-my-pi/pi-agent-core/compaction/pruning";
+} from "@open-agents/agent/compaction";
+import { DEFAULT_PRUNE_CONFIG, pruneToolOutputs } from "@open-agents/agent/compaction/pruning";
 import type {
 	AssistantMessage,
 	Context,
@@ -71,10 +69,9 @@ import type {
 	ToolChoice,
 	Usage,
 	UsageReport,
-} from "@oh-my-pi/pi-ai";
+} from "@open-agents/ai";
 import {
 	calculateRateLimitBackoffMs,
-	clearAnthropicFastModeFallback,
 	Effort,
 	getSupportedEfforts,
 	isContextOverflow,
@@ -83,23 +80,24 @@ import {
 	parseRateLimitReason,
 	resolveServiceTier,
 	streamSimple,
-} from "@oh-my-pi/pi-ai";
-import { countTokens, MacOSPowerAssertion } from "@oh-my-pi/pi-natives";
+} from "@open-agents/ai";
+import type { InMemorySnapshotStore } from "@open-agents/hashline";
+import { countTokens, MacOSPowerAssertion } from "@open-agents/natives";
 import {
 	extractRetryHint,
 	getAgentDbPath,
-	getInstallId,
 	isEnoent,
 	isUnexpectedSocketCloseMessage,
 	logger,
 	prompt,
 	Snowflake,
-} from "@oh-my-pi/pi-utils";
+} from "@open-agents/utils";
 import { type AsyncJob, type AsyncJobDeliveryState, AsyncJobManager } from "../async";
 import { classifyDifficulty } from "../auto-thinking/classifier";
 import { reset as resetCapabilities } from "../capability";
 import type { Rule } from "../capability/rule";
-import { MODEL_ROLE_IDS, type ModelRegistry } from "../config/model-registry";
+import { createCompactorOnnxSummarizer } from "../compaction/compactor-onnx";
+import type { ModelRegistry } from "../config/model-registry";
 import {
 	extractExplicitThinkingSelector,
 	formatModelSelectorValue,
@@ -571,28 +569,10 @@ function dedupeIrcReply(text: string): string {
  */
 function buildSessionMetadata(
 	sessionId: string,
-	provider: string,
-	authStorage: AuthStorage | undefined,
+	_provider: string,
+	_authStorage: AuthStorage | undefined,
 ): Record<string, unknown> {
 	const userId: Record<string, string> = { session_id: sessionId };
-	// Only look up account_uuid when the request is going to Anthropic. Injecting
-	// a Claude OAuth account_uuid into requests bound for other providers (including
-	// Anthropic-format-compatible proxies like cloudflare-ai-gateway or gitlab-duo)
-	// would leak the user's Anthropic identity to unrelated third-party APIs.
-	if (provider === "anthropic") {
-		const accountUuid = authStorage?.getOAuthAccountId("anthropic", sessionId);
-		if (typeof accountUuid === "string" && accountUuid.length > 0) {
-			userId.account_uuid = accountUuid;
-			// Claude Code's `device_id` is a stable 64-hex install identifier. Use
-			// omp's persistent install id as the root instead of deriving it from
-			// `account_uuid`: logging into a different Claude account on the same
-			// install should not make the device look new.
-			userId.device_id = crypto
-				.createHash("sha256")
-				.update(`omp-claude-device-id-v1:${getInstallId()}`)
-				.digest("hex");
-		}
-	}
 	return { user_id: JSON.stringify(userId) };
 }
 
@@ -5548,9 +5528,6 @@ export class AgentSession {
 		// again. Without this, `/fast on` (or user switching to a tier that
 		// grants anthropic priority) after an auto-disable is a silent no-op
 		// and the warning notice fires every turn.
-		if (serviceTier === "priority" || serviceTier === "claude-only") {
-			clearAnthropicFastModeFallback(this.#providerSessionState);
-		}
 		this.agent.serviceTier = serviceTier;
 		this.sessionManager.appendServiceTierChange(serviceTier ?? null);
 	}
@@ -6771,10 +6748,6 @@ export class AgentSession {
 		);
 	}
 
-	#getModelKey(model: Model): string {
-		return `${model.provider}/${model.id}`;
-	}
-
 	#formatRoleModelValue(
 		role: string,
 		model: Model,
@@ -6827,37 +6800,8 @@ export class AgentSession {
 	}
 
 	#getCompactionModelCandidates(availableModels: Model[]): Model[] {
-		const candidates: Model[] = [];
-		const seen = new Set<string>();
-
-		const addCandidate = (model: Model | undefined): void => {
-			if (!model) return;
-			const key = this.#getModelKey(model);
-			if (seen.has(key)) return;
-			seen.add(key);
-			candidates.push(model);
-		};
-
-		const currentModel = this.model;
-		// Prefer the active session's model: it's what the user is actively using,
-		// and routing compaction to a different provider (e.g. an OpenAI default
-		// model while the chat is on Anthropic) changes provider-specific behavior
-		// like remote compaction endpoints. Role-based candidates only kick in
-		// as auth fallbacks when the current model has no usable credentials.
-		addCandidate(currentModel);
-		for (const role of MODEL_ROLE_IDS) {
-			addCandidate(this.#resolveRoleModelFull(role, availableModels, currentModel).model);
-		}
-
-		const sortedByContext = [...availableModels].sort((a, b) => b.contextWindow - a.contextWindow);
-		for (const model of sortedByContext) {
-			if (!seen.has(this.#getModelKey(model))) {
-				addCandidate(model);
-				break;
-			}
-		}
-
-		return candidates;
+		const compactor = this.#resolveRoleModelFull("compactor", availableModels, this.model).model;
+		return compactor ? [compactor] : [];
 	}
 	#isCompactionAuthFailure(error: unknown): boolean {
 		if (!(error instanceof Error)) return false;
@@ -6881,8 +6825,13 @@ export class AgentSession {
 		}
 		return new Error(
 			`Compaction requires usable credentials for ${currentModel.provider}/${currentModel.id}. ` +
-				`Configure ${currentModel.provider} credentials or assign an authenticated fallback role such as modelRoles.smol.`,
+				`Configure ${currentModel.provider} credentials or assign modelTiers.compactor.`,
 		);
+	}
+
+	#compactionSummaryOptions(extra?: SummaryOptions): SummaryOptions {
+		const onnxSummarizer = createCompactorOnnxSummarizer(this.settings);
+		return onnxSummarizer ? { ...extra, onnxSummarizer } : { ...extra };
 	}
 
 	async #compactWithFallbackModel(
@@ -6893,14 +6842,15 @@ export class AgentSession {
 	): Promise<CompactionResult> {
 		const candidates = this.#getCompactionModelCandidates(this.#modelRegistry.getAvailable());
 		const telemetry = resolveTelemetry(this.agent.telemetry, this.sessionId);
+		const summaryOptions = this.#compactionSummaryOptions(options);
 
 		for (const candidate of candidates) {
 			const apiKey = await this.#modelRegistry.getApiKey(candidate, this.sessionId);
-			if (!apiKey) continue;
+			if (!summaryOptions.onnxSummarizer && !apiKey) continue;
 
 			try {
-				return await compact(preparation, candidate, apiKey, customInstructions, signal, {
-					...options,
+				return await compact(preparation, candidate, apiKey ?? "", customInstructions, signal, {
+					...summaryOptions,
 					metadata: this.agent.metadataForProvider(candidate.provider),
 					convertToLlm,
 					telemetry,
@@ -7179,30 +7129,36 @@ export class AgentSession {
 				const candidates = this.#getCompactionModelCandidates(availableModels);
 				const retrySettings = this.settings.getGroup("retry");
 				const telemetry = resolveTelemetry(this.agent.telemetry, this.sessionId);
+				const autoSummaryOptions = this.#compactionSummaryOptions({
+					promptOverride: compactionPrep.hookPrompt,
+					extraContext: compactionPrep.hookContext,
+					remoteInstructions: this.#baseSystemPrompt.join("\n\n"),
+					initiatorOverride: "agent",
+					thinkingLevel: this.thinkingLevel,
+				});
 				let compactResult: CompactionResult | undefined;
 				let lastError: unknown;
 
 				for (const candidate of candidates) {
 					const apiKey = await this.#modelRegistry.getApiKey(candidate, this.sessionId);
-					if (!apiKey) continue;
+					if (!autoSummaryOptions.onnxSummarizer && !apiKey) continue;
 
 					let attempt = 0;
 					while (true) {
 						try {
-							compactResult = await compact(preparation, candidate, apiKey, undefined, autoCompactionSignal, {
-								promptOverride: compactionPrep.hookPrompt,
-								extraContext: compactionPrep.hookContext,
-								remoteInstructions: this.#baseSystemPrompt.join("\n\n"),
-								metadata: this.agent.metadataForProvider(candidate.provider),
-								initiatorOverride: "agent",
-								convertToLlm,
-								telemetry,
-								// Honor the user's /model thinking selection on the
-								// auto-compaction path — the most-fired compaction
-								// site. Clamped per-model inside compact() via
-								// resolveCompactionEffort.
-								thinkingLevel: this.thinkingLevel,
-							});
+							compactResult = await compact(
+								preparation,
+								candidate,
+								apiKey ?? "",
+								undefined,
+								autoCompactionSignal,
+								{
+									...autoSummaryOptions,
+									metadata: this.agent.metadataForProvider(candidate.provider),
+									convertToLlm,
+									telemetry,
+								},
+							);
 							break;
 						} catch (error) {
 							if (autoCompactionSignal.aborted) {

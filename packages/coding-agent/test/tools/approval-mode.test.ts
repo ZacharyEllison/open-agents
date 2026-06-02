@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentToolContext } from "@oh-my-pi/pi-agent-core";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { createAgentSession } from "@oh-my-pi/pi-coding-agent/sdk";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { Snowflake } from "@oh-my-pi/pi-utils";
+import type { AgentToolContext } from "@open-agents/agent";
+import { getBundledModel } from "@open-agents/ai";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { createAgentSession } from "@open-agents/coding-agent/sdk";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { Snowflake } from "@open-agents/utils";
 
 const BASE_SETTINGS = {
 	"async.enabled": false,

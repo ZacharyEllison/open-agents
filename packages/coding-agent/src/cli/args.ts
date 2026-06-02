@@ -1,8 +1,8 @@
 /**
  * CLI argument parsing and help display
  */
-import { type Effort, THINKING_EFFORTS } from "@oh-my-pi/pi-ai";
-import { APP_NAME, CONFIG_DIR_NAME, logger } from "@oh-my-pi/pi-utils";
+import { type Effort, THINKING_EFFORTS } from "@open-agents/ai";
+import { APP_NAME, CONFIG_DIR_NAME, logger } from "@open-agents/utils";
 import chalk from "chalk";
 import { parseEffort } from "../thinking";
 import { BUILTIN_TOOLS } from "../tools";
@@ -291,12 +291,12 @@ export function getExtraHelpText(): string {
   ANTHROPIC_SEARCH_BASE_URL  - Anthropic web search base URL (override; pairs with ANTHROPIC_SEARCH_API_KEY)
 
   ${chalk.dim("# Configuration")}
-  PI_CODING_AGENT_DIR        - Session storage directory (default: ~/${CONFIG_DIR_NAME}/agent)
+  OA_AGENT_DIR        - Session storage directory (default: ~/${CONFIG_DIR_NAME}/agent)
   PI_PACKAGE_DIR             - Override package directory (for Nix/Guix store paths)
-  PI_SMOL_MODEL              - Override smol/fast model (see --smol)
-  PI_SLOW_MODEL              - Override slow/reasoning model (see --slow)
-  PI_PLAN_MODEL              - Override planning model (see --plan)
-  PI_NO_PTY                  - Disable PTY-based interactive bash execution
+  OA_SMOL_MODEL              - Override smol/fast model (see --smol)
+  OA_SLOW_MODEL              - Override slow/reasoning model (see --slow)
+  OA_PLAN_MODEL              - Override planning model (see --plan)
+  OA_NO_PTY                  - Disable PTY-based interactive bash execution
 
   For complete environment variable reference, see:
   ${chalk.dim("docs/environment-variables.md")}

@@ -1,6 +1,6 @@
 # Plugin manager and installer plumbing
 
-This document describes how `omp plugin` npm/link operations mutate plugin state on disk and how installed npm/link plugins become runtime capabilities (tools and extensions today, hooks/commands path resolution available). Marketplace installs use separate marketplace registries and cache plumbing; see `docs/marketplace.md`.
+This document describes how `open-agent plugin` npm/link operations mutate plugin state on disk and how installed npm/link plugins become runtime capabilities (tools and extensions today, hooks/commands path resolution available). Marketplace installs use separate marketplace registries and cache plumbing; see `docs/marketplace.md`.
 
 ## Scope and architecture
 
@@ -9,25 +9,25 @@ There are two plugin-management implementations in the codebase:
 1. **Active path used by CLI commands**: `PluginManager` (`src/extensibility/plugins/manager.ts`)
 2. **Legacy helper module**: installer functions (`src/extensibility/plugins/installer.ts`)
 
-`omp plugin` npm/link actions go through `PluginManager`; marketplace actions go through `MarketplaceManager`.
+`open-agent plugin` npm/link actions go through `PluginManager`; marketplace actions go through `MarketplaceManager`.
 
 `installer.ts` still documents important safety checks and filesystem behavior, but it is not the path used by `src/commands/plugin.ts` + `src/cli/plugin-cli.ts`.
 
 ## Lifecycle: from CLI invocation to runtime availability
 
 ```text
-omp plugin <npm/link action> ...
+open-agent plugin <npm/link action> ...
   -> src/commands/plugin.ts
   -> runPluginCommand(...) in src/cli/plugin-cli.ts
   -> PluginManager method (install/list/uninstall/link/...)
-  -> mutate ~/.omp/plugins/{package.json,node_modules,omp-plugins.lock.json}
+  -> mutate ~/.open-agent/plugins/{package.json,node_modules,open-agent-plugins.lock.json}
   -> runtime discovery: discoverAndLoadCustomTools(...) and discoverAndLoadExtensions(...)
   -> getAllPluginToolPaths(cwd) / getAllPluginExtensionPaths(cwd)
   -> custom tool loader imports tool modules; extension loader imports extension modules
 
-omp plugin install name@marketplace / omp install name@marketplace
+open-agent plugin install name@marketplace / open-agent install name@marketplace
   -> MarketplaceManager
-  -> mutate ~/.omp/marketplaces.json, ~/.omp/plugins/installed_plugins.json, cache dirs
+  -> mutate ~/.open-agent/marketplaces.json, ~/.open-agent/plugins/installed_plugins.json, cache dirs
   -> installed marketplace plugin cache is surfaced as plugin roots/capabilities
 ```
 
@@ -41,27 +41,27 @@ omp plugin install name@marketplace / omp install name@marketplace
 
 ## On-disk model
 
-Global plugin state lives under `~/.omp/plugins`:
+Global plugin state lives under `~/.open-agent/plugins`:
 
 - `package.json` — dependency manifest used by `bun install`/`bun uninstall` for npm-installed plugins
 - `node_modules/` — installed npm plugin packages or symlinks
-- `omp-plugins.lock.json` — runtime state for npm/link plugins:
+- `open-agent-plugins.lock.json` — runtime state for npm/link plugins:
   - enabled/disabled per plugin
   - selected feature set per plugin
   - persisted plugin settings
 
 Project-local overrides live at:
 
-- `<cwd>/.omp/plugin-overrides.json`
+- `<cwd>/.open-agent/plugin-overrides.json`
 
 Overrides are read-only from manager/loader perspective (no write path here) and can disable plugins or override features/settings for this project.
 
 Marketplace registries live separately:
 
-- `~/.omp/marketplaces.json` — configured marketplace catalogs
-- `~/.omp/plugins/installed_plugins.json` — user-scoped marketplace installs
-- `<cwd>/.omp/plugins/installed_plugins.json` — project-scoped marketplace installs when available
-- `~/.omp/plugins/cache/{marketplaces,plugins}/` — cached catalogs and plugin directories
+- `~/.open-agent/marketplaces.json` — configured marketplace catalogs
+- `~/.open-agent/plugins/installed_plugins.json` — user-scoped marketplace installs
+- `<cwd>/.open-agent/plugins/installed_plugins.json` — project-scoped marketplace installs when available
+- `~/.open-agent/plugins/cache/{marketplaces,plugins}/` — cached catalogs and plugin directories
 
 ## Plugin spec parsing and metadata interpretation
 
@@ -99,7 +99,7 @@ Malformed `package.json` JSON is a hard failure at read time; malformed manifest
 1. Parse feature bracket syntax from install spec.
 2. Validate package name against regex + shell-metacharacter denylist.
 3. Ensure plugin `package.json` exists (`omp-plugins`, private dependencies map).
-4. Run `bun install <packageSpec>` in `~/.omp/plugins`.
+4. Run `bun install <packageSpec>` in `~/.open-agent/plugins`.
 5. Read installed package `node_modules/<name>/package.json`.
 6. Resolve manifest and compute `enabledFeatures`:
    - `[*]`: all declared features (or `null` if no feature map)
@@ -112,7 +112,7 @@ Malformed `package.json` JSON is a hard failure at read time; malformed manifest
 
 Because update is install-driven:
 
-- `omp plugin install pkg@newVersion` updates dependency and lockfile version.
+- `open-agent plugin install pkg@newVersion` updates dependency and lockfile version.
 - Existing settings are preserved; state entry is overwritten for version/features/enabled.
 - No separate “check updates” or transactional migration logic exists.
 
@@ -128,9 +128,9 @@ If uninstall command fails, runtime state is not changed.
 
 ## List flow (`PluginManager.list`)
 
-1. Read plugin dependency map from `~/.omp/plugins/package.json`.
+1. Read plugin dependency map from `~/.open-agent/plugins/package.json`.
 2. Load lockfile runtime config (missing file -> empty defaults).
-3. Load project overrides (`<cwd>/.omp/plugin-overrides.json`, parse/read errors -> empty object with warning).
+3. Load project overrides (`<cwd>/.open-agent/plugin-overrides.json`, parse/read errors -> empty object with warning).
 4. For each dependency with a resolvable package.json:
    - build `InstalledPlugin` record
    - merge feature/enable state:
@@ -142,7 +142,7 @@ This is the effective state used by CLI status output and settings/features oper
 
 ## Link flow (`PluginManager.link`)
 
-`link` supports local plugin development by symlinking a local package into `~/.omp/plugins/node_modules/<pkg.name>`.
+`link` supports local plugin development by symlinking a local package into `~/.open-agent/plugins/node_modules/<pkg.name>`.
 
 Behavior:
 

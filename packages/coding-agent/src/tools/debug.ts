@@ -6,9 +6,9 @@ import type {
 	AgentToolUpdateCallback,
 	RenderResultOptions,
 	ToolApprovalDecision,
-} from "@oh-my-pi/pi-agent-core";
-import { type Component, Text } from "@oh-my-pi/pi-tui";
-import { isEnoent, prompt } from "@oh-my-pi/pi-utils";
+} from "@open-agents/agent";
+import { type Component, Text } from "@open-agents/tui";
+import { isEnoent, prompt } from "@open-agents/utils";
 import * as z from "zod/v4";
 import {
 	type DapBreakpointRecord,

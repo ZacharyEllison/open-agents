@@ -2,9 +2,9 @@
  * Root command for the coding agent CLI.
  */
 
-import { THINKING_EFFORTS } from "@oh-my-pi/pi-ai";
-import { APP_NAME } from "@oh-my-pi/pi-utils";
-import { Args, Command, Flags } from "@oh-my-pi/pi-utils/cli";
+import { THINKING_EFFORTS } from "@open-agents/ai";
+import { APP_NAME } from "@open-agents/utils";
+import { Args, Command, Flags } from "@open-agents/utils/cli";
 import { parseArgs } from "../cli/args";
 import { runRootCommand } from "../main";
 import { prepareAcpTerminalAuthArgs } from "../modes/acp/terminal-auth";
@@ -26,13 +26,13 @@ export default class Index extends Command {
 			description: 'Model to use (fuzzy match: "opus", "gpt-5.2", or "openai/gpt-5.2")',
 		}),
 		smol: Flags.string({
-			description: "Smol/fast model for lightweight tasks (or PI_SMOL_MODEL env)",
+			description: "Smol/fast model for lightweight tasks (or OA_SMOL_MODEL env)",
 		}),
 		slow: Flags.string({
-			description: "Slow/reasoning model for thorough analysis (or PI_SLOW_MODEL env)",
+			description: "Slow/reasoning model for thorough analysis (or OA_SLOW_MODEL env)",
 		}),
 		plan: Flags.string({
-			description: "Plan model for architectural planning (or PI_PLAN_MODEL env)",
+			description: "Plan model for architectural planning (or OA_PLAN_MODEL env)",
 		}),
 		provider: Flags.string({
 			description: "Provider to use (legacy; prefer --model)",

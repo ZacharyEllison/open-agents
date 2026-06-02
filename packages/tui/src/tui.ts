@@ -4,7 +4,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { performance } from "node:perf_hooks";
-import { $flag, getDebugLogPath } from "@oh-my-pi/pi-utils";
+import { $flag, getDebugLogPath } from "@open-agents/utils";
 import { isKeyRelease, matchesKey } from "./keys";
 import { type Terminal, terminalHasEagerEraseScrollbackRisk } from "./terminal";
 import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } from "./terminal-capabilities";

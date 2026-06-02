@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
-import type { AgentTool, AgentToolResult } from "@oh-my-pi/pi-agent-core";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolResult } from "@open-agents/agent";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { TempDir } from "@open-agents/utils";
 import * as z from "zod/v4";
 import { disposeAllVmContexts } from "../../src/eval/js/context-manager";
 import { executeJs, type JsResult } from "../../src/eval/js/executor";

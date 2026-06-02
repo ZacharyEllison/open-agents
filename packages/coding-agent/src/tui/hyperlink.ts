@@ -5,7 +5,7 @@
  * sequences when the active terminal supports hyperlinks and the user setting
  * permits it. Falls back to plain text when disabled.
  */
-import { TERMINAL } from "@oh-my-pi/pi-tui";
+import { TERMINAL } from "@open-agents/tui";
 import { settings } from "../config/settings";
 import {
 	LocalProtocolHandler,

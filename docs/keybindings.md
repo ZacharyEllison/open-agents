@@ -1,10 +1,10 @@
 # Keybindings
 
-Run `/hotkeys` inside an `omp` session to see the active chords for your current build. The list reflects any remaps loaded from disk and any bindings added by extensions.
+Run `/hotkeys` inside an `open-agent` session to see the active chords for your current build. The list reflects any remaps loaded from disk and any bindings added by extensions.
 
 ## Customize keybindings
 
-User remaps live in `~/.omp/agent/keybindings.yml`. The file is a YAML mapping whose keys are keybinding action IDs and whose values are either one chord string or an array of chord strings. It is not read from `~/.omp/agent/config.yml`, and there is no nested `keybindings` object.
+User remaps live in `~/.open-agent/agent/keybindings.yml`. The file is a YAML mapping whose keys are keybinding action IDs and whose values are either one chord string or an array of chord strings. It is not read from `~/.open-agent/agent/config.yml`, and there is no nested `keybindings` object.
 
 ```yaml
 app.model.cycleForward: Ctrl+P
@@ -41,6 +41,6 @@ app.stt.toggle: []
 | `app.clipboard.pasteImage`  | `Ctrl+V` (`Alt+V` fallback on Windows) | Paste an image from the clipboard             |
 | `app.stt.toggle`            | `Alt+H`                                | Toggle speech-to-text recording               |
 
-On Windows Terminal, `Ctrl+V` may be handled by the terminal paste command before `omp` sees it; use the `Alt+V` fallback when clipboard image paste appears to do nothing.
+On Windows Terminal, `Ctrl+V` may be handled by the terminal paste command before `open-agent` sees it; use the `Alt+V` fallback when clipboard image paste appears to do nothing.
 
 Older unqualified action names are migrated when `keybindings.yml` is loaded, but new docs and new configs should use the namespaced action IDs above. Existing `keybindings.json` files are still accepted and migrated to `keybindings.yml`; `keybindings.yaml` is also accepted.

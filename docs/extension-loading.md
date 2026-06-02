@@ -30,15 +30,15 @@ Extension loading builds a list of module entry files, imports each module with 
 
 Native `extension-module` discovery comes from:
 
-- Project directory: `<cwd>/.omp/extensions`
-- User directory: `~/.omp/agent/extensions`
-- Native legacy/settings JSON entries: `<cwd>/.omp/settings.json#extensions` and `~/.omp/agent/settings.json#extensions`
+- Project directory: `<cwd>/.open-agent/extensions`
+- User directory: `~/.open-agent/agent/extensions`
+- Native legacy/settings JSON entries: `<cwd>/.open-agent/settings.json#extensions` and `~/.open-agent/agent/settings.json#extensions`
 
 Path roots come from the native provider (`SOURCE_PATHS.native`). Project lookup is cwd-only for these native roots; it does not walk ancestors.
 
 Notes:
 
-- Native auto-discovery is currently `.omp` based.
+- Native auto-discovery is currently `.open-agent` based.
 - Legacy `.pi` is still accepted in package manifests (`pi.extensions`) and project override lookup, but `.pi/extensions` is not a native root here.
 
 ### 2) Installed plugin extension entries
@@ -58,18 +58,18 @@ Configured path sources in the main session startup path (`sdk.ts`):
 
 Settings files:
 
-- User: `~/.omp/agent/config.yml` (or custom agent dir via `PI_CODING_AGENT_DIR`)
-- Project/native settings capability: `<cwd>/.omp/config.yml` and `<cwd>/.omp/settings.json`
+- User: `~/.open-agent/agent/config.yml` (or custom agent dir via `OA_AGENT_DIR`)
+- Project/native settings capability: `<cwd>/.open-agent/config.yml` and `<cwd>/.open-agent/settings.json`
 
 Native extension-module discovery also reads legacy JSON extension lists from:
 
-- `~/.omp/agent/settings.json`
-- `<cwd>/.omp/settings.json`
+- `~/.open-agent/agent/settings.json`
+- `<cwd>/.open-agent/settings.json`
 
 Examples:
 
 ```yaml
-# ~/.omp/agent/config.yml
+# ~/.open-agent/agent/config.yml
 extensions:
   - ~/my-exts/safety.ts
   - ./local/ext-pack
@@ -77,7 +77,7 @@ extensions:
 
 ```json
 {
-  "extensions": ["./.omp/extensions/my-extra"]
+  "extensions": ["./.open-agent/extensions/my-extra"]
 }
 ```
 
@@ -222,7 +222,7 @@ When events run through `ExtensionRunner`, handler exceptions are caught and emi
 ### User-level
 
 ```text
-~/.omp/agent/
+~/.open-agent/agent/
   config.yml
   extensions/
     guardrails.ts
@@ -234,7 +234,7 @@ When events run through `ExtensionRunner`, handler exceptions are caught and emi
 
 ```text
 <repo>/
-  .omp/
+  .open-agent/
     settings.json
     extensions/
       checks/

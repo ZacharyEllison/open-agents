@@ -6,8 +6,8 @@
  * `pi_natives.linux-x64-*.node`. Root cause: the old loader's
  * `isCompiledBinary` detection relied on signals that are unreliable in a Bun
  * standalone binary:
- *   - `process.env.PI_COMPILED` — never set, because `bun build --compile
- *     --define PI_COMPILED=true` substitutes the bare identifier, not
+ *   - `process.env.OA_COMPILED` — never set, because `bun build --compile
+ *     --define OA_COMPILED=true` substitutes the bare identifier, not
  *     property accesses on `process.env`.
  *   - CommonJS `__filename` bunfs markers — Bun's compiled binaries kept the
  *     original build-host absolute path there, while `import.meta.url` is the
@@ -40,7 +40,7 @@ import {
 describe("issue 823: standalone-binary native loader path resolution", () => {
 	it("detects compiled-binary mode from embedded-addon presence when env and url markers are absent", () => {
 		// Mirrors what a Bun standalone binary actually sees on linux-x64 / WSL:
-		// - `process.env.PI_COMPILED` is undefined (the build flag does not substitute property accesses).
+		// - `process.env.OA_COMPILED` is undefined (the build flag does not substitute property accesses).
 		// - `import.meta.url` points at `$bunfs` for bundled modules; the old CJS
 		//   loader used `__filename`, which is NOT rewritten.
 		// The embedded-addon module is the authoritative compiled-mode signal: it is `null` in
@@ -73,11 +73,11 @@ describe("issue 823: standalone-binary native loader path resolution", () => {
 			}),
 		).toBe(false);
 
-		// Env override (e.g. user-set PI_COMPILED=1) still wins.
+		// Env override (e.g. user-set OA_COMPILED=1) still wins.
 		expect(
 			detectCompiledBinary({
 				embeddedAddon: null,
-				env: { PI_COMPILED: "1" },
+				env: { OA_COMPILED: "1" },
 				importMetaUrl: "/anywhere",
 			}),
 		).toBe(true);
@@ -139,8 +139,8 @@ describe("issue 823: standalone-binary native loader path resolution", () => {
 	});
 
 	it("prefers platform leaf package candidates ahead of core nativeDir candidates on npm installs", () => {
-		const leafPackageDir = "/app/node_modules/@oh-my-pi/pi-natives-linux-x64";
-		const nativeDir = "/app/node_modules/@oh-my-pi/pi-natives/native";
+		const leafPackageDir = "/app/node_modules/@open-agents/natives-linux-x64";
+		const nativeDir = "/app/node_modules/@open-agents/natives/native";
 		const candidates = resolveLoaderCandidates({
 			addonFilenames: getAddonFilenames({ tag: "linux-x64", arch: "x64", variant: "baseline" }),
 			isCompiledBinary: false,
@@ -159,8 +159,8 @@ describe("issue 823: standalone-binary native loader path resolution", () => {
 
 	it("keeps Windows staging ahead of leaf package and core nativeDir candidates", () => {
 		const versionedDir = "/home/u/.omp/natives/15.5.15";
-		const leafPackageDir = "/app/node_modules/@oh-my-pi/pi-natives-win32-x64";
-		const nativeDir = "/app/node_modules/@oh-my-pi/pi-natives/native";
+		const leafPackageDir = "/app/node_modules/@open-agents/natives-win32-x64";
+		const nativeDir = "/app/node_modules/@open-agents/natives/native";
 		const candidates = resolveLoaderCandidates({
 			addonFilenames: getAddonFilenames({ tag: "win32-x64", arch: "x64", variant: "baseline" }),
 			isCompiledBinary: false,

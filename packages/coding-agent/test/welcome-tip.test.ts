@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { renderWelcomeTip } from "@oh-my-pi/pi-coding-agent/modes/components/welcome";
-import { visibleWidth } from "@oh-my-pi/pi-tui";
+import { renderWelcomeTip } from "@open-agents/coding-agent/modes/components/welcome";
+import { visibleWidth } from "@open-agents/tui";
 
 describe("renderWelcomeTip", () => {
 	it("wraps long tips under the label instead of truncating", () => {

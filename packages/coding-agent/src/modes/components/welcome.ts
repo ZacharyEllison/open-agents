@@ -6,8 +6,8 @@ import {
 	truncateToWidth,
 	visibleWidth,
 	wrapTextWithAnsi,
-} from "@oh-my-pi/pi-tui";
-import { APP_NAME } from "@oh-my-pi/pi-utils";
+} from "@open-agents/tui";
+import { APP_NAME } from "@open-agents/utils";
 import { theme } from "../../modes/theme/theme";
 import tipsText from "./tips.txt" with { type: "text" };
 
@@ -53,11 +53,13 @@ export interface LspServerInfo {
 }
 
 /**
- * Premium welcome screen with block-based OMP logo and two-column layout.
+ * Premium welcome screen with animated triforce logo and two-column layout.
  */
 export class WelcomeComponent implements Component {
 	#animStart: number | null = null;
 	#animTimer: ReturnType<typeof setInterval> | null = null;
+	#shimmerTimer: ReturnType<typeof setInterval> | null = null;
+	#shimmerTick = 0;
 	/** Tip chosen once per instance so re-renders (intro, LSP updates) don't shuffle it. */
 	readonly #tip: string | undefined = TIPS.length > 0 ? TIPS[Math.floor(Math.random() * TIPS.length)] : undefined;
 
@@ -79,6 +81,7 @@ export class WelcomeComponent implements Component {
 	playIntro(requestRender: () => void): void {
 		this.#stopAnimation();
 		this.#animStart = performance.now();
+		this.#ensureShimmer(requestRender);
 		requestRender();
 		this.#animTimer = setInterval(() => {
 			const elapsed = performance.now() - (this.#animStart ?? 0);
@@ -89,12 +92,29 @@ export class WelcomeComponent implements Component {
 		}, INTRO_TICK_MS);
 	}
 
+	/** Continuous triforce shimmer (~8 fps). */
+	#ensureShimmer(requestRender: () => void): void {
+		if (this.#shimmerTimer != null) return;
+		this.#shimmerTimer = setInterval(() => {
+			this.#shimmerTick++;
+			requestRender();
+		}, SHIMMER_TICK_MS);
+	}
+
 	#stopAnimation(): void {
 		if (this.#animTimer != null) {
 			clearInterval(this.#animTimer);
 			this.#animTimer = null;
 		}
 		this.#animStart = null;
+	}
+
+	dispose(): void {
+		if (this.#shimmerTimer != null) {
+			clearInterval(this.#shimmerTimer);
+			this.#shimmerTimer = null;
+		}
+		this.#stopAnimation();
 	}
 
 	setModel(modelName: string, providerName: string): void {
@@ -305,27 +325,86 @@ export class WelcomeComponent implements Component {
 		return str + padding(width - visLen);
 	}
 
-	/** Pick the logo frame for the current intro phase, or the resting frame. */
+	/** Pick the logo frame for the current shimmer tick (intro adds a brief boost). */
 	#currentLogoFrame(): readonly string[] {
-		if (this.#animStart == null) return REST_FRAME;
-		const elapsed = performance.now() - this.#animStart;
-		if (elapsed >= INTRO_MS) return REST_FRAME;
-		// Ease-out cubic so the spin decelerates into the resting state.
-		const progress = elapsed / INTRO_MS;
-		const eased = 1 - (1 - progress) ** 3;
-		// Sweep backward through INTRO_SWEEPS full rotations so the gradient
-		// visibly spins multiple times. `eased == 1` → phase = 0 = resting frame.
-		const phase = ((((1 - eased) * INTRO_SWEEPS) % 1) + 1) % 1;
-		// Shine traverses the diagonal at a steady pace, decoupled from the
-		// gradient phase so the two layers parallax. Strength fades out with
-		// the same ease-out curve so the highlight is gone by the resting frame.
-		const shinePos = (((progress * INTRO_SHINE_TRAVERSALS) % 1) + 1) % 1;
-		const shineStrength = (1 - eased) ** 1.5;
-		return gradientLogo(PI_LOGO, phase, { strength: shineStrength, pos: shinePos });
+		let phase = (this.#shimmerTick * SHIMMER_PHASE_STEP) % 1;
+		if (this.#animStart != null) {
+			const elapsed = performance.now() - this.#animStart;
+			if (elapsed < INTRO_MS) {
+				const progress = elapsed / INTRO_MS;
+				phase = (phase + (1 - progress) * 0.35) % 1;
+			}
+		}
+		return renderTriforceLogo(phase);
 	}
 }
 
-export const PI_LOGO = ["▀██████████▀", " ╘██    ██  ", "  ██    ██  ", "  ██    ██  ", " ▄██▄  ▄██▄ "];
+/** Triforce outline used by the welcome screen and setup splash. */
+export const TRIFORCE_ART = ["      ▲", "     ▲ ▲", "    ▲   ▲", "   ▲ ▲ ▲ ▲"] as const;
+
+/** @deprecated Use {@link TRIFORCE_ART}. Kept for setup splash imports during transition. */
+export const PI_LOGO = [...TRIFORCE_ART];
+
+const SHIMMER_CHARS = ["░", "▒", "▓", "█", "▓", "▒", "░"] as const;
+const GOLD_STOPS: ReadonlyArray<readonly [number, number, number]> = [
+	[120, 85, 20],
+	[180, 130, 30],
+	[220, 175, 45],
+	[255, 215, 80],
+];
+const GOLD_RAMP_256 = [136, 178, 214, 220, 227];
+
+function goldEscape(t: number): string {
+	if (TERMINAL.trueColor) {
+		const stops = GOLD_STOPS;
+		const seg = t * (stops.length - 1);
+		const i = Math.min(stops.length - 2, Math.floor(seg));
+		const f = seg - i;
+		const a = stops[i];
+		const b = stops[i + 1];
+		const r = a[0] + (b[0] - a[0]) * f;
+		const g = a[1] + (b[1] - a[1]) * f;
+		const bl = a[2] + (b[2] - a[2]) * f;
+		return `\x1b[38;2;${Math.round(r)};${Math.round(g)};${Math.round(bl)}m`;
+	}
+	const idx = Math.min(GOLD_RAMP_256.length - 1, Math.max(0, Math.floor(t * (GOLD_RAMP_256.length - 1) + 0.5)));
+	return `\x1b[38;5;${GOLD_RAMP_256[idx]}m`;
+}
+
+/** Which of the three triforce triangles owns a glyph at (row, col). */
+function triforceTriangleIndex(row: number, col: number, _rows: number, cols: number): number {
+	const mid = (cols - 1) / 2;
+	if (row <= 1) return 0;
+	if (col <= mid - (row - 1) * 0.6) return 1;
+	return 2;
+}
+
+/**
+ * Render the triforce with a gentle golden shimmer. Each triangle ripples through
+ * {@link SHIMMER_CHARS} on an independent phase offset.
+ */
+export function renderTriforceLogo(phase: number): string[] {
+	const reset = "\x1b[0m";
+	const rows = TRIFORCE_ART.length;
+	const cols = Math.max(...TRIFORCE_ART.map(l => l.length));
+	return TRIFORCE_ART.map((line, y) => {
+		let result = "";
+		for (let x = 0; x < line.length; x++) {
+			const char = line[x];
+			if (char !== "▲") {
+				result += char;
+				continue;
+			}
+			const tri = triforceTriangleIndex(y, x, rows, cols);
+			const triPhase = (phase + tri / 3) % 1;
+			const shimmerIdx = Math.floor(triPhase * SHIMMER_CHARS.length) % SHIMMER_CHARS.length;
+			const shimmerChar = SHIMMER_CHARS[shimmerIdx] ?? "▲";
+			const goldT = (triPhase + y / rows) % 1;
+			result += goldEscape(goldT) + shimmerChar + reset;
+		}
+		return result;
+	});
+}
 
 /** Multi-stop palette for the diagonal gradient. */
 const GRADIENT_STOPS: ReadonlyArray<readonly [number, number, number]> = [
@@ -426,10 +505,7 @@ export function gradientLogo(lines: readonly string[], phase = 0, shine?: ShineC
 const INTRO_MS = 3000;
 /** Render cadence during the intro (~30fps). */
 const INTRO_TICK_MS = 33;
-/** Number of full gradient rotations the sweep performs before settling. */
-const INTRO_SWEEPS = 2.5;
-/** Number of times the shine highlight crosses the diagonal across the intro. */
-const INTRO_SHINE_TRAVERSALS = 3;
-
-/** Resting gradient frame, cached for re-renders outside of the intro. */
-const REST_FRAME = gradientLogo(PI_LOGO, 0);
+/** Shimmer cadence (~8 fps). */
+const SHIMMER_TICK_MS = 125;
+/** Phase advance per shimmer tick. */
+const SHIMMER_PHASE_STEP = 0.08;

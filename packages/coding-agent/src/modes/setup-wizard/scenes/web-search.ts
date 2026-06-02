@@ -1,4 +1,4 @@
-import { type SelectItem, SelectList, truncateToWidth } from "@oh-my-pi/pi-tui";
+import { type SelectItem, SelectList, truncateToWidth } from "@open-agents/tui";
 import { SETTINGS_SCHEMA } from "../../../config/settings-schema";
 import { getSearchProvider, setPreferredSearchProvider } from "../../../web/search/provider";
 import { isSearchProviderPreference, type SearchProviderId } from "../../../web/search/types";

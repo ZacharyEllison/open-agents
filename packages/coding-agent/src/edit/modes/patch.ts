@@ -7,8 +7,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { AgentToolResult } from "@oh-my-pi/pi-agent-core";
-import { isEnoent } from "@oh-my-pi/pi-utils";
+import type { AgentToolResult } from "@open-agents/agent";
+import { isEnoent } from "@open-agents/utils";
 import * as z from "zod/v4";
 import {
 	type FileDiagnosticsResult,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Message, Tool } from "@oh-my-pi/pi-ai";
+import type { Message, Tool } from "@open-agents/ai";
 import { AppendOnlyContextManager, AppendOnlyLog, StablePrefix } from "../src/append-only-context";
 import type { AgentContext, AgentTool } from "../src/types";
 

@@ -4,8 +4,8 @@
  * Uses brush-core via native bindings for shell execution.
  */
 import * as fs from "node:fs/promises";
-import { ExponentialYield } from "@oh-my-pi/pi-agent-core/utils/yield";
-import { executeShell, type MinimizerOptions, Shell, type ShellRunResult } from "@oh-my-pi/pi-natives";
+import { ExponentialYield } from "@open-agents/agent/utils/yield";
+import { executeShell, type MinimizerOptions, Shell, type ShellRunResult } from "@open-agents/natives";
 import { Settings, type ShellMinimizerSettings } from "../config/settings";
 import { OutputSink } from "../session/streaming-output";
 import { resolveOutputMaxColumns, resolveOutputSinkHeadBytes } from "../tools/output-meta";

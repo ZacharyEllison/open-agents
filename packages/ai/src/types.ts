@@ -1,8 +1,4 @@
 import type { ZodType, z } from "zod/v4";
-import type { BedrockOptions } from "./providers/amazon-bedrock";
-import type { AnthropicOptions } from "./providers/anthropic";
-import type { AzureOpenAIResponsesOptions } from "./providers/azure-openai-responses";
-import type { CursorOptions } from "./providers/cursor";
 import type {
 	DeleteArgs,
 	DeleteResult,
@@ -20,42 +16,17 @@ import type {
 	WriteArgs,
 	WriteResult,
 } from "./providers/cursor/gen/agent_pb";
-import type { GoogleOptions } from "./providers/google";
-import type { GoogleGeminiCliOptions } from "./providers/google-gemini-cli";
-import type { GoogleVertexOptions } from "./providers/google-vertex";
-import type { OllamaChatOptions } from "./providers/ollama";
-import type { OpenAICodexResponsesOptions } from "./providers/openai-codex-responses";
 import type { OpenAICompletionsOptions } from "./providers/openai-completions";
 import type { OpenAIResponsesOptions } from "./providers/openai-responses";
 import type { AssistantMessageEventStream } from "./utils/event-stream";
 
 export type { AssistantMessageEventStream } from "./utils/event-stream";
 
-export type KnownApi =
-	| "openai-completions"
-	| "openai-responses"
-	| "openai-codex-responses"
-	| "azure-openai-responses"
-	| "anthropic-messages"
-	| "bedrock-converse-stream"
-	| "google-generative-ai"
-	| "google-gemini-cli"
-	| "google-vertex"
-	| "ollama-chat"
-	| "cursor-agent";
+export type KnownApi = "openai-completions" | "openai-responses";
 export type Api = KnownApi | (string & {});
 export interface ApiOptionsMap {
-	"anthropic-messages": AnthropicOptions;
-	"bedrock-converse-stream": BedrockOptions;
 	"openai-completions": OpenAICompletionsOptions;
 	"openai-responses": OpenAIResponsesOptions;
-	"openai-codex-responses": OpenAICodexResponsesOptions;
-	"azure-openai-responses": AzureOpenAIResponsesOptions;
-	"google-generative-ai": GoogleOptions;
-	"google-gemini-cli": GoogleGeminiCliOptions;
-	"google-vertex": GoogleVertexOptions;
-	"ollama-chat": OllamaChatOptions;
-	"cursor-agent": CursorOptions;
 }
 // Compile-time exhaustiveness check - this will fail if ApiOptionsMap doesn't have all KnownApi keys
 type _CheckExhaustive =
@@ -96,56 +67,14 @@ export interface ThinkingConfig {
 }
 
 export type KnownProvider =
-	| "alibaba-coding-plan"
-	| "amazon-bedrock"
-	| "anthropic"
-	| "google"
-	| "google-gemini-cli"
-	| "google-antigravity"
-	| "google-vertex"
-	| "openai"
-	| "openai-codex"
-	| "kimi-code"
-	| "minimax-code"
-	| "minimax-code-cn"
-	| "github-copilot"
-	| "fireworks"
-	| "firepass"
-	| "gitlab-duo"
-	| "cursor"
-	| "deepseek"
-	| "xai"
-	| "xai-oauth"
-	| "groq"
-	| "cerebras"
-	| "openrouter"
-	| "kilo"
-	| "vercel-ai-gateway"
-	| "zai"
-	| "zhipu-coding-plan"
-	| "mistral"
-	| "minimax"
-	| "opencode-go"
-	| "opencode-zen"
-	| "synthetic"
-	| "cloudflare-ai-gateway"
-	| "huggingface"
-	| "litellm"
-	| "moonshot"
-	| "nvidia"
-	| "nanogpt"
 	| "ollama"
-	| "ollama-cloud"
-	| "qianfan"
-	| "qwen-portal"
-	| "together"
-	| "venice"
+	| "llama.cpp"
 	| "vllm"
-	| "xiaomi"
-	| "wafer-pass"
-	| "wafer-serverless"
-	| "zenmux"
-	| "lm-studio";
+	| "lm-studio"
+	| "localai"
+	| "jan"
+	| "llamafile"
+	| "tabbyapi";
 export type Provider = KnownProvider | string;
 
 import type { Effort } from "./model-thinking";
@@ -373,11 +302,11 @@ export interface StreamOptions {
 	 * in the iterator while waiting for the first semantic stream event. Set to
 	 * `0` to disable both layers for this request. After the first semantic
 	 * event arrives, `streamIdleTimeoutMs` governs inter-event stalls. Falls
-	 * back to `PI_STREAM_FIRST_EVENT_TIMEOUT_MS` and then to a 100s default.
+	 * back to `OA_STREAM_FIRST_EVENT_TIMEOUT_MS` and then to a 100s default.
 	 * OpenAI-family transports additionally honor
-	 * `PI_OPENAI_STREAM_FIRST_EVENT_TIMEOUT_MS` as the most-specific override and
+	 * `OA_OPENAI_STREAM_FIRST_EVENT_TIMEOUT_MS` as the most-specific override and
 	 * floor the first-event budget at the resolved idle (per-call
-	 * `streamIdleTimeoutMs` or `PI_OPENAI_STREAM_IDLE_TIMEOUT_MS`) so slow local
+	 * `streamIdleTimeoutMs` or `OA_OPENAI_STREAM_IDLE_TIMEOUT_MS`) so slow local
 	 * OpenAI-compatible servers are not undercut during prompt processing.
 	 *
 	 * Iterator-level honored by: every built-in provider (via the lazy-stream
@@ -391,7 +320,7 @@ export interface StreamOptions {
 	 * milliseconds. Once the first event arrives, this guards against silent
 	 * mid-stream stalls (broker dies, half-open socket, model produces no real
 	 * progress for too long). Set to `0` to disable. Falls back to
-	 * `PI_STREAM_IDLE_TIMEOUT_MS` (alias: `PI_OPENAI_STREAM_IDLE_TIMEOUT_MS`)
+	 * `OA_STREAM_IDLE_TIMEOUT_MS` (alias: `OA_OPENAI_STREAM_IDLE_TIMEOUT_MS`)
 	 * and then to a 120s default.
 	 */
 	streamIdleTimeoutMs?: number;

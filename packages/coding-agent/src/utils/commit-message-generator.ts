@@ -2,14 +2,13 @@
  * Generate commit messages from diffs using a smol, fast model.
  * Follows the same pattern as title-generator.ts.
  */
-import type { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { Api, Model } from "@oh-my-pi/pi-ai";
-import { completeSimple } from "@oh-my-pi/pi-ai";
-import { logger, prompt } from "@oh-my-pi/pi-utils";
+import type { ThinkingLevel } from "@open-agents/agent";
+import type { Api, Model } from "@open-agents/ai";
+import { completeSimple } from "@open-agents/ai";
+import { logger, prompt } from "@open-agents/utils";
 import type { ModelRegistry } from "../config/model-registry";
 import { resolveModelRoleValue } from "../config/model-resolver";
 import type { Settings } from "../config/settings";
-import MODEL_PRIO from "../priority.json" with { type: "json" };
 import commitSystemPrompt from "../prompts/system/commit-message-system.md" with { type: "text" };
 import { toReasoningEffort } from "../thinking";
 
@@ -51,18 +50,12 @@ function getSmolModelCandidates(
 	};
 
 	const matchPreferences = { usageOrder: settings.getStorage()?.getModelUsageOrder() };
-	const configuredSmol = resolveModelRoleValue(settings.getModelRole("smol"), availableModels, {
+	const configuredCompactor = resolveModelRoleValue(settings.getModelTier("compactor"), availableModels, {
 		settings,
 		matchPreferences,
 		modelRegistry: registry,
 	});
-	addCandidate(configuredSmol.model, configuredSmol.thinkingLevel);
-
-	for (const pattern of MODEL_PRIO.smol) {
-		const needle = pattern.toLowerCase();
-		addCandidate(availableModels.find(m => m.id.toLowerCase() === needle));
-		addCandidate(availableModels.find(m => m.id.toLowerCase().includes(needle)));
-	}
+	addCandidate(configuredCompactor.model, configuredCompactor.thinkingLevel);
 
 	for (const model of availableModels) {
 		addCandidate(model);

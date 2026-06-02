@@ -2,17 +2,17 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
+import { Settings } from "@open-agents/coding-agent/config/settings";
 import {
 	type InternalResource,
 	type InternalUrl,
 	InternalUrlRouter,
 	LocalProtocolHandler,
 	type ProtocolHandler,
-} from "@oh-my-pi/pi-coding-agent/internal-urls";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { FindTool } from "@oh-my-pi/pi-coding-agent/tools/find";
-import { SearchTool } from "@oh-my-pi/pi-coding-agent/tools/search";
+} from "@open-agents/coding-agent/internal-urls";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { FindTool } from "@open-agents/coding-agent/tools/find";
+import { SearchTool } from "@open-agents/coding-agent/tools/search";
 import { AgentRegistry } from "../../src/registry/agent-registry";
 
 function getResultText(result: { content: Array<{ type: string; text?: string }> }): string {

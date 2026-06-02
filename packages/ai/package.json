@@ -1,6 +1,6 @@
 {
 	"type": "module",
-	"name": "@oh-my-pi/pi-ai",
+	"name": "@open-agents/ai",
 	"version": "15.8.1",
 	"description": "Unified LLM API with automatic model discovery and provider configuration",
 	"homepage": "https://omp.sh",
@@ -39,7 +39,7 @@
 	},
 	"dependencies": {
 		"@bufbuild/protobuf": "catalog:",
-		"@oh-my-pi/pi-utils": "catalog:",
+		"@open-agents/utils": "catalog:",
 		"openai": "catalog:",
 		"partial-json": "catalog:",
 		"zod": "catalog:"
@@ -63,22 +63,6 @@
 		"./*": {
 			"types": "./src/*.ts",
 			"import": "./src/*.ts"
-		},
-		"./auth-broker": {
-			"types": "./src/auth-broker/index.ts",
-			"import": "./src/auth-broker/index.ts"
-		},
-		"./auth-broker/*": {
-			"types": "./src/auth-broker/*.ts",
-			"import": "./src/auth-broker/*.ts"
-		},
-		"./auth-gateway": {
-			"types": "./src/auth-gateway/index.ts",
-			"import": "./src/auth-gateway/index.ts"
-		},
-		"./auth-gateway/*": {
-			"types": "./src/auth-gateway/*.ts",
-			"import": "./src/auth-gateway/*.ts"
 		},
 		"./models.json": {
 			"types": "./src/models.json.d.ts",

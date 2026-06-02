@@ -13,8 +13,8 @@ import {
 	type AuthStorage,
 	getAntigravityUserAgent,
 	getGeminiCliHeaders,
-} from "@oh-my-pi/pi-ai";
-import { fetchWithRetry } from "@oh-my-pi/pi-utils";
+} from "@open-agents/ai";
+import { fetchWithRetry } from "@open-agents/utils";
 
 import type { SearchCitation, SearchResponse, SearchSource } from "../../../web/search/types";
 import { SearchProviderError } from "../../../web/search/types";

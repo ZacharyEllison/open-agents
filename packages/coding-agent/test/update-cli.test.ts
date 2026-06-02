@@ -50,7 +50,7 @@ describe("update-cli bun install command", () => {
 			"-g",
 			"--no-cache",
 			"--registry=https://registry.npmjs.org/",
-			"@oh-my-pi/pi-coding-agent@15.7.6",
+			"@open-agents/coding-agent@15.7.6",
 		]);
 	});
 });

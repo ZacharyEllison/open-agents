@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { agentLoop, agentLoopContinue, INTENT_FIELD } from "@oh-my-pi/pi-agent-core/agent-loop";
+import { agentLoop, agentLoopContinue, INTENT_FIELD } from "@open-agents/agent/agent-loop";
 import type {
 	AgentContext,
 	AgentEvent,
@@ -9,10 +9,10 @@ import type {
 	AgentToolContext,
 	StreamFn,
 	ToolCallContext,
-} from "@oh-my-pi/pi-agent-core/types";
-import type { AssistantMessage, Message, ToolResultMessage } from "@oh-my-pi/pi-ai";
-import { createMockModel } from "@oh-my-pi/pi-ai/providers/mock";
-import { AssistantMessageEventStream } from "@oh-my-pi/pi-ai/utils/event-stream";
+} from "@open-agents/agent/types";
+import type { AssistantMessage, Message, ToolResultMessage } from "@open-agents/ai";
+import { createMockModel } from "@open-agents/ai/providers/mock";
+import { AssistantMessageEventStream } from "@open-agents/ai/utils/event-stream";
 import * as z from "zod/v4";
 import { createAssistantMessage, createUserMessage } from "./helpers";
 

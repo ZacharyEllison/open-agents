@@ -1,5 +1,5 @@
-import type { AgentTool, AgentToolResult } from "@oh-my-pi/pi-agent-core";
-import { logger, untilAborted } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolResult } from "@open-agents/agent";
+import { logger, untilAborted } from "@open-agents/utils";
 import * as z from "zod/v4";
 import { formatCurrentTime, formatMemories } from "../hindsight/content";
 import recallDescription from "../prompts/tools/recall.md" with { type: "text" };

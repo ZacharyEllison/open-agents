@@ -1,6 +1,6 @@
-import { getOAuthProviders } from "@oh-my-pi/pi-ai/utils/oauth";
-import type { OAuthProviderInfo } from "@oh-my-pi/pi-ai/utils/oauth/types";
-import { Container, extractPrintableText, fuzzyFilter, matchesKey, Spacer, TruncatedText } from "@oh-my-pi/pi-tui";
+import { getOAuthProviders } from "@open-agents/ai/utils/oauth";
+import type { OAuthProviderInfo } from "@open-agents/ai/utils/oauth/types";
+import { Container, extractPrintableText, fuzzyFilter, matchesKey, Spacer, TruncatedText } from "@open-agents/tui";
 import { theme } from "../../modes/theme/theme";
 import { matchesSelectCancel, matchesSelectDown, matchesSelectUp } from "../../modes/utils/keybinding-matchers";
 import type { AuthStorage } from "../../session/auth-storage";

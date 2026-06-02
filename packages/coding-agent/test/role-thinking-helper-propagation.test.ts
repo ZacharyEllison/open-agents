@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
-import * as ai from "@oh-my-pi/pi-ai";
-import { Effort, getBundledModel } from "@oh-my-pi/pi-ai";
+import * as ai from "@open-agents/ai";
+import { Effort, getBundledModel } from "@open-agents/ai";
 import { generateCommitMessage } from "../src/utils/commit-message-generator";
 import { generateSessionTitle } from "../src/utils/title-generator";
 
@@ -10,14 +10,14 @@ function getModelOrThrow(id: string) {
 	return model;
 }
 
-function createSettings(modelRoles: Record<string, string>) {
+function createSettings(modelTiers: Record<string, string>) {
 	return {
 		get(path: string) {
 			if (path === "providers.tinyModel") return "online";
 			return undefined;
 		},
 		getModelRole(role: string) {
-			return modelRoles[role];
+			return modelTiers[role];
 		},
 		getStorage() {
 			return undefined;

@@ -8,9 +8,9 @@ import {
 	toolWireSchema,
 	validateSchemaCompatibility,
 	validateStrictSchemaEnforcement,
-} from "@oh-my-pi/pi-ai/utils/schema";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { createTools, HIDDEN_TOOLS, type ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
+} from "@open-agents/ai/utils/schema";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { createTools, HIDDEN_TOOLS, type ToolSession } from "@open-agents/coding-agent/tools";
 
 interface ToolSchemaEntry {
 	name: string;

@@ -10,10 +10,10 @@ import type {
 	ToolApproval,
 	ToolApprovalDecision,
 	ToolTier,
-} from "@oh-my-pi/pi-agent-core";
-import type { CompactionResult } from "@oh-my-pi/pi-agent-core/compaction";
-import type { Model, Static, TSchema } from "@oh-my-pi/pi-ai";
-import type { Component } from "@oh-my-pi/pi-tui";
+} from "@open-agents/agent";
+import type { CompactionResult } from "@open-agents/agent/compaction";
+import type { Model, Static, TSchema } from "@open-agents/ai";
+import type { Component } from "@open-agents/tui";
 import type { Rule } from "../../capability/rule";
 import type { ModelRegistry } from "../../config/model-registry";
 import type { Settings } from "../../config/settings";
@@ -56,7 +56,7 @@ export interface CustomToolAPI {
 	/** Whether UI is available (false in print/RPC mode) */
 	hasUI: boolean;
 	/** File logger for error/warning/debug messages */
-	logger: typeof import("@oh-my-pi/pi-utils").logger;
+	logger: typeof import("@open-agents/utils").logger;
 	/** Injected zod-backed typebox shim (legacy/compat — Zod-authored tools are preferred). */
 	typebox: typeof import("../typebox");
 	/** Injected zod module for Zod-authored custom tools. */

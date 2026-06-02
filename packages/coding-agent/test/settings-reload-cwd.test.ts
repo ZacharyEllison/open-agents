@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { getProjectAgentDir, Snowflake } from "@oh-my-pi/pi-utils";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import { getProjectAgentDir, Snowflake } from "@open-agents/utils";
 
 describe("Settings.reloadForCwd", () => {
 	it("re-resolves path-scoped settings against the new directory in place", async () => {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, setSystemTime, vi } from "bun:test";
-import type { AuthStorage } from "@oh-my-pi/pi-ai";
-import { hookFetch } from "@oh-my-pi/pi-utils";
+import type { AuthStorage } from "@open-agents/ai";
+import { hookFetch } from "@open-agents/utils";
 import { type KagiSearchRequest, searchWithKagi } from "../../src/web/kagi";
 import { KagiProvider, searchKagi } from "../../src/web/search/providers/kagi";
 import { SearchProviderError } from "../../src/web/search/types";

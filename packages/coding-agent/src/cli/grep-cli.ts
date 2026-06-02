@@ -4,8 +4,8 @@
  * Handles `omp grep` subcommand for testing grep tool on Windows.
  */
 import * as path from "node:path";
-import { GrepOutputMode, grep } from "@oh-my-pi/pi-natives";
-import { APP_NAME } from "@oh-my-pi/pi-utils";
+import { GrepOutputMode, grep } from "@open-agents/natives";
+import { APP_NAME } from "@open-agents/utils";
 import chalk from "chalk";
 
 export interface GrepCommandArgs {

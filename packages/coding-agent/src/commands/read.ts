@@ -1,7 +1,7 @@
 /**
  * Show what the read tool will return for a given path.
  */
-import { Args, Command } from "@oh-my-pi/pi-utils/cli";
+import { Args, Command } from "@open-agents/utils/cli";
 import { type ReadCommandArgs, runReadCommand } from "../cli/read-cli";
 import { initTheme } from "../modes/theme/theme";
 

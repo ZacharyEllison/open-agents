@@ -16,22 +16,22 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getCapability } from "@oh-my-pi/pi-coding-agent/capability";
-import { clearCache } from "@oh-my-pi/pi-coding-agent/capability/fs";
-import { hookCapability } from "@oh-my-pi/pi-coding-agent/capability/hook";
-import { mcpCapability } from "@oh-my-pi/pi-coding-agent/capability/mcp";
-import { promptCapability } from "@oh-my-pi/pi-coding-agent/capability/prompt";
-import { ruleCapability } from "@oh-my-pi/pi-coding-agent/capability/rule";
-import { skillCapability } from "@oh-my-pi/pi-coding-agent/capability/skill";
-import { slashCommandCapability } from "@oh-my-pi/pi-coding-agent/capability/slash-command";
-import { toolCapability } from "@oh-my-pi/pi-coding-agent/capability/tool";
-import type { LoadContext, Provider } from "@oh-my-pi/pi-coding-agent/capability/types";
+import { getCapability } from "@open-agents/coding-agent/capability";
+import { clearCache } from "@open-agents/coding-agent/capability/fs";
+import { hookCapability } from "@open-agents/coding-agent/capability/hook";
+import { mcpCapability } from "@open-agents/coding-agent/capability/mcp";
+import { promptCapability } from "@open-agents/coding-agent/capability/prompt";
+import { ruleCapability } from "@open-agents/coding-agent/capability/rule";
+import { skillCapability } from "@open-agents/coding-agent/capability/skill";
+import { slashCommandCapability } from "@open-agents/coding-agent/capability/slash-command";
+import { toolCapability } from "@open-agents/coding-agent/capability/tool";
+import type { LoadContext, Provider } from "@open-agents/coding-agent/capability/types";
 // Register all discovery providers as a side effect.
-import "@oh-my-pi/pi-coding-agent/discovery";
+import "@open-agents/coding-agent/discovery";
 import {
 	clearOmpExtensionCliRoots,
 	injectOmpExtensionCliRoots,
-} from "@oh-my-pi/pi-coding-agent/discovery/omp-extension-roots";
+} from "@open-agents/coding-agent/discovery/omp-extension-roots";
 
 const PROVIDER_ID = "omp-plugins";
 
@@ -208,7 +208,7 @@ test("disabled installed plugins do not contribute sub-discovery", async () => {
 		JSON.stringify({ name: "omp-plugins", dependencies: { "my-disabled-ext": "1.0.0" } }),
 	);
 	writeFile(
-		path.join(pluginsDir, "omp-plugins.lock.json"),
+		path.join(pluginsDir, "open-agent-plugins.lock.json"),
 		JSON.stringify({ plugins: { "my-disabled-ext": { enabled: false } }, settings: {} }),
 	);
 
@@ -231,7 +231,7 @@ test("linked plugins (only in lockfile, not in package.json#dependencies) are su
 	// Intentionally NO `<plugins>/package.json` — matches a fresh `plugin link`
 	// against a setup that has never run `plugin install`.
 	writeFile(
-		path.join(pluginsDir, "omp-plugins.lock.json"),
+		path.join(pluginsDir, "open-agent-plugins.lock.json"),
 		JSON.stringify({
 			plugins: { "my-linked-ext": { version: "1.0.0", enabled: true, enabledFeatures: null } },
 			settings: {},

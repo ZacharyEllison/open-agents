@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { enumeratePythonRuntimes, filterEnv, resolvePythonRuntime } from "@oh-my-pi/pi-coding-agent/eval/py/runtime";
-import * as piUtils from "@oh-my-pi/pi-utils";
+import { enumeratePythonRuntimes, filterEnv, resolvePythonRuntime } from "@open-agents/coding-agent/eval/py/runtime";
+import * as piUtils from "@open-agents/utils";
 
 describe("Python gateway environment filtering", () => {
 	it("filters sensitive and unknown variables from shell env", () => {

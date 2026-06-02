@@ -7,6 +7,7 @@ export * from "./compaction";
 export * from "./entries";
 export * from "./errors";
 export * from "./messages";
+export * from "./onnx-summarizer";
 export * from "./openai";
 export * from "./pruning";
 export * from "./shake";

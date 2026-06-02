@@ -1,4 +1,4 @@
-import { $env } from "@oh-my-pi/pi-utils";
+import { $env } from "@open-agents/utils";
 
 export type EditMode = "replace" | "patch" | "hashline" | "apply_patch";
 
@@ -33,7 +33,7 @@ export function resolveEditMode(session: EditModeSessionLike): EditMode {
 	const modelVariant = session.settings.getEditVariantForModel?.(activeModel);
 	if (modelVariant) return modelVariant;
 
-	const envMode = normalizeEditMode($env.PI_EDIT_VARIANT);
+	const envMode = normalizeEditMode($env.OA_EDIT_VARIANT);
 	if (envMode) return envMode;
 
 	const settingsMode = normalizeEditMode(String(session.settings.get("edit.mode") ?? ""));

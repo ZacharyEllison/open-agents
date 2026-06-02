@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { zhipuCodingPlanModelManagerOptions } from "@oh-my-pi/pi-ai/provider-models/openai-compat";
-import { detectOpenAICompat, resolveOpenAICompat } from "@oh-my-pi/pi-ai/providers/openai-completions-compat";
-import type { Model } from "@oh-my-pi/pi-ai/types";
+import { zhipuCodingPlanModelManagerOptions } from "@open-agents/ai/provider-models/openai-compat";
+import { detectOpenAICompat, resolveOpenAICompat } from "@open-agents/ai/providers/openai-completions-compat";
+import type { Model } from "@open-agents/ai/types";
 
 /**
  * Resolver-branch coverage for the `isZhipu` path added by the

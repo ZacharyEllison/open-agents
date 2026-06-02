@@ -1,10 +1,11 @@
-import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import { prompt } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@open-agents/agent";
+import { prompt } from "@open-agents/utils";
 import * as z from "zod/v4";
 import checkpointDescription from "../prompts/tools/checkpoint.md" with { type: "text" };
 import rewindDescription from "../prompts/tools/rewind.md" with { type: "text" };
 import type { ToolSession } from ".";
 import type { OutputMeta } from "./output-meta";
+import { WORKER_ONLY_TIERS } from "./tier-access";
 import { ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 
@@ -48,6 +49,7 @@ function isTopLevelSession(session: ToolSession): boolean {
 
 export class CheckpointTool implements AgentTool<typeof checkpointSchema, CheckpointToolDetails> {
 	readonly name = "checkpoint";
+	readonly allowedTiers = WORKER_ONLY_TIERS;
 	readonly approval = "read" as const;
 	readonly label = "Checkpoint";
 	readonly summary = "Create a git-based checkpoint to save and restore session state";
@@ -94,6 +96,7 @@ export class CheckpointTool implements AgentTool<typeof checkpointSchema, Checkp
 
 export class RewindTool implements AgentTool<typeof rewindSchema, RewindToolDetails> {
 	readonly name = "rewind";
+	readonly allowedTiers = WORKER_ONLY_TIERS;
 	readonly approval = "read" as const;
 	readonly label = "Rewind";
 	readonly summary = "Rewind to a previously created checkpoint";

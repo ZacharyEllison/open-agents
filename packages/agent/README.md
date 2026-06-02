@@ -1,6 +1,6 @@
 # @oh-my-pi/pi-agent
 
-Stateful agent with tool execution and event streaming. Built on `@oh-my-pi/pi-ai`.
+Stateful agent with tool execution and event streaming. Built on `@open-agents/ai`.
 
 ## Installation
 
@@ -12,7 +12,7 @@ npm install @oh-my-pi/pi-agent
 
 ```typescript
 import { Agent } from "@oh-my-pi/pi-agent";
-import { getModel } from "@oh-my-pi/pi-ai";
+import { getModel } from "@open-agents/ai";
 
 const agent = new Agent({
 	initialState: {
@@ -279,10 +279,10 @@ const agent = new Agent({
 
 ## Tools
 
-Define tools using `AgentTool` with a Zod parameter schema (via `z` from `@oh-my-pi/pi-ai`).
+Define tools using `AgentTool` with a Zod parameter schema (via `z` from `@open-agents/ai`).
 
 ```typescript
-import { z } from "@oh-my-pi/pi-ai";
+import { z } from "@open-agents/ai";
 
 const readFileTool: AgentTool = {
 	name: "read_file",

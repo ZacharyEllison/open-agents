@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { type SettingPath, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { ReadTool } from "@oh-my-pi/pi-coding-agent/tools/read";
-import * as imageResize from "@oh-my-pi/pi-coding-agent/utils/image-resize";
-import * as toolsManager from "@oh-my-pi/pi-coding-agent/utils/tools-manager";
-import * as scrapers from "@oh-my-pi/pi-coding-agent/web/scrapers/types";
-import * as scraperUtils from "@oh-my-pi/pi-coding-agent/web/scrapers/utils";
-import * as natives from "@oh-my-pi/pi-natives";
-import { hookFetch, ptree, Snowflake } from "@oh-my-pi/pi-utils";
+import { type SettingPath, Settings } from "@open-agents/coding-agent/config/settings";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { ReadTool } from "@open-agents/coding-agent/tools/read";
+import * as imageResize from "@open-agents/coding-agent/utils/image-resize";
+import * as toolsManager from "@open-agents/coding-agent/utils/tools-manager";
+import * as scrapers from "@open-agents/coding-agent/web/scrapers/types";
+import * as scraperUtils from "@open-agents/coding-agent/web/scrapers/utils";
+import * as natives from "@open-agents/natives";
+import { hookFetch, ptree, Snowflake } from "@open-agents/utils";
 
 const withMissingSystemPython = () => {
 	const whichSpy = vi.spyOn(Bun, "which").mockImplementation(() => null);

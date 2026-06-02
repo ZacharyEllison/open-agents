@@ -10,6 +10,8 @@
  * batch's `flush` flag to true only for the final write so diagnostics
  * round-trip once.
  */
+
+import type { AgentToolResult } from "@open-agents/agent";
 import {
 	buildCompactDiffPreview,
 	MismatchError as HashlineMismatchError,
@@ -17,8 +19,7 @@ import {
 	Patcher,
 	type PatchSectionResult,
 	type PreparedSection,
-} from "@oh-my-pi/hashline";
-import type { AgentToolResult } from "@oh-my-pi/pi-agent-core";
+} from "@open-agents/hashline";
 import type { FileDiagnosticsResult, WritethroughCallback, WritethroughDeferredHandle } from "../../lsp";
 import type { ToolSession } from "../../tools";
 import { outputMeta } from "../../tools/output-meta";

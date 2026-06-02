@@ -1,6 +1,6 @@
 # Mnemopi memory backend
 
-Oh My Pi can use `@oh-my-pi/pi-mnemopi` as a local long-term memory backend.
+Oh My Pi can use `@open-agents/mnemopi` as a local long-term memory backend.
 
 Set:
 
@@ -61,7 +61,7 @@ The coding-agent wrapper applies scoping on top of the underlying `Mnemopi` pack
 - `per-project` writes to and recalls from a bank derived from the current git repository root (or cwd) plus a stable hash.
 - `per-project-tagged` writes to the project-local bank and recalls from both the project-local bank and the shared global bank, with duplicate recall results merged.
 
-The combined project-plus-global behavior lives in the wrapper. The `@oh-my-pi/pi-mnemopi` package itself still exposes banks and constructor options directly, including `bank` for selecting a bank name. Project-local banks other than the shared bank are stored as sibling bank databases managed by Mnemopi's `BankManager`.
+The combined project-plus-global behavior lives in the wrapper. The `@open-agents/mnemopi` package itself still exposes banks and constructor options directly, including `bank` for selecting a bank name. Project-local banks other than the shared bank are stored as sibling bank databases managed by Mnemopi's `BankManager`.
 
 ## LLM and embeddings
 

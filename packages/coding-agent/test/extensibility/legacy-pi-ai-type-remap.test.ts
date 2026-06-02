@@ -10,7 +10,7 @@ import {
 } from "../../src/extensibility/plugins/legacy-pi-compat";
 import { Type as TypeBoxShimType } from "../../src/extensibility/typebox";
 
-// pi-ai 15.1.0 removed the runtime `Type` export from `@oh-my-pi/pi-ai`'s
+// pi-ai 15.1.0 removed the runtime `Type` export from `@open-agents/ai`'s
 // package root. Legacy extensions (and their aliased-scope variants such as
 // `@earendil-works/pi-ai`) still author parameter schemas as
 // `import { Type } from "@earendil-works/pi-ai"` and then `Type.Object(...)`.
@@ -61,9 +61,9 @@ describe("legacy-pi @(scope)/pi-ai root `Type` remap (issue #1437)", () => {
 		expect(loaded.schema.safeParse({ name: "ok", extra: 1 }).success).toBe(false);
 	});
 
-	it('redirects `import { Type } from "@oh-my-pi/pi-ai"` for plugins published against the canonical scope', async () => {
+	it('redirects `import { Type } from "@open-agents/ai"` for plugins published against the canonical scope', async () => {
 		const entry = await writeFixtureExtension(
-			['import { Type } from "@oh-my-pi/pi-ai";', "export const probe = Type;"].join("\n"),
+			['import { Type } from "@open-agents/ai";', "export const probe = Type;"].join("\n"),
 		);
 
 		const loaded = (await loadLegacyPiModule(entry)) as { probe: typeof TypeBoxShimType };
@@ -89,13 +89,13 @@ describe("legacy-pi @(scope)/pi-ai root `Type` remap (issue #1437)", () => {
 		expect(loaded.zodObj.safeParse({}).success).toBe(false);
 	});
 
-	it("does not redirect subpath imports such as @oh-my-pi/pi-ai/utils/schema", async () => {
+	it("does not redirect subpath imports such as @open-agents/ai/utils/schema", async () => {
 		const entry = await writeFixtureExtension(
 			[
 				// `zodToWireSchema` is only exported from the subpath, not the root,
 				// so a successful import proves the subpath still resolves directly
 				// against the bundled pi-ai package rather than the shim.
-				'import { zodToWireSchema } from "@oh-my-pi/pi-ai/utils/schema";',
+				'import { zodToWireSchema } from "@open-agents/ai/utils/schema";',
 				"export const fn = zodToWireSchema;",
 			].join("\n"),
 		);
@@ -109,7 +109,7 @@ describe("legacy pi package root remaps (issue #1474)", () => {
 	it("loads @earendil-works/pi-coding-agent root imports when host package resolution is unavailable", async () => {
 		const realResolveSync = Bun.resolveSync.bind(Bun);
 		vi.spyOn(Bun, "resolveSync").mockImplementation((specifier: string, from: string) => {
-			if (specifier === "@oh-my-pi/pi-coding-agent" && from.endsWith(path.join("src", "extensibility", "plugins"))) {
+			if (specifier === "@open-agents/coding-agent" && from.endsWith(path.join("src", "extensibility", "plugins"))) {
 				throw new Error("compiled binary host package resolution unavailable");
 			}
 			return realResolveSync(specifier, from);
@@ -127,7 +127,7 @@ describe("legacy pi package root remaps (issue #1474)", () => {
 	it("falls back to legacy-scoped subpath peers for direct plugin imports", async () => {
 		const realResolveSync = Bun.resolveSync.bind(Bun);
 		vi.spyOn(Bun, "resolveSync").mockImplementation((specifier: string, from: string) => {
-			if (specifier === "@oh-my-pi/pi-ai/utils/oauth") {
+			if (specifier === "@open-agents/ai/utils/oauth") {
 				throw new Error(`canonical peer unavailable from ${from}`);
 			}
 			return realResolveSync(specifier, from);
@@ -170,7 +170,7 @@ describe("legacy pi package root remaps (issue #1474)", () => {
 		const realResolveSync = Bun.resolveSync.bind(Bun);
 		let canonicalLookupSeen = false;
 		vi.spyOn(Bun, "resolveSync").mockImplementation((specifier: string, from: string) => {
-			if (specifier === "@oh-my-pi/pi-utils") {
+			if (specifier === "@open-agents/utils") {
 				canonicalLookupSeen = true;
 			}
 			return realResolveSync(specifier, from);

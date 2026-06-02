@@ -19,21 +19,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Agent } from "@oh-my-pi/pi-agent-core";
-import { getBundledModel } from "@oh-my-pi/pi-ai/models";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { EventController } from "@oh-my-pi/pi-coding-agent/modes/controllers/event-controller";
-import { InputController } from "@oh-my-pi/pi-coding-agent/modes/controllers/input-controller";
-import { getThemeByName, setThemeInstance } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import type { InteractiveModeContext } from "@oh-my-pi/pi-coding-agent/modes/types";
-import { UiHelpers } from "@oh-my-pi/pi-coding-agent/modes/utils/ui-helpers";
-import { AgentSession, type AgentSessionEvent } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SKILL_PROMPT_MESSAGE_TYPE, type SkillPromptDetails } from "@oh-my-pi/pi-coding-agent/session/messages";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { Container } from "@oh-my-pi/pi-tui";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import { Agent } from "@open-agents/agent";
+import { getBundledModel } from "@open-agents/ai/models";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { EventController } from "@open-agents/coding-agent/modes/controllers/event-controller";
+import { InputController } from "@open-agents/coding-agent/modes/controllers/input-controller";
+import { getThemeByName, setThemeInstance } from "@open-agents/coding-agent/modes/theme/theme";
+import type { InteractiveModeContext } from "@open-agents/coding-agent/modes/types";
+import { UiHelpers } from "@open-agents/coding-agent/modes/utils/ui-helpers";
+import { AgentSession, type AgentSessionEvent } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SKILL_PROMPT_MESSAGE_TYPE, type SkillPromptDetails } from "@open-agents/coding-agent/session/messages";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { Container } from "@open-agents/tui";
+import { TempDir } from "@open-agents/utils";
 
 // ============================================================================
 // Shared helpers

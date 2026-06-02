@@ -4,11 +4,11 @@
  * silently succeeding. See #1668.
  */
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import type { Args } from "@oh-my-pi/pi-coding-agent/cli/args";
-import type { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { createSessionManager } from "@oh-my-pi/pi-coding-agent/main";
-import type { SessionInfo } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import * as sessionManagerModule from "@oh-my-pi/pi-coding-agent/session/session-manager";
+import type { Args } from "@open-agents/coding-agent/cli/args";
+import type { Settings } from "@open-agents/coding-agent/config/settings";
+import { createSessionManager } from "@open-agents/coding-agent/main";
+import type { SessionInfo } from "@open-agents/coding-agent/session/session-manager";
+import * as sessionManagerModule from "@open-agents/coding-agent/session/session-manager";
 
 function buildArgs(resume: string): Args {
 	return {

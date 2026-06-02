@@ -1,16 +1,16 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { Effort } from "@oh-my-pi/pi-ai";
+import type { ThinkingLevel } from "@open-agents/agent";
+import type { Effort } from "@open-agents/ai";
 import {
 	detectMacOSAppearance,
 	MacAppearanceObserver,
 	type HighlightColors as NativeHighlightColors,
 	highlightCode as nativeHighlightCode,
 	supportsLanguage as nativeSupportsLanguage,
-} from "@oh-my-pi/pi-natives";
-import type { EditorTheme, MarkdownTheme, SelectListTheme, SymbolTheme } from "@oh-my-pi/pi-tui";
-import { adjustHsv, getCustomThemesDir, isEnoent, logger } from "@oh-my-pi/pi-utils";
+} from "@open-agents/natives";
+import type { EditorTheme, MarkdownTheme, SelectListTheme, SymbolTheme } from "@open-agents/tui";
+import { adjustHsv, getCustomThemesDir, isEnoent, logger } from "@open-agents/utils";
 import chalk from "chalk";
 import * as z from "zod/v4";
 // Embed theme JSON files at build time
@@ -103,7 +103,7 @@ export type SymbolKey =
 	| "icon.context"
 	| "icon.cost"
 	| "icon.time"
-	| "icon.pi"
+	| "icon.agent"
 	| "icon.agents"
 	| "icon.cache"
 	| "icon.input"
@@ -269,7 +269,7 @@ const UNICODE_SYMBOLS: SymbolMap = {
 	"icon.context": "◫",
 	"icon.cost": "💲",
 	"icon.time": "⏱",
-	"icon.pi": "π",
+	"icon.agent": "▲",
 	"icon.agents": "👥",
 	"icon.cache": "💾",
 	"icon.input": "⤵",
@@ -500,7 +500,7 @@ const NERD_SYMBOLS: SymbolMap = {
 	// pick:  | alt: ◷ ◴
 	"icon.time": "\uf017",
 	// pick:  | alt: π ∏ ∑
-	"icon.pi": "\ue22c",
+	"icon.agent": "\ue22c",
 	// pick:  | alt: 
 	"icon.agents": "\uf0c0",
 	// pick:  | alt:  
@@ -698,7 +698,7 @@ const ASCII_SYMBOLS: SymbolMap = {
 	"icon.context": "ctx:",
 	"icon.cost": "$",
 	"icon.time": "t:",
-	"icon.pi": "pi",
+	"icon.agent": "agent",
 	"icon.agents": "AG",
 	"icon.cache": "cache",
 	"icon.input": "in:",
@@ -1527,7 +1527,7 @@ export class Theme {
 			context: this.#symbols["icon.context"],
 			cost: this.#symbols["icon.cost"],
 			time: this.#symbols["icon.time"],
-			pi: this.#symbols["icon.pi"],
+			agent: this.#symbols["icon.agent"],
 			agents: this.#symbols["icon.agents"],
 			cache: this.#symbols["icon.cache"],
 			input: this.#symbols["icon.input"],
@@ -2476,7 +2476,7 @@ export function getEditorTheme(): EditorTheme {
 	};
 }
 
-export function getSettingsListTheme(): import("@oh-my-pi/pi-tui").SettingsListTheme {
+export function getSettingsListTheme(): import("@open-agents/tui").SettingsListTheme {
 	return {
 		label: (text: string, selected: boolean, changed: boolean) =>
 			changed ? theme.fg("statusLineGitDirty", text) : selected ? theme.fg("accent", text) : text,

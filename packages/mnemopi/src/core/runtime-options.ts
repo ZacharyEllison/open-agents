@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { Api, Model } from "@oh-my-pi/pi-ai";
+import type { Api, Model } from "@open-agents/ai";
 
 export interface MnemopiLlmCompleteOptions {
 	maxTokens?: number;

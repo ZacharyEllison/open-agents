@@ -6,7 +6,7 @@ import {
 	fetchWithRetry,
 	getFastembedCacheDir,
 	logger,
-} from "@oh-my-pi/pi-utils";
+} from "@open-agents/utils";
 import type { EmbeddingModel } from "fastembed";
 import { LRUCache } from "lru-cache/raw";
 import packageJson from "../../package.json" with { type: "json" };

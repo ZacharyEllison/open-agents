@@ -6,8 +6,8 @@
  * `Remember: …` line per stored item — instead of the generic JSON arg tree,
  * which exploded multi-line memory blobs into an unreadable wall.
  */
-import type { Component } from "@oh-my-pi/pi-tui";
-import { Text } from "@oh-my-pi/pi-tui";
+import type { Component } from "@open-agents/tui";
+import { Text } from "@open-agents/tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme } from "../modes/theme/theme";
 import { Ellipsis, renderStatusLine, truncateToWidth } from "../tui";

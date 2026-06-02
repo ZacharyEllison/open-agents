@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getThemeByName, initTheme, theme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
+import { getThemeByName, initTheme, theme } from "@open-agents/coding-agent/modes/theme/theme";
 import {
 	dedupeParseErrors,
 	formatCodeFrameLine,
@@ -10,7 +10,7 @@ import {
 	formatParseErrors,
 	formatScreenshot,
 	truncateDiffByHunk,
-} from "@oh-my-pi/pi-coding-agent/tools/render-utils";
+} from "@open-agents/coding-agent/tools/render-utils";
 
 describe("parse error formatting", () => {
 	it("deduplicates parse errors while preserving order", () => {

@@ -1,6 +1,6 @@
 {
 	"type": "module",
-	"name": "@oh-my-pi/pi-agent-core",
+	"name": "@open-agents/agent",
 	"version": "15.8.1",
 	"description": "General-purpose agent with transport abstraction, state management, and attachment support",
 	"homepage": "https://omp.sh",
@@ -35,9 +35,9 @@
 		"fmt": "biome format --write ."
 	},
 	"dependencies": {
-		"@oh-my-pi/pi-ai": "catalog:",
-		"@oh-my-pi/pi-natives": "catalog:",
-		"@oh-my-pi/pi-utils": "catalog:",
+		"@open-agents/ai": "catalog:",
+		"@open-agents/natives": "catalog:",
+		"@open-agents/utils": "catalog:",
 		"@opentelemetry/api": "catalog:"
 	},
 	"devDependencies": {

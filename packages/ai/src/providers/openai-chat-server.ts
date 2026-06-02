@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { resolvePromptCacheKey } from "../auth-gateway/http";
+import { resolvePromptCacheKey } from "../gateway-wire/prompt-cache";
 /**
  * Parsed inbound OpenAI chat-completions request, ready to feed into pi-ai
  * `stream(model, context, options)`.
  */
-import type { AuthGatewayParsedRequest as ParsedRequest } from "../auth-gateway/types";
+import type { AuthGatewayParsedRequest as ParsedRequest } from "../gateway-wire/types";
 import type {
 	AssistantMessage,
 	AssistantMessageEventStream,

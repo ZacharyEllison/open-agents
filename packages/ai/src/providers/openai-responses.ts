@@ -1,4 +1,4 @@
-import { $env, extractHttpStatusFromError, structuredCloneJSON } from "@oh-my-pi/pi-utils";
+import { $env, extractHttpStatusFromError, structuredCloneJSON } from "@open-agents/utils";
 import OpenAI, { APIConnectionTimeoutError as OpenAIConnectionTimeoutError } from "openai";
 import type {
 	Tool as OpenAITool,

@@ -1,9 +1,9 @@
-import { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import { getOAuthProviders } from "@oh-my-pi/pi-ai/utils/oauth";
-import type { OAuthProvider } from "@oh-my-pi/pi-ai/utils/oauth/types";
-import type { Component, OverlayHandle } from "@oh-my-pi/pi-tui";
-import { Input, Loader, Spacer, Text } from "@oh-my-pi/pi-tui";
-import { getAgentDbPath, getProjectDir, normalizePathForComparison } from "@oh-my-pi/pi-utils";
+import { ThinkingLevel } from "@open-agents/agent";
+import { getOAuthProviders } from "@open-agents/ai/utils/oauth";
+import type { OAuthProvider } from "@open-agents/ai/utils/oauth/types";
+import type { Component, OverlayHandle } from "@open-agents/tui";
+import { Input, Loader, Spacer, Text } from "@open-agents/tui";
+import { getAgentDbPath, getProjectDir, normalizePathForComparison } from "@open-agents/utils";
 import { getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
 import { settings } from "../../config/settings";

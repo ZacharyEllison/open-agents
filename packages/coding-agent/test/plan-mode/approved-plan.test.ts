@@ -7,7 +7,7 @@ import {
 	normalizePlanTitle,
 	renameApprovedPlanFile,
 	resolvePlanTitle,
-} from "@oh-my-pi/pi-coding-agent/plan-mode/approved-plan";
+} from "@open-agents/coding-agent/plan-mode/approved-plan";
 
 describe("renameApprovedPlanFile", () => {
 	let tmpDir: string;

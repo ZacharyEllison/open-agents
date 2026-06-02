@@ -7,12 +7,12 @@ import {
 	visibleWidth as nativeVisibleWidth,
 	wrapTextWithAnsi as nativeWrapTextWithAnsi,
 	type SliceResult,
-} from "@oh-my-pi/pi-natives";
-import { getDefaultTabWidth, getIndentation } from "@oh-my-pi/pi-utils";
+} from "@open-agents/natives";
+import { getDefaultTabWidth, getIndentation } from "@open-agents/utils";
 
-export { Ellipsis } from "@oh-my-pi/pi-natives";
+export { Ellipsis } from "@open-agents/natives";
 
-export { getDefaultTabWidth, getIndentation } from "@oh-my-pi/pi-utils";
+export { getDefaultTabWidth, getIndentation } from "@open-agents/utils";
 
 export function sliceWithWidth(line: string, startCol: number, length: number, strict?: boolean | null): SliceResult {
 	return nativeSliceWithWidth(line, startCol, length, strict ?? null, getDefaultTabWidth());

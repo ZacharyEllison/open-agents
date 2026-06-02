@@ -8,13 +8,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import { Agent, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import { Agent, ThinkingLevel } from "@open-agents/agent";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { TempDir } from "@open-agents/utils";
 
 describe("plan mode thinking level", () => {
 	let tempDir: TempDir;
@@ -37,7 +37,7 @@ describe("plan mode thinking level", () => {
 		tempDir.removeSync();
 	});
 
-	function createSessionWithRoles(modelRoles: Record<string, string>): AgentSession {
+	function createSessionWithRoles(modelTiers: Record<string, string>): AgentSession {
 		const sonnet = modelRegistry.find("anthropic", "claude-sonnet-4-5");
 		if (!sonnet) throw new Error("Expected claude-sonnet-4-5 to exist in registry");
 
@@ -46,7 +46,7 @@ describe("plan mode thinking level", () => {
 				initialState: { model: sonnet, systemPrompt: ["Test"], tools: [], messages: [] },
 			}),
 			sessionManager: SessionManager.inMemory(),
-			settings: Settings.isolated({ modelRoles }),
+			settings: Settings.isolated({ modelTiers }),
 			modelRegistry,
 		});
 		return session;

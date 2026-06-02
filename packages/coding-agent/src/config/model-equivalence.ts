@@ -1,4 +1,4 @@
-import { type Api, getBundledModels, getBundledProviders, type Model } from "@oh-my-pi/pi-ai";
+import { type Api, getBundledModels, getBundledProviders, type Model } from "@open-agents/ai";
 import {
 	getBracketStrippedModelIdCandidates,
 	getLongestModelLikeIdSegment,

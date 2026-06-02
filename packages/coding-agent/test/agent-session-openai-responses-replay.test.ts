@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getBundledModel } from "@oh-my-pi/pi-ai/models";
+import { getBundledModel } from "@open-agents/ai/models";
 import type {
 	AssistantMessage,
 	Message,
@@ -10,16 +10,16 @@ import type {
 	ProviderSessionState,
 	ToolResultMessage,
 	Usage,
-} from "@oh-my-pi/pi-ai/types";
-import { createOpenAIResponsesHistoryPayload } from "@oh-my-pi/pi-ai/utils";
-import type { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import type { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
+} from "@open-agents/ai/types";
+import { createOpenAIResponsesHistoryPayload } from "@open-agents/ai/utils";
+import type { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import type { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
 import {
 	type SessionEntry,
 	SessionManager,
 	type SessionMessageEntry,
-} from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { Snowflake } from "@oh-my-pi/pi-utils";
+} from "@open-agents/coding-agent/session/session-manager";
+import { Snowflake } from "@open-agents/utils";
 
 function createUsage(): Usage {
 	return {
@@ -209,9 +209,9 @@ async function createSessionHarness(
 ): Promise<{ session: AgentSession; authStorage: AuthStorage }> {
 	const { provider = "openai", modelId = "gpt-5-mini" } = options;
 	const [{ createAgentSession }, { Settings }, { AuthStorage }] = await Promise.all([
-		import("@oh-my-pi/pi-coding-agent/sdk"),
-		import("@oh-my-pi/pi-coding-agent/config/settings"),
-		import("@oh-my-pi/pi-coding-agent/session/auth-storage"),
+		import("@open-agents/coding-agent/sdk"),
+		import("@open-agents/coding-agent/config/settings"),
+		import("@open-agents/coding-agent/session/auth-storage"),
 	]);
 	const authStorage = await AuthStorage.create(path.join(tempDir, `testauth-${Snowflake.next()}.db`));
 	authStorage.setRuntimeApiKey("openai", "test-key");

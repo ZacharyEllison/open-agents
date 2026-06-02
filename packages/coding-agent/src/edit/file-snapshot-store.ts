@@ -5,10 +5,10 @@
  * the hashline patcher to verify or recover from stale section tags (file
  * changed externally between read and edit, or a prior in-session edit
  * advanced the tag). The store is the {@link InMemorySnapshotStore}
- * from `@oh-my-pi/hashline`; the only coding-agent-specific concern here
+ * from `@open-agents/hashline`; the only coding-agent-specific concern here
  * is wiring it onto the per-session owner object.
  */
-import { InMemorySnapshotStore } from "@oh-my-pi/hashline";
+import { InMemorySnapshotStore } from "@open-agents/hashline";
 import { normalizeToLF } from "./normalize";
 
 /**

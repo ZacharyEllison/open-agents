@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { recoverOrphanedBackups, SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { MemorySessionStorage } from "@oh-my-pi/pi-coding-agent/session/session-storage";
+import { recoverOrphanedBackups, SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { MemorySessionStorage } from "@open-agents/coding-agent/session/session-storage";
 
 class FsCodeError extends Error {
 	code: string;

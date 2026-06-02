@@ -1,14 +1,14 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
-import { Agent } from "@oh-my-pi/pi-agent-core";
-import type { AssistantMessage, Usage } from "@oh-my-pi/pi-ai";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { resolveLocalUrlToPath } from "@oh-my-pi/pi-coding-agent/internal-urls";
-import { AssistantMessageComponent } from "@oh-my-pi/pi-coding-agent/modes/components/assistant-message";
-import { initTheme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import { SILENT_ABORT_MARKER } from "@oh-my-pi/pi-coding-agent/session/messages";
-import { Text } from "@oh-my-pi/pi-tui";
-import { formatNumber, TempDir } from "@oh-my-pi/pi-utils";
+import { Agent } from "@open-agents/agent";
+import type { AssistantMessage, Usage } from "@open-agents/ai";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import { resolveLocalUrlToPath } from "@open-agents/coding-agent/internal-urls";
+import { AssistantMessageComponent } from "@open-agents/coding-agent/modes/components/assistant-message";
+import { initTheme } from "@open-agents/coding-agent/modes/theme/theme";
+import { SILENT_ABORT_MARKER } from "@open-agents/coding-agent/session/messages";
+import { Text } from "@open-agents/tui";
+import { formatNumber, TempDir } from "@open-agents/utils";
 import { ModelRegistry } from "../src/config/model-registry";
 import type { HookSelectorSlider } from "../src/modes/components/hook-selector";
 import { InteractiveMode } from "../src/modes/interactive-mode";
@@ -222,7 +222,7 @@ describe("InteractiveMode plan review rendering", () => {
 				},
 			}),
 			sessionManager: SessionManager.create(tempDir.path(), tempDir.path()),
-			settings: Settings.isolated({ modelRoles: { plan: `anthropic/${planModel.id}` } }),
+			settings: Settings.isolated({ modelTiers: { plan: `anthropic/${planModel.id}` } }),
 			modelRegistry,
 		});
 		mode = new InteractiveMode(session, "test");

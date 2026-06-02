@@ -1,4 +1,4 @@
-import { getGeminiCliHeaders } from "../providers/google-gemini-cli";
+import { getGeminiCliHeaders } from "../providers/google-gemini-headers";
 import type {
 	UsageAmount,
 	UsageFetchContext,

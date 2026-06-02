@@ -11,7 +11,7 @@ import {
 	Patcher,
 	parsePatch,
 	resolveBlockEdits,
-} from "@oh-my-pi/hashline";
+} from "@open-agents/hashline";
 
 const PATH = "x.ts";
 

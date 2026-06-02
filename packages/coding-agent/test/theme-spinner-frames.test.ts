@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getConfigRootDir, getCustomThemesDir, setAgentDir } from "@oh-my-pi/pi-utils";
+import { getConfigRootDir, getCustomThemesDir, setAgentDir } from "@open-agents/utils";
 import { getThemeByName } from "../src/modes/theme/theme";
 
 // Path of the built-in dark theme JSON, used as a known-valid base we can
 // extend with custom `symbols.spinnerFrames` shapes.
 const DARK_THEME_PATH = path.join(import.meta.dir, "..", "src", "modes", "theme", "dark.json");
 
-const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
+const originalAgentDir = process.env.OA_AGENT_DIR;
 const fallbackAgentDir = path.join(getConfigRootDir(), "agent");
 
 let tmpAgentDir: string;
@@ -38,7 +38,7 @@ describe("theme symbols.spinnerFrames", () => {
 			setAgentDir(originalAgentDir);
 		} else {
 			setAgentDir(fallbackAgentDir);
-			delete process.env.PI_CODING_AGENT_DIR;
+			delete process.env.OA_AGENT_DIR;
 		}
 		await fs.rm(tmpAgentDir, { recursive: true, force: true });
 	});

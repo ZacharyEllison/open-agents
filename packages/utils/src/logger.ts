@@ -345,7 +345,7 @@ function printModuleLoadSummary(loads: Span[], depth: number, lines: string[]): 
 	}
 	const wall = unionEnd > unionStart ? unionEnd - unionStart : 0;
 	lines.push(`${childIndent}(modules): ${loads.length} loaded, wall ${fmtMs(wall)}, sum ${fmtMs(totalSelf)}`);
-	const showAll = process.env.PI_TIMING === "full";
+	const showAll = process.env.OA_TIMING === "full";
 	const sorted = [...loads].sort((a, b) => durationOf(b) - durationOf(a));
 	const visible = showAll ? sorted : sorted.slice(0, MODULE_LOAD_VERBOSE_TOP);
 	for (const span of visible) {
@@ -355,7 +355,7 @@ function printModuleLoadSummary(loads: Span[], depth: number, lines: string[]): 
 		lines.push(`${grandIndent}${span.op}: ${fmtMs(dur)}${tag}`);
 	}
 	if (!showAll && sorted.length > MODULE_LOAD_VERBOSE_TOP) {
-		lines.push(`${grandIndent}… ${sorted.length - MODULE_LOAD_VERBOSE_TOP} more (PI_TIMING=full to show all)`);
+		lines.push(`${grandIndent}… ${sorted.length - MODULE_LOAD_VERBOSE_TOP} more (OA_TIMING=full to show all)`);
 	}
 }
 

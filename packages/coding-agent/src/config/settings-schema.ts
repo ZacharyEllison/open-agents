@@ -1,4 +1,4 @@
-import { THINKING_EFFORTS } from "@oh-my-pi/pi-ai";
+import { THINKING_EFFORTS } from "@open-agents/ai";
 import { TASK_SIMPLE_MODES } from "../task/simple-mode";
 import { AUTO_THINKING, getConfiguredThinkingLevelMetadata, getThinkingLevelMetadata } from "../thinking";
 import {
@@ -82,6 +82,7 @@ export const TAB_METADATA: Record<SettingTab, { label: string; icon: `tab.${stri
 
 /** Status line segment identifiers */
 export type StatusLineSegmentId =
+	| "agent"
 	| "pi"
 	| "model"
 	| "mode"
@@ -209,8 +210,12 @@ export interface ModelTagsSettings {
 // Typed defaults for array/record settings — named constants avoid `as` casts
 // under `as const` while still letting SettingValue infer the correct element type.
 const EMPTY_STRING_ARRAY: string[] = [];
-const EMPTY_STRING_RECORD: Record<string, string> = {};
-const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
+/** Default tier assignments: discover local models at startup (setup wizard / resolver). */
+const DEFAULT_MODEL_TIERS: Record<string, string> = {
+	interface: "auto",
+	worker: "auto",
+	compactor: "auto",
+};
 const EMPTY_MODEL_TAGS_RECORD: ModelTagsSettings = {};
 const HINDSIGHT_RECALL_TYPES_DEFAULT: string[] = ["world", "experience"];
 export const DEFAULT_BASH_INTERCEPTOR_RULES: BashInterceptorRule[] = [
@@ -260,7 +265,7 @@ export const SETTINGS_SCHEMA = {
 
 	// Auth broker — credentials proxied through a remote `omp auth-broker serve`
 	// host. Hidden from the UI; populate via env vars or hand-edited config.yml.
-	// Env (`OMP_AUTH_BROKER_URL` / `OMP_AUTH_BROKER_TOKEN`) takes precedence so
+	// Env (`OA_AUTH_BROKER_URL` / `OA_AUTH_BROKER_TOKEN`) takes precedence so
 	// per-machine overrides remain trivial.
 	"auth.broker.url": { type: "string", default: undefined },
 	"auth.broker.token": { type: "string", default: undefined },
@@ -338,13 +343,11 @@ export const SETTINGS_SCHEMA = {
 
 	disabledExtensions: { type: "array", default: EMPTY_STRING_ARRAY },
 
-	modelRoles: { type: "record", default: EMPTY_STRING_RECORD },
+	modelTiers: { type: "record", default: DEFAULT_MODEL_TIERS },
 
 	modelTags: { type: "record", default: EMPTY_MODEL_TAGS_RECORD },
 
 	modelProviderOrder: { type: "array", default: EMPTY_STRING_ARRAY },
-
-	cycleOrder: { type: "array", default: DEFAULT_CYCLE_ORDER },
 
 	// ────────────────────────────────────────────────────────────────────────
 	// Appearance
@@ -2764,11 +2767,6 @@ export const SETTINGS_SCHEMA = {
 		default: [] as string[],
 	},
 
-	"task.agentModelOverrides": {
-		type: "record",
-		default: {} as Record<string, string>,
-	},
-
 	"tasks.todoClearDelay": {
 		type: "number",
 		default: 60,
@@ -2976,7 +2974,7 @@ export const SETTINGS_SCHEMA = {
 			tab: "providers",
 			label: "Tiny Model Device",
 			description:
-				"ONNX execution provider for local tiny models (titles + memory). Default uses CPU-only inference. The PI_TINY_DEVICE env var overrides this.",
+				"ONNX execution provider for local tiny models (titles + memory). Default uses CPU-only inference. The OA_TINY_DEVICE env var overrides this.",
 			options: TINY_MODEL_DEVICE_SETTING_OPTIONS,
 		},
 	},
@@ -2988,7 +2986,7 @@ export const SETTINGS_SCHEMA = {
 			tab: "providers",
 			label: "Tiny Model Precision",
 			description:
-				"ONNX quantization/precision for local tiny models. Default uses each model's shipped dtype (q4); lower precision is faster, higher is more faithful. The PI_TINY_DTYPE env var overrides this.",
+				"ONNX quantization/precision for local tiny models. Default uses each model's shipped dtype (q4); lower precision is faster, higher is more faithful. The OA_TINY_DTYPE env var overrides this.",
 			options: TINY_MODEL_DTYPE_SETTING_OPTIONS,
 		},
 	},
@@ -3002,6 +3000,18 @@ export const SETTINGS_SCHEMA = {
 			description:
 				"Mnemopi LLM for fact extraction + consolidation: online (smol/remote) by default, or a local on-device model",
 			condition: "mnemopiActive",
+			options: TINY_MEMORY_MODEL_OPTIONS,
+		},
+	},
+	"providers.compactorOnnxModel": {
+		type: "enum",
+		values: TINY_MEMORY_MODEL_VALUES,
+		default: ONLINE_MEMORY_MODEL_KEY,
+		ui: {
+			tab: "context",
+			label: "Compactor ONNX Model",
+			description:
+				"Optional on-device ONNX model for context compaction summaries (compactor tier). `online` keeps server-based compaction; local keys reuse the memory-model registry (1B–1.7B q4). Falls back to modelTiers.compactor on worker errors.",
 			options: TINY_MEMORY_MODEL_OPTIONS,
 		},
 	},
@@ -3180,41 +3190,6 @@ export const SETTINGS_SCHEMA = {
 			label: "Auto QA",
 			description: "Enable automated tool issue reporting (report_tool_issue) for all agents",
 		},
-	},
-
-	"dev.autoqaPush.endpoint": {
-		type: "string",
-		// Bundled QA collector — runs `/work/pi-www/autoqa` behind qa.omp.sh.
-		// Override via `PI_AUTO_QA_PUSH_URL` or `dev.autoqaPush.endpoint`
-		// in `config.yml` to point at a self-hosted instance.
-		default: "https://qa.omp.sh/v1/grievances" as const,
-		ui: {
-			tab: "tools",
-			label: "Auto QA Push Endpoint",
-			description: "Full URL that receives the JSON payload (default ships to https://qa.omp.sh/v1/grievances)",
-		},
-	},
-
-	"dev.autoqaPush.token": {
-		type: "string",
-		default: undefined,
-	},
-
-	/**
-	 * User decision on sharing automatic `report_tool_issue` grievances.
-	 *
-	 *   - `"unset"`  — never asked; the first `report_tool_issue` invocation
-	 *                  pops a consent dialog and persists the answer here.
-	 *   - `"granted"` — record and (when push is configured) ship grievances.
-	 *   - `"denied"`  — silently no-op every `report_tool_issue` call.
-	 *
-	 * Owned by `packages/coding-agent/src/tools/report-tool-issue.ts` via the
-	 * process-global consent handler registered by `InteractiveMode`.
-	 */
-	"dev.autoqa.consent": {
-		type: "enum",
-		values: ["unset", "granted", "denied"] as const,
-		default: "unset" as const,
 	},
 
 	"thinkingBudgets.minimal": { type: "number", default: 1024 },
@@ -3457,9 +3432,8 @@ export interface GroupTypeMap {
 	statusLine: StatusLineSettings;
 	thinkingBudgets: ThinkingBudgetsSettings;
 	stt: SttSettings;
-	modelRoles: Record<string, string>;
+	modelTiers: Record<string, string>;
 	modelTags: ModelTagsSettings;
-	cycleOrder: string[];
 	shellMinimizer: ShellMinimizerSettings;
 }
 

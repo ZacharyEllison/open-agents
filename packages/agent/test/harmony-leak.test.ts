@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { AssistantMessage, Model, ToolCall } from "@oh-my-pi/pi-ai";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
+import type { AssistantMessage, Model, ToolCall } from "@open-agents/ai";
+import { getBundledModel } from "@open-agents/ai";
 import {
 	createHarmonyAuditEvent,
 	detectHarmonyLeak,

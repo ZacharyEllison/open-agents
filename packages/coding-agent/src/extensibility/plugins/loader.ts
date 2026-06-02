@@ -6,7 +6,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getPluginsLockfile, getPluginsNodeModules, getPluginsPackageJson, isEnoent } from "@oh-my-pi/pi-utils";
+import { getPluginsLockfile, getPluginsNodeModules, getPluginsPackageJson, isEnoent } from "@open-agents/utils";
 import { getConfigDirPaths } from "../../config";
 import { installLegacyPiSpecifierShim } from "./legacy-pi-compat";
 import type { InstalledPlugin, PluginManifest, PluginRuntimeConfig, ProjectPluginOverrides } from "./types";
@@ -20,7 +20,7 @@ installLegacyPiSpecifierShim();
 /**
  * Load plugin runtime config from lock file.
  *
- * `home` controls which `<plugins>/omp-plugins.lock.json` is read — pass it
+ * `home` controls which `<plugins>/open-agent-plugins.lock.json` is read — pass it
  * through whenever the caller is loading plugins for a tempdir-rooted
  * scenario (tests, discovery sub-surfaces that need to mirror an alternate
  * `LoadContext.home`).
@@ -54,7 +54,7 @@ async function loadProjectOverrides(cwd: string): Promise<ProjectPluginOverrides
  *
  * Respects both global runtime config and project overrides. Iterates the
  * union of `<plugins>/package.json#dependencies` (`bun install`-installed
- * packages) and `<plugins>/omp-plugins.lock.json#plugins` (so locally
+ * packages) and `<plugins>/open-agent-plugins.lock.json#plugins` (so locally
  * `plugin link`-symlinked extensions, which never get a dependency entry,
  * are still discovered). The optional `home` parameter pins the plugins
  * root for callers that need to enumerate plugins relative to a non-default

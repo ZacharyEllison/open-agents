@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import * as evalIndex from "@oh-my-pi/pi-coding-agent/eval";
-import * as pyKernel from "@oh-my-pi/pi-coding-agent/eval/py/kernel";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { EvalTool } from "@oh-my-pi/pi-coding-agent/tools/eval";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import * as evalIndex from "@open-agents/coding-agent/eval";
+import * as pyKernel from "@open-agents/coding-agent/eval/py/kernel";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { EvalTool } from "@open-agents/coding-agent/tools/eval";
 
 function makeSession(settings = Settings.isolated()): ToolSession {
 	return {

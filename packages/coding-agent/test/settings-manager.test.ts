@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Effort } from "@oh-my-pi/pi-ai";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { getProjectAgentDir, Snowflake } from "@oh-my-pi/pi-utils";
+import { Effort } from "@open-agents/ai";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import { getProjectAgentDir, Snowflake } from "@open-agents/utils";
 import { YAML } from "bun";
 
 describe("Settings", () => {
@@ -56,7 +56,7 @@ describe("Settings", () => {
 			// Seed initial settings in config.yml
 			await writeSettings({
 				theme: "dark",
-				modelRoles: { default: "claude-sonnet" },
+				modelTiers: { default: "claude-sonnet" },
 			});
 
 			// Settings loads the initial state
@@ -65,7 +65,7 @@ describe("Settings", () => {
 			// Simulate external edit (e.g., user modifying DB directly or another process)
 			await writeSettings({
 				theme: { dark: "anthracite" },
-				modelRoles: { default: "claude-sonnet" },
+				modelTiers: { default: "claude-sonnet" },
 				enabledModels: ["claude-opus-4-5", "gpt-5.2-codex"],
 			});
 
@@ -77,7 +77,7 @@ describe("Settings", () => {
 			expect(savedSettings.enabledModels).toEqual(["claude-opus-4-5", "gpt-5.2-codex"]);
 			expect(savedSettings.defaultThinkingLevel).toBe(Effort.High);
 			expect(savedSettings.theme).toEqual({ dark: "anthracite" });
-			expect((savedSettings.modelRoles as { default?: string } | undefined)?.default).toBe("claude-sonnet");
+			expect((savedSettings.modelTiers as { default?: string } | undefined)?.default).toBe("claude-sonnet");
 		});
 
 		it("filters model allow-list and disabled providers by current path prefix", async () => {
@@ -111,13 +111,13 @@ describe("Settings", () => {
 
 		it("should preserve custom settings when changing theme", async () => {
 			await writeSettings({
-				modelRoles: { default: "claude-sonnet" },
+				modelTiers: { default: "claude-sonnet" },
 			});
 
 			const settings = await Settings.init({ cwd: projectDir, agentDir });
 
 			await writeSettings({
-				modelRoles: { default: "claude-sonnet" },
+				modelTiers: { default: "claude-sonnet" },
 				shellPath: "/bin/zsh",
 				extensions: ["/path/to/extension.ts"],
 			});
@@ -154,7 +154,7 @@ describe("Settings", () => {
 	describe("model role overrides", () => {
 		it("does not persist temporary default model overrides when another role is saved", async () => {
 			await writeSettings({
-				modelRoles: { default: "anthropic/claude-sonnet-4-5" },
+				modelTiers: { default: "anthropic/claude-sonnet-4-5" },
 			});
 
 			const settings = await Settings.init({ cwd: projectDir, agentDir });
@@ -166,7 +166,7 @@ describe("Settings", () => {
 			await settings.flush();
 
 			const savedSettings = await readSettings();
-			expect(savedSettings.modelRoles).toEqual({
+			expect(savedSettings.modelTiers).toEqual({
 				default: "anthropic/claude-sonnet-4-5",
 				smol: "anthropic/claude-haiku-4-5",
 			});
@@ -176,7 +176,7 @@ describe("Settings", () => {
 
 		it("restores persisted model roles after clearing runtime overrides", async () => {
 			await writeSettings({
-				modelRoles: { default: "anthropic/claude-sonnet-4-5" },
+				modelTiers: { default: "anthropic/claude-sonnet-4-5" },
 			});
 
 			const settings = await Settings.init({ cwd: projectDir, agentDir });
@@ -184,14 +184,14 @@ describe("Settings", () => {
 			settings.overrideModelRoles({ default: "openai/gpt-5.2-codex" });
 			expect(settings.getModelRole("default")).toBe("openai/gpt-5.2-codex");
 
-			settings.clearOverride("modelRoles");
+			settings.clearOverride("modelTiers");
 
 			expect(settings.getModelRole("default")).toBe("anthropic/claude-sonnet-4-5");
 		});
 
 		it("keeps the live role value aligned when saving over a runtime override", () => {
 			const settings = Settings.isolated({
-				modelRoles: { default: "anthropic/claude-sonnet-4-5" },
+				modelTiers: { default: "anthropic/claude-sonnet-4-5" },
 			});
 
 			settings.overrideModelRoles({ default: "openai/gpt-5.2-codex" });
@@ -199,7 +199,7 @@ describe("Settings", () => {
 
 			expect(settings.getModelRole("default")).toBe("anthropic/claude-opus-4-5");
 
-			settings.clearOverride("modelRoles");
+			settings.clearOverride("modelTiers");
 
 			expect(settings.getModelRole("default")).toBe("anthropic/claude-opus-4-5");
 		});

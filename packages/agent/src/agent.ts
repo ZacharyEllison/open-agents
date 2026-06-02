@@ -20,7 +20,7 @@ import {
 	type ThinkingBudgets,
 	type ToolChoice,
 	type ToolResultMessage,
-} from "@oh-my-pi/pi-ai";
+} from "@open-agents/ai";
 import { agentLoop, agentLoopContinue } from "./agent-loop";
 import type { AppendOnlyContextManager } from "./append-only-context";
 import type { HarmonyAuditEvent } from "./harmony-leak";
@@ -32,6 +32,8 @@ import type {
 	AgentState,
 	AgentTool,
 	AgentToolContext,
+	ModelTier,
+	ModelTierConfig,
 	StreamFn,
 	ToolCallContext,
 } from "./types";
@@ -308,6 +310,8 @@ export class Agent {
 	#onBeforeYield?: () => Promise<void> | void;
 	#telemetry?: AgentLoopConfig["telemetry"];
 	#appendOnlyContext?: AppendOnlyContextManager;
+	#tierModels?: ModelTierConfig;
+	#activeTier: ModelTier = "interface";
 
 	/** Buffered Cursor tool results with text length at time of call (for correct ordering) */
 	#cursorToolResultBuffer: CursorToolResultEntry[] = [];
@@ -629,6 +633,32 @@ export class Agent {
 
 	setModel(m: Model) {
 		this.#state.model = m;
+		if (this.#tierModels) {
+			this.#tierModels = { ...this.#tierModels, interface: m };
+		}
+	}
+
+	setTierModels(tiers: ModelTierConfig): void {
+		this.#tierModels = tiers;
+		this.#state.model = tiers.interface;
+	}
+
+	getTierModels(): ModelTierConfig | undefined {
+		return this.#tierModels;
+	}
+
+	setActiveTier(tier: ModelTier): void {
+		this.#activeTier = tier;
+	}
+
+	getActiveTier(): ModelTier {
+		return this.#activeTier;
+	}
+
+	#getResolvedTierModels(): ModelTierConfig {
+		const model = this.#state.model;
+		if (!model) throw new Error("No model configured");
+		return this.#tierModels ?? { interface: model, worker: model, compactor: model };
 	}
 
 	setThinkingLevel(l: Effort | undefined) {
@@ -866,8 +896,7 @@ export class Agent {
 	 * Otherwise, continues from existing context.
 	 */
 	async #runLoop(messages?: AgentMessage[], options?: AgentPromptOptions & { skipInitialSteeringPoll?: boolean }) {
-		const model = this.#state.model;
-		if (!model) throw new Error("No model configured");
+		const tiers = this.#getResolvedTierModels();
 
 		let skipInitialSteeringPoll = options?.skipInitialSteeringPoll === true;
 		using _ = new EventLoopKeepalive();
@@ -917,7 +946,8 @@ export class Agent {
 			this.#getToolChoice?.() ?? refreshToolChoiceForActiveTools(options?.toolChoice, this.#state.tools);
 
 		const config: AgentLoopConfig = {
-			model,
+			tiers,
+			activeTier: this.#activeTier,
 			reasoning,
 			temperature: this.#temperature,
 			topP: this.#topP,
@@ -1050,9 +1080,9 @@ export class Agent {
 			const errorMsg: AgentMessage = {
 				role: "assistant",
 				content: [{ type: "text", text: "" }],
-				api: model.api,
-				provider: model.provider,
-				model: model.id,
+				api: tiers.interface.api,
+				provider: tiers.interface.provider,
+				model: tiers.interface.id,
 				usage: {
 					input: 0,
 					output: 0,

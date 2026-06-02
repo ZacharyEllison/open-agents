@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { type AssistantMessage, getBundledModel } from "@oh-my-pi/pi-ai";
-import type { Rule } from "@oh-my-pi/pi-coding-agent/capability/rule";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { createAgentSession } from "@oh-my-pi/pi-coding-agent/sdk";
-import { SecretObfuscator } from "@oh-my-pi/pi-coding-agent/secrets";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { getSessionsDir, Snowflake } from "@oh-my-pi/pi-utils";
+import { type AssistantMessage, getBundledModel } from "@open-agents/ai";
+import type { Rule } from "@open-agents/coding-agent/capability/rule";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { createAgentSession } from "@open-agents/coding-agent/sdk";
+import { SecretObfuscator } from "@open-agents/coding-agent/secrets";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { getSessionsDir, Snowflake } from "@open-agents/utils";
 
 function createTtsrRule(name: string): Rule {
 	return {

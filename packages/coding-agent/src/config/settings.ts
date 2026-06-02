@@ -22,15 +22,17 @@ import {
 	logger,
 	procmgr,
 	setDefaultTabWidth,
-} from "@oh-my-pi/pi-utils";
+} from "@open-agents/utils";
 import { YAML } from "bun";
 import { type Settings as SettingsCapabilityItem, settingsCapability } from "../capability/settings";
-import type { ModelRole } from "../config/model-registry";
+import type { ModelTier } from "../config/model-registry";
+import { MODEL_TIER_IDS } from "../config/model-registry";
 import { loadCapability } from "../discovery";
 import { isLightTheme, setAutoThemeMapping, setColorBlindMode, setSymbolPreset } from "../modes/theme/theme";
 import { AgentStorage } from "../session/agent-storage";
 import { type EditMode, normalizeEditMode } from "../utils/edit-mode";
 import { withFileLock } from "./file-lock";
+import { LEGACY_MODEL_ROLE_TO_TIER, migrateModelRolesToTiers } from "./model-tier-legacy";
 import {
 	type BashInterceptorRule,
 	type GroupPrefix,
@@ -456,51 +458,88 @@ export class Settings {
 		return this.get("bashInterceptor.patterns");
 	}
 
+	static readonly #LEGACY_ROLE_TO_TIER: Record<string, ModelTier> = LEGACY_MODEL_ROLE_TO_TIER;
+
+	static #resolveTierKey(tierOrLegacyRole: ModelTier | string): string {
+		return Settings.#LEGACY_ROLE_TO_TIER[tierOrLegacyRole] ?? tierOrLegacyRole;
+	}
+
 	/**
-	 * Set a model role (helper for modelRoles record).
+	 * Set a model tier assignment (helper for modelTiers record).
 	 */
-	setModelRole(role: ModelRole | string, modelId: string): void {
-		const current = shallowStringRecord(getByPath(this.#global, ["modelRoles"]));
-		const runtimeOverrides = getByPath(this.#overrides, ["modelRoles"]);
+	setModelTier(tier: ModelTier, modelId: string): void {
+		const key = Settings.#resolveTierKey(tier);
+		const current = shallowStringRecord(getByPath(this.#global, ["modelTiers"]));
+		const runtimeOverrides = getByPath(this.#overrides, ["modelTiers"]);
 		const updateRuntimeOverride =
 			!!runtimeOverrides &&
 			typeof runtimeOverrides === "object" &&
 			!Array.isArray(runtimeOverrides) &&
-			Object.hasOwn(runtimeOverrides, role);
+			Object.hasOwn(runtimeOverrides, key);
 
-		this.set("modelRoles", { ...current, [role]: modelId });
+		this.set("modelTiers", { ...current, [key]: modelId });
 
 		if (updateRuntimeOverride) {
-			this.override("modelRoles", { ...shallowStringRecord(runtimeOverrides), [role]: modelId });
+			this.override("modelTiers", { ...shallowStringRecord(runtimeOverrides), [key]: modelId });
 		}
 	}
 
-	/**
-	 * Get a model role (helper for modelRoles record).
-	 */
-	getModelRole(role: ModelRole | string): string | undefined {
-		const roles = this.get("modelRoles");
-		return roles[role];
+	/** @deprecated Use setModelTier */
+	setModelRole(role: ModelTier | string, modelId: string): void {
+		this.setModelTier(Settings.#resolveTierKey(role) as ModelTier, modelId);
 	}
 
 	/**
-	 * Get all model roles (helper for modelRoles record).
+	 * Get a model tier assignment (helper for modelTiers record).
 	 */
+	getModelTier(tier: ModelTier): string | undefined {
+		const tiers = this.get("modelTiers");
+		return tiers[tier];
+	}
+
+	/** @deprecated Use getModelTier */
+	getModelRole(role: ModelTier | string): string | undefined {
+		const key = Settings.#resolveTierKey(role);
+		const tiers = this.get("modelTiers");
+		return tiers[key];
+	}
+
+	getModelTiers(): Readonly<Record<ModelTier, string | undefined>> {
+		const tiers = this.get("modelTiers");
+		return {
+			interface: tiers.interface,
+			worker: tiers.worker,
+			compactor: tiers.compactor,
+		};
+	}
+
+	/** @deprecated Use getModelTiers */
 	getModelRoles(): ReadOnlyDict<string> {
-		return { ...this.get("modelRoles") };
+		return { ...this.get("modelTiers") };
 	}
 
-	/*
-	 * Override model roles (helper for modelRoles record).
-	 */
-	overrideModelRoles(roles: ReadOnlyDict<string>): void {
-		const next = shallowStringRecord(getByPath(this.#overrides, ["modelRoles"]));
-		for (const [role, modelId] of Object.entries(roles)) {
+	overrideModelTiers(tiers: Partial<Record<ModelTier, string>>): void {
+		const next = shallowStringRecord(getByPath(this.#overrides, ["modelTiers"]));
+		for (const tier of MODEL_TIER_IDS) {
+			const modelId = tiers[tier];
 			if (modelId) {
-				next[role] = modelId;
+				next[tier] = modelId;
 			}
 		}
-		this.override("modelRoles", next);
+		this.override("modelTiers", next);
+	}
+
+	/** @deprecated Use overrideModelTiers */
+	overrideModelRoles(roles: ReadOnlyDict<string>): void {
+		const mapped: Partial<Record<ModelTier, string>> = {};
+		for (const [role, modelId] of Object.entries(roles)) {
+			if (!modelId) continue;
+			const tier = Settings.#LEGACY_ROLE_TO_TIER[role];
+			if (tier) {
+				mapped[tier] = modelId;
+			}
+		}
+		this.overrideModelTiers(mapped);
 	}
 
 	/**
@@ -543,7 +582,21 @@ export class Settings {
 			if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
 				return {};
 			}
-			return this.#migrateRawSettings(parsed as RawSettings);
+			const raw = parsed as RawSettings;
+			const hadModelRoles = "modelRoles" in raw;
+			const migrated = this.#migrateRawSettings(raw);
+			if (this.#persist && filePath === this.#configPath && hadModelRoles && !("modelRoles" in migrated)) {
+				try {
+					await Bun.write(filePath, YAML.stringify(migrated, null, 2));
+					logger.debug("Settings: persisted modelRoles → modelTiers migration", { path: filePath });
+				} catch (err) {
+					logger.warn("Settings: failed to persist modelRoles migration", {
+						path: filePath,
+						error: String(err),
+					});
+				}
+			}
+			return migrated;
 		} catch (error) {
 			if (isEnoent(error)) return {};
 			logger.warn("Settings: failed to load", { path: filePath, error: String(error) });
@@ -736,6 +789,8 @@ export class Settings {
 			raw.mnemopi = raw.mnemosyne;
 			delete raw.mnemosyne;
 		}
+
+		migrateModelRolesToTiers(raw);
 
 		// hindsight: dynamicBankId/agentName -> scoping enum + bankId
 		// - dynamicBankId=true  → scoping="per-project" (closest semantic match;

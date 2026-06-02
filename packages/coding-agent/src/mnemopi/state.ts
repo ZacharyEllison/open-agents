@@ -1,8 +1,8 @@
 import { dirname } from "node:path";
-import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import { Mnemopi, type RecallResult } from "@oh-my-pi/pi-mnemopi";
-import { BankManager } from "@oh-my-pi/pi-mnemopi/core";
-import { logger } from "@oh-my-pi/pi-utils";
+import type { AgentMessage } from "@open-agents/agent";
+import { Mnemopi, type RecallResult } from "@open-agents/mnemopi";
+import { BankManager } from "@open-agents/mnemopi/core";
+import { logger } from "@open-agents/utils";
 import {
 	composeRecallQuery,
 	formatCurrentTime,

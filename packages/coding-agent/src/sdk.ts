@@ -7,7 +7,7 @@ import {
 	AppendOnlyContextManager,
 	INTENT_FIELD,
 	type ThinkingLevel,
-} from "@oh-my-pi/pi-agent-core";
+} from "@open-agents/agent";
 import {
 	type CredentialDisabledEvent,
 	isUsageLimitError,
@@ -15,24 +15,19 @@ import {
 	type Model,
 	type SimpleStreamOptions,
 	streamSimple,
-} from "@oh-my-pi/pi-ai";
-import {
-	getOpenAICodexTransportDetails,
-	prewarmOpenAICodexResponses,
-} from "@oh-my-pi/pi-ai/providers/openai-codex-responses";
-import type { Component } from "@oh-my-pi/pi-tui";
+} from "@open-agents/ai";
+import type { Component } from "@open-agents/tui";
 import {
 	$env,
 	$flag,
 	extractRetryHint,
-	getAgentDbPath,
 	getAgentDir,
 	getProjectDir,
 	logger,
 	postmortem,
 	prompt,
 	Snowflake,
-} from "@oh-my-pi/pi-utils";
+} from "@open-agents/utils";
 import chalk from "chalk";
 import { type AsyncJob, AsyncJobManager, isBackgroundJobSupportEnabled } from "./async";
 import { createAutoresearchExtension } from "./autoresearch";
@@ -99,8 +94,7 @@ import {
 	SecretObfuscator,
 } from "./secrets";
 import { AgentSession } from "./session/agent-session";
-import { resolveAuthBrokerConfig } from "./session/auth-broker-config";
-import { AuthBrokerClient, AuthStorage, RemoteAuthCredentialStore } from "./session/auth-storage";
+import { AuthStorage } from "./session/auth-storage";
 import { type CustomMessage, convertToLlm } from "./session/messages";
 import { getRestorableSessionModels, SessionManager } from "./session/session-manager";
 import { closeAllConnections } from "./ssh/connection-manager";
@@ -422,34 +416,12 @@ function getDefaultAgentDir(): string {
 /**
  * Create an AuthStorage instance.
  *
- * Default: local SQLite store at `<agentDir>/agent.db`.
- *
- * Broker mode: when `OMP_AUTH_BROKER_URL` is set, credentials are pulled from
- * a remote auth-broker over the wire. Refresh tokens never leave the broker;
- * the client receives access tokens with `refresh = "__remote__"` and calls
- * back into the broker through the {@link AuthStorageOptions.refreshOAuthCredential}
- * override to re-mint access tokens when needed.
+ * Keyless local build: no persisted credentials. Env-var API keys are resolved
+ * by {@link AuthStorage.getApiKey} at request time.
  */
-export async function discoverAuthStorage(agentDir: string = getDefaultAgentDir()): Promise<AuthStorage> {
-	const brokerConfig = await resolveAuthBrokerConfig();
-	if (brokerConfig) {
-		const client = new AuthBrokerClient({ url: brokerConfig.url, token: brokerConfig.token });
-		const initialResult = await client.fetchSnapshot();
-		if (initialResult.status !== 200) throw new Error("Auth broker returned no initial snapshot");
-		const store = new RemoteAuthCredentialStore({ client, initialSnapshot: initialResult.snapshot });
-		// Refresh + usage hooks live on RemoteAuthCredentialStore; AuthStorage
-		// discovers them automatically when no explicit option overrides them.
-		const storage = new AuthStorage(store, {
-			configValueResolver: resolveConfigValue,
-			sourceLabel: `broker ${brokerConfig.url}`,
-		});
-		await storage.reload();
-		return storage;
-	}
-	const dbPath = getAgentDbPath(agentDir);
-	const storage = await AuthStorage.create(dbPath, {
+export async function discoverAuthStorage(_agentDir: string = getDefaultAgentDir()): Promise<AuthStorage> {
+	const storage = AuthStorage.createKeyless({
 		configValueResolver: resolveConfigValue,
-		sourceLabel: `local ${dbPath}`,
 	});
 	await storage.reload();
 	return storage;
@@ -841,7 +813,7 @@ function buildMCPPromptCommands(manager: MCPManager): LoadedCustomCommand[] {
  * const { session } = await createAgentSession();
  *
  * // With explicit model
- * import { getModel } from '@oh-my-pi/pi-ai';
+ * import { getModel } from '@open-agents/ai';
  * const { session } = await createAgentSession({
  *   model: getModel('anthropic', 'claude-opus-4-5'),
  *   thinkingLevel: 'high',
@@ -1000,7 +972,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		resolveAllowedModels(modelRegistry, settings, modelMatchPreferences),
 	);
 	const defaultRoleSpec = logger.time("resolveDefaultModelRole", () =>
-		resolveModelRoleValue(settings.getModelRole("default"), allowedModels, {
+		resolveModelRoleValue(settings.getModelTier("interface"), allowedModels, {
 			settings,
 			matchPreferences: modelMatchPreferences,
 			modelRegistry,
@@ -1658,7 +1630,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		const repeatToolDescriptions = settings.get("repeatToolDescriptions");
 		const eagerTasks = settings.get("task.eager");
-		const intentField = settings.get("tools.intentTracing") || $flag("PI_INTENT_TRACING") ? INTENT_FIELD : undefined;
+		const intentField = settings.get("tools.intentTracing") || $flag("OA_INTENT_TRACING") ? INTENT_FIELD : undefined;
 		const rebuildSystemPrompt = async (
 			toolNames: string[],
 			tools: Map<string, AgentTool>,
@@ -2132,37 +2104,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					unsubscribeCredentialDisabled?.();
 				}
 			};
-		}
-
-		if (model?.api === "openai-codex-responses") {
-			const codexModel = model;
-			const codexTransport = getOpenAICodexTransportDetails(codexModel, {
-				sessionId: providerSessionId,
-				baseUrl: codexModel.baseUrl,
-				preferWebsockets: preferOpenAICodexWebsockets,
-				providerSessionState: session.providerSessionState,
-			});
-			if (codexTransport.websocketPreferred) {
-				void (async () => {
-					try {
-						const codexPrewarmApiKey = await modelRegistry.getApiKey(codexModel, providerSessionId);
-						if (!codexPrewarmApiKey) return;
-						await logger.time("prewarmOpenAICodexResponses", prewarmOpenAICodexResponses, codexModel, {
-							apiKey: codexPrewarmApiKey,
-							sessionId: providerSessionId,
-							preferWebsockets: preferOpenAICodexWebsockets,
-							providerSessionState: session.providerSessionState,
-						});
-					} catch (error) {
-						const errorMessage = error instanceof Error ? error.message : String(error);
-						logger.debug("Codex websocket prewarm failed", {
-							error: errorMessage,
-							provider: codexModel.provider,
-							model: codexModel.id,
-						});
-					}
-				})();
-			}
 		}
 
 		// Start LSP warmup in the background so startup does not block on language server initialization.

@@ -1,13 +1,13 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
-import { getBundledModel } from "@oh-my-pi/pi-ai";
-import { KeybindingsManager } from "@oh-my-pi/pi-coding-agent/config/keybindings";
-import type { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { ModelSelectorComponent } from "@oh-my-pi/pi-coding-agent/modes/components/model-selector";
-import { SessionSelectorComponent } from "@oh-my-pi/pi-coding-agent/modes/components/session-selector";
-import { initTheme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import type { SessionInfo } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { setKeybindings, type TUI } from "@oh-my-pi/pi-tui";
+import { getBundledModel } from "@open-agents/ai";
+import { KeybindingsManager } from "@open-agents/coding-agent/config/keybindings";
+import type { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { ModelSelectorComponent } from "@open-agents/coding-agent/modes/components/model-selector";
+import { SessionSelectorComponent } from "@open-agents/coding-agent/modes/components/session-selector";
+import { initTheme } from "@open-agents/coding-agent/modes/theme/theme";
+import type { SessionInfo } from "@open-agents/coding-agent/session/session-manager";
+import { setKeybindings, type TUI } from "@open-agents/tui";
 
 beforeAll(() => {
 	initTheme();
@@ -71,7 +71,7 @@ describe("component escape bindings", () => {
 		}
 
 		const settings = Settings.isolated({
-			modelRoles: {
+			modelTiers: {
 				default: `${model.provider}/${model.id}`,
 			},
 		});

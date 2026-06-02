@@ -4,11 +4,11 @@
 import type * as fs1 from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { ImageContent, Model, TextContent, TSchema } from "@oh-my-pi/pi-ai";
-import * as PiCodingAgent from "@oh-my-pi/pi-coding-agent";
-import type { KeyId } from "@oh-my-pi/pi-tui";
-import { hasFsCode, isEacces, isEnoent, logger } from "@oh-my-pi/pi-utils";
+import type { ThinkingLevel } from "@open-agents/agent";
+import type { ImageContent, Model, TextContent, TSchema } from "@open-agents/ai";
+import * as PiCodingAgent from "@open-agents/coding-agent";
+import type { KeyId } from "@open-agents/tui";
+import { hasFsCode, isEacces, isEnoent, logger } from "@open-agents/utils";
 import * as Zod from "zod/v4";
 import { type ExtensionModule, extensionModuleCapability } from "../../capability/extension-module";
 import { loadCapability } from "../../discovery";

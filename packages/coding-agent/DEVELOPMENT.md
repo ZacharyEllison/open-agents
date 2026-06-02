@@ -235,7 +235,7 @@ Notable current limitation from implementation: `#handleLine()` handles `RpcResp
 ### ASCII overview
 
 ```text
-@oh-my-pi/pi-agent-core Agent
+@open-agents/agent Agent
             │ events/messages
             ▼
        AgentSession
@@ -397,7 +397,7 @@ A `ToolFactory` is `(session: ToolSession) => Tool | null | Promise<Tool | null>
    - feature toggles (`find.enabled`, `grep.enabled`, etc.)
    - recursion guard for `task` (`task.maxRecursionDepth` vs `session.taskDepth`)
    - yield mode (`requireYieldTool`) and `todo_write` suppression
-5. Instantiates selected tools in parallel with `Promise.all`, records slow factory timings when `PI_TIMING=1`, and wraps results with `wrapToolWithMetaNotice`.
+5. Instantiates selected tools in parallel with `Promise.all`, records slow factory timings when `OA_TIMING=1`, and wraps results with `wrapToolWithMetaNotice`.
 6. Includes `resolve` unconditionally so plan mode and deferred preview/apply workflows always have it available.
 
 The wrapper step is not cosmetic: it enforces uniform meta-notice behavior and normalized error rendering across all tools.
@@ -764,7 +764,7 @@ This subsystem is split into two layers:
 #### Bash executor (`src/exec/bash-executor.ts`)
 
 - Entry point: `executeBash(command, options)`.
-- Uses `Settings.getShellConfig()` and `Shell` from `@oh-my-pi/pi-natives`.
+- Uses `Settings.getShellConfig()` and `Shell` from `@open-agents/natives`.
 - Reuses shell sessions via `shellSessions: Map<string, Shell>` keyed by `buildSessionKey(...)` (shell, prefix, snapshot path, env, optional `sessionKey`).
 - Applies shell snapshot support via `getOrCreateSnapshot(...)` when using bash.
 - Streams output into `OutputSink` (`onChunk`, artifact path/id support).
@@ -890,7 +890,7 @@ Bundled agent definitions are implemented in `packages/coding-agent/src/task/age
 
 `TaskTool` applies additional runtime constraints in `index.ts`:
 
-- `PI_BLOCKED_AGENT` prevents self-recursive spawn of a specific agent.
+- `OA_BLOCKED_AGENT` prevents self-recursive spawn of a specific agent.
 - Parent spawn policy (`session.getSessionSpawns()`) gates whether a child can be launched.
 - In plan mode (`session.getPlanModeState?.().enabled`), effective subagent tools are replaced with a restricted set (`read`, `grep`, `find`, `ls`, `lsp`, `fetch`, `web_search`) and child spawning is disabled for that effective agent (`spawns: undefined`).
 

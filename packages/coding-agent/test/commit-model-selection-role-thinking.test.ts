@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Effort, getBundledModel } from "@oh-my-pi/pi-ai";
+import { Effort, getBundledModel } from "@open-agents/ai";
 import { resolvePrimaryModel, resolveSmolModel } from "../src/commit/model-selection";
 
 function getModelOrThrow(id: string) {
@@ -8,19 +8,19 @@ function getModelOrThrow(id: string) {
 	return model;
 }
 
-function createSettings(modelRoles: Record<string, string>) {
+function createSettings(modelTiers: Record<string, string>) {
 	return {
 		getModelRole(role: string) {
-			return modelRoles[role];
+			return modelTiers[role];
 		},
 		getStorage() {
 			return undefined;
 		},
 		setModelRole(role: string, value: string) {
-			modelRoles[role] = value;
+			modelTiers[role] = value;
 		},
 		get(path: string) {
-			if (path === "modelRoles") return modelRoles;
+			if (path === "modelTiers") return modelTiers;
 			return undefined;
 		},
 	} as never;

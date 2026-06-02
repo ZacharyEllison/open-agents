@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { formatHashlineHeader, InMemorySnapshotStore, missingSnapshotTagMessage } from "@oh-my-pi/hashline";
 import {
 	adjustIndentation,
 	computeEditDiff,
 	computeHashlineDiff,
 	DEFAULT_FUZZY_THRESHOLD,
 	findMatch,
-} from "@oh-my-pi/pi-coding-agent/edit";
+} from "@open-agents/coding-agent/edit";
+import { formatHashlineHeader, InMemorySnapshotStore, missingSnapshotTagMessage } from "@open-agents/hashline";
 
 describe("findMatch", () => {
 	describe("exact matching", () => {

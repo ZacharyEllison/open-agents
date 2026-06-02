@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RenderResultOptions } from "@oh-my-pi/pi-agent-core";
-import { preloadPluginRoots } from "@oh-my-pi/pi-coding-agent/discovery/helpers";
-import { LspTool } from "@oh-my-pi/pi-coding-agent/lsp";
-import * as lspClient from "@oh-my-pi/pi-coding-agent/lsp/client";
-import * as lspConfig from "@oh-my-pi/pi-coding-agent/lsp/config";
-import { getServersForFile, loadConfig } from "@oh-my-pi/pi-coding-agent/lsp/config";
-import { applyWorkspaceEdit } from "@oh-my-pi/pi-coding-agent/lsp/edits";
-import { renderCall, renderResult } from "@oh-my-pi/pi-coding-agent/lsp/render";
+import type { RenderResultOptions } from "@open-agents/agent";
+import { preloadPluginRoots } from "@open-agents/coding-agent/discovery/helpers";
+import { LspTool } from "@open-agents/coding-agent/lsp";
+import * as lspClient from "@open-agents/coding-agent/lsp/client";
+import * as lspConfig from "@open-agents/coding-agent/lsp/config";
+import { getServersForFile, loadConfig } from "@open-agents/coding-agent/lsp/config";
+import { applyWorkspaceEdit } from "@open-agents/coding-agent/lsp/edits";
+import { renderCall, renderResult } from "@open-agents/coding-agent/lsp/render";
 import type {
 	CodeAction,
 	CreateFile,
@@ -20,7 +20,7 @@ import type {
 	SymbolInformation,
 	TextDocumentEdit,
 	WorkspaceEdit,
-} from "@oh-my-pi/pi-coding-agent/lsp/types";
+} from "@open-agents/coding-agent/lsp/types";
 import {
 	applyCodeAction,
 	collectGlobMatches,
@@ -31,12 +31,12 @@ import {
 	hasGlobPattern,
 	resolveDiagnosticTargets,
 	resolveSymbolColumn,
-} from "@oh-my-pi/pi-coding-agent/lsp/utils";
-import { getThemeByName } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
-import { clampTimeout } from "@oh-my-pi/pi-coding-agent/tools/tool-timeouts";
-import * as piUtils from "@oh-my-pi/pi-utils";
-import { sanitizeText, TempDir } from "@oh-my-pi/pi-utils";
+} from "@open-agents/coding-agent/lsp/utils";
+import { getThemeByName } from "@open-agents/coding-agent/modes/theme/theme";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
+import { clampTimeout } from "@open-agents/coding-agent/tools/tool-timeouts";
+import * as piUtils from "@open-agents/utils";
+import { sanitizeText, TempDir } from "@open-agents/utils";
 
 describe("lsp regressions", () => {
 	afterEach(() => {

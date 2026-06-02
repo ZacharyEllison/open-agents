@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { TempDir } from "@open-agents/utils";
 import { ConfigFile } from "../src/config/config-file";
 import { ModelRegistry } from "../src/config/model-registry";
 import { ModelsConfigSchema } from "../src/config/models-config-schema";

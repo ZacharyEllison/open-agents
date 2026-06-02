@@ -1,4 +1,4 @@
-import { logger } from "@oh-my-pi/pi-utils";
+import { logger } from "@open-agents/utils";
 import type { AgentSession } from "../session/agent-session";
 import { type BankScope, ensureBankMission } from "./bank";
 import type { HindsightApi, MemoryItemInput } from "./client";

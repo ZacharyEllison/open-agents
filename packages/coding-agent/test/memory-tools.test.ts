@@ -11,23 +11,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { HindsightApi } from "@oh-my-pi/pi-coding-agent/hindsight/client";
-import type { HindsightConfig } from "@oh-my-pi/pi-coding-agent/hindsight/config";
-import { HindsightSessionState } from "@oh-my-pi/pi-coding-agent/hindsight/state";
-import { mnemopiBackend } from "@oh-my-pi/pi-coding-agent/mnemopi/backend";
-import { loadMnemopiConfig, type MnemopiBackendConfig } from "@oh-my-pi/pi-coding-agent/mnemopi/config";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import { HindsightApi } from "@open-agents/coding-agent/hindsight/client";
+import type { HindsightConfig } from "@open-agents/coding-agent/hindsight/config";
+import { HindsightSessionState } from "@open-agents/coding-agent/hindsight/state";
+import { mnemopiBackend } from "@open-agents/coding-agent/mnemopi/backend";
+import { loadMnemopiConfig, type MnemopiBackendConfig } from "@open-agents/coding-agent/mnemopi/config";
 import {
 	getMnemopiScopedDbPaths,
 	getMnemopiSessionState,
 	MnemopiSessionState,
 	setMnemopiSessionState,
-} from "@oh-my-pi/pi-coding-agent/mnemopi/state";
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools/index";
-import { MemoryEditTool } from "@oh-my-pi/pi-coding-agent/tools/memory-edit";
-import { MemoryRecallTool } from "@oh-my-pi/pi-coding-agent/tools/memory-recall";
-import { MemoryReflectTool } from "@oh-my-pi/pi-coding-agent/tools/memory-reflect";
-import { MemoryRetainTool } from "@oh-my-pi/pi-coding-agent/tools/memory-retain";
+} from "@open-agents/coding-agent/mnemopi/state";
+import type { ToolSession } from "@open-agents/coding-agent/tools/index";
+import { MemoryEditTool } from "@open-agents/coding-agent/tools/memory-edit";
+import { MemoryRecallTool } from "@open-agents/coding-agent/tools/memory-recall";
+import { MemoryReflectTool } from "@open-agents/coding-agent/tools/memory-reflect";
+import { MemoryRetainTool } from "@open-agents/coding-agent/tools/memory-retain";
 
 const TEST_SESSION_ID = "test-session-id";
 let registeredState: HindsightSessionState | undefined;

@@ -1,7 +1,7 @@
-import type { AuthStorage } from "@oh-my-pi/pi-ai";
-import type { OAuthProvider } from "@oh-my-pi/pi-ai/utils/oauth/types";
-import { Input, matchesKey, truncateToWidth } from "@oh-my-pi/pi-tui";
-import { getAgentDbPath } from "@oh-my-pi/pi-utils";
+import type { AuthStorage } from "@open-agents/ai";
+import type { OAuthProvider } from "@open-agents/ai/utils/oauth/types";
+import { Input, matchesKey, truncateToWidth } from "@open-agents/tui";
+import { getAgentDbPath } from "@open-agents/utils";
 import { OAuthSelectorComponent } from "../../components/oauth-selector";
 import { theme } from "../../theme/theme";
 import type { SetupSceneHost, SetupTab } from "./types";

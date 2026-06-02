@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
-import { Agent } from "@oh-my-pi/pi-agent-core";
-import { Effort, getBundledModel } from "@oh-my-pi/pi-ai";
-import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
-import { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
-import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import { Agent } from "@open-agents/agent";
+import { Effort, getBundledModel } from "@open-agents/ai";
+import { ModelRegistry } from "@open-agents/coding-agent/config/model-registry";
+import { Settings } from "@open-agents/coding-agent/config/settings";
+import { AgentSession } from "@open-agents/coding-agent/session/agent-session";
+import { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
+import { SessionManager } from "@open-agents/coding-agent/session/session-manager";
+import { TempDir } from "@open-agents/utils";
 import * as autoThinkingClassifier from "../src/auto-thinking/classifier";
 import { AUTO_THINKING, clampAutoThinkingEffort, resolveProvisionalAutoLevel } from "../src/thinking";
 import { createAssistantMessage } from "./helpers/agent-session-setup";
@@ -42,7 +42,7 @@ describe("AgentSession role model thinking behavior", () => {
 	async function createSession(options: {
 		initialModelId: string;
 		initialThinkingLevel: Effort;
-		modelRoles: Record<string, string>;
+		modelTiers: Record<string, string>;
 	}) {
 		const model = getAnthropicModelOrThrow(options.initialModelId);
 		const agent = new Agent({
@@ -60,7 +60,7 @@ describe("AgentSession role model thinking behavior", () => {
 		const modelRegistry = new ModelRegistry(authStorage, path.join(tempDir.path(), "models.yml"));
 
 		sessionSettings = Settings.isolated();
-		for (const [role, modelRoleValue] of Object.entries(options.modelRoles)) {
+		for (const [role, modelRoleValue] of Object.entries(options.modelTiers)) {
 			sessionSettings.setModelRole(role, modelRoleValue);
 		}
 		session = new AgentSession({
@@ -78,7 +78,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: defaultModel.id,
 			initialThinkingLevel: Effort.High,
-			modelRoles: {
+			modelTiers: {
 				default: `${defaultModel.provider}/${defaultModel.id}`,
 				slow: `${slowModel.provider}/${slowModel.id}:off`,
 			},
@@ -112,7 +112,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: defaultModel.id,
 			initialThinkingLevel: Effort.Low,
-			modelRoles: {
+			modelTiers: {
 				default: `${defaultModel.provider}/${defaultModel.id}`,
 				slow: `${slowModel.provider}/${slowModel.id}:high`,
 			},
@@ -141,7 +141,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: defaultModel.id,
 			initialThinkingLevel: Effort.Medium,
-			modelRoles: {
+			modelTiers: {
 				default: `${defaultModel.provider}/${defaultModel.id}`,
 				smol: `${smolModel.provider}/${smolModel.id}:low`,
 				slow: `${slowPlanModel.provider}/${slowPlanModel.id}:high`,
@@ -168,7 +168,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: defaultModel.id,
 			initialThinkingLevel: Effort.High,
-			modelRoles: {
+			modelTiers: {
 				default: "anthropic/nonexistent-model:off",
 			},
 		});
@@ -246,7 +246,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: model.id,
 			initialThinkingLevel: Effort.High,
-			modelRoles: { default: `${model.provider}/${model.id}` },
+			modelTiers: { default: `${model.provider}/${model.id}` },
 		});
 		const promptSpy = vi.spyOn(session.agent, "prompt").mockResolvedValue(undefined);
 		const classifierSpy = vi.spyOn(autoThinkingClassifier, "classifyDifficulty").mockResolvedValue(Effort.Medium);
@@ -315,7 +315,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: model.id,
 			initialThinkingLevel: Effort.High,
-			modelRoles: { default: `${model.provider}/${model.id}` },
+			modelTiers: { default: `${model.provider}/${model.id}` },
 		});
 		vi.spyOn(session.agent, "prompt").mockResolvedValue(undefined);
 		vi.spyOn(autoThinkingClassifier, "classifyDifficulty").mockRejectedValue(new Error("classifier down"));
@@ -335,7 +335,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: model.id,
 			initialThinkingLevel: Effort.High,
-			modelRoles: { default: `${model.provider}/${model.id}` },
+			modelTiers: { default: `${model.provider}/${model.id}` },
 		});
 		vi.spyOn(session.agent, "prompt").mockResolvedValue(undefined);
 		const classifierSpy = vi.spyOn(autoThinkingClassifier, "classifyDifficulty").mockResolvedValue(Effort.XHigh);
@@ -355,7 +355,7 @@ describe("AgentSession role model thinking behavior", () => {
 		await createSession({
 			initialModelId: model.id,
 			initialThinkingLevel: Effort.High,
-			modelRoles: { default: `${model.provider}/${model.id}` },
+			modelTiers: { default: `${model.provider}/${model.id}` },
 		});
 		vi.spyOn(session.agent, "prompt").mockResolvedValue(undefined);
 		const classifierSpy = vi.spyOn(autoThinkingClassifier, "classifyDifficulty").mockResolvedValue(Effort.Low);

@@ -7,8 +7,8 @@
  * - Register commands, keyboard shortcuts, and CLI flags
  * - Interact with the user via UI primitives
  */
-import type { AgentMessage, AgentToolResult, AgentToolUpdateCallback, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { CompactionResult } from "@oh-my-pi/pi-agent-core/compaction";
+import type { AgentMessage, AgentToolResult, AgentToolUpdateCallback, ThinkingLevel } from "@open-agents/agent";
+import type { CompactionResult } from "@open-agents/agent/compaction";
 import type {
 	Api,
 	AssistantMessageEvent,
@@ -21,11 +21,11 @@ import type {
 	Static,
 	TextContent,
 	TSchema,
-} from "@oh-my-pi/pi-ai";
-import type { OAuthCredentials, OAuthLoginCallbacks } from "@oh-my-pi/pi-ai/utils/oauth/types";
-import type * as piCodingAgent from "@oh-my-pi/pi-coding-agent";
-import type { AutocompleteItem, Component, EditorTheme, KeyId, TUI } from "@oh-my-pi/pi-tui";
-import type { logger as PiLogger } from "@oh-my-pi/pi-utils";
+} from "@open-agents/ai";
+import type { OAuthCredentials, OAuthLoginCallbacks } from "@open-agents/ai/utils/oauth/types";
+import type * as piCodingAgent from "@open-agents/coding-agent";
+import type { AutocompleteItem, Component, EditorTheme, KeyId, TUI } from "@open-agents/tui";
+import type { logger as PiLogger } from "@open-agents/utils";
 import type * as Zod from "zod/v4";
 import type { KeybindingsManager } from "../../config/keybindings";
 import type { ModelRegistry } from "../../config/model-registry";

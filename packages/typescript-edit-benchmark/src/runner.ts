@@ -7,11 +7,11 @@
 /// <reference types="./bun-imports.d.ts" />
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { formatHashlineHeader, InMemorySnapshotStore } from "@oh-my-pi/hashline";
-import type { AgentMessage, ResolvedThinkingLevel, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { Model } from "@oh-my-pi/pi-ai";
-import { formatSessionDumpText, RpcClient } from "@oh-my-pi/pi-coding-agent";
-import { prompt } from "@oh-my-pi/pi-utils";
+import type { AgentMessage, ResolvedThinkingLevel, ThinkingLevel } from "@open-agents/agent";
+import type { Model } from "@open-agents/ai";
+import { formatSessionDumpText, RpcClient } from "@open-agents/coding-agent";
+import { formatHashlineHeader, InMemorySnapshotStore } from "@open-agents/hashline";
+import { prompt } from "@open-agents/utils";
 import { diffLines } from "diff";
 import { formatDirectory } from "./formatter";
 import { discoverSharedInfra, InProcessClient, type SharedInfra } from "./in-process-client";
@@ -24,7 +24,7 @@ import { verifyExpectedFileSubset, verifyExpectedFiles } from "./verify";
 const REPO_ROOT = path.resolve(import.meta.dir, "..", "..", "..");
 const RUNS_DIR = path.join(REPO_ROOT, "runs");
 const TMP = path.join(RUNS_DIR, `rb-${Math.random().toString(36).slice(2, 10)}`);
-const CLI_PATH = Bun.fileURLToPath(import.meta.resolve("@oh-my-pi/pi-coding-agent/cli"));
+const CLI_PATH = Bun.fileURLToPath(import.meta.resolve("@open-agents/coding-agent/cli"));
 
 function formatLogPath(logFile: string): string {
 	const relativePath = path.relative(REPO_ROOT, logFile);
@@ -1028,13 +1028,13 @@ async function runSingleTask(
 			`{"type":"meta","task":"${task.id}","run":${runIndex},"workDir":"${cwd}","providerSessionId":${JSON.stringify(sessionSetup.providerSessionId)}}\n`,
 		);
 
-		if (config.editVariant !== undefined) process.env.PI_EDIT_VARIANT = config.editVariant;
+		if (config.editVariant !== undefined) process.env.OA_EDIT_VARIANT = config.editVariant;
 		if (config.editFuzzy !== undefined)
-			process.env.PI_EDIT_FUZZY = config.editFuzzy === "auto" ? "auto" : config.editFuzzy ? "1" : "0";
+			process.env.OA_EDIT_FUZZY = config.editFuzzy === "auto" ? "auto" : config.editFuzzy ? "1" : "0";
 		if (config.editFuzzyThreshold !== undefined)
-			process.env.PI_EDIT_FUZZY_THRESHOLD =
+			process.env.OA_EDIT_FUZZY_THRESHOLD =
 				config.editFuzzyThreshold === "auto" ? "auto" : String(config.editFuzzyThreshold);
-		process.env.PI_NO_TITLE = "1";
+		process.env.OA_NO_TITLE = "1";
 
 		const useInProcess = config.inProcess !== false;
 		const client: BenchmarkClient = useInProcess

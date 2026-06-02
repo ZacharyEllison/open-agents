@@ -1,4 +1,4 @@
-import { type Api, type AssistantMessage, completeSimple, type Model } from "@oh-my-pi/pi-ai";
+import { type Api, type AssistantMessage, completeSimple, type Model } from "@open-agents/ai";
 import { callHostLlm, getHostLlmBackend } from "./llm-backends";
 import {
 	getMnemopiRuntimeOptions,

@@ -1,16 +1,16 @@
 ---
 name: authoring-extensions
-description: Use when creating a new omp extension. Covers ExtensionAPI, factory signature, tool/command/event registration, and local-dev testing.
+description: Use when creating a new open-agent extension. Covers ExtensionAPI, factory signature, tool/command/event registration, and local-dev testing.
 ---
 
 # Authoring Extensions
 
-Extensions are the primary way to add capabilities to `oh-my-pi`. A single extension module can register tools the LLM can call, slash commands users can invoke, and event handlers that run throughout the session lifecycle — all from one TypeScript file.
+Extensions are the primary way to add capabilities to `open-agent`. A single extension module can register tools the LLM can call, slash commands users can invoke, and event handlers that run throughout the session lifecycle — all from one TypeScript file.
 
 ## Minimum viable extension
 
 ```ts
-import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+import type { ExtensionAPI } from "@open-agents/coding-agent";
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
@@ -19,14 +19,14 @@ export default function (pi: ExtensionAPI) {
 }
 ```
 
-That is a working extension. Drop it into `~/.omp/agent/extensions/hello.ts` and restart omp to see the notification.
+That is a working extension. Drop it into `~/.open-agent/agent/extensions/hello.ts` and restart open-agent to see the notification.
 
 ## Full example
 
 The following extension registers a slash command, a tool, and a session-start hook:
 
 ```ts
-import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+import type { ExtensionAPI } from "@open-agents/coding-agent";
 
 export default function myExtension(pi: ExtensionAPI) {
   const z = pi.zod;
@@ -75,24 +75,24 @@ export default function myExtension(pi: ExtensionAPI) {
 
 ## Discovery paths
 
-omp loads extension modules from these sources:
+open-agent loads extension modules from these sources:
 
-1. Native `.omp` locations discovered through the capability system:
-   - `<cwd>/.omp/extensions/`
-   - `~/.omp/agent/extensions/`
-   - legacy extension paths listed in `.omp/settings.json#extensions` or `~/.omp/agent/settings.json#extensions`
-2. Marketplace-installed plugins from the OMP and Claude plugin registries.
-3. Explicit configured paths passed by the CLI (`omp --extension ./my-ext.ts`, also `-e`; `--hook` is treated as an alias) and by the `extensions:` setting in config.
+1. Native `.open-agent` locations discovered through the capability system:
+   - `<cwd>/.open-agent/extensions/`
+   - `~/.open-agent/agent/extensions/`
+   - legacy extension paths listed in `.open-agent/settings.json#extensions` or `~/.open-agent/agent/settings.json#extensions`
+2. Marketplace-installed plugins from the open-agent and Claude plugin registries.
+3. Explicit configured paths passed by the CLI (`open-agent --extension ./my-ext.ts`, also `-e`; `--hook` is treated as an alias) and by the `extensions:` setting in config.
 
 The runtime de-duplicates by resolved absolute path — first seen wins.
 
-When a path points to a directory, omp resolves the entry point in this order:
+When a path points to a directory, open-agent resolves the entry point in this order:
 
 1. `package.json` with `omp.extensions` (or legacy `pi.extensions`) field
 2. `index.ts`
 3. `index.js`
 
-When scanning an `extensions/` directory, omp also loads direct `*.ts`/`*.js` files and one-level subdirectories that have `index.ts`, `index.js`, or a manifest.
+When scanning an `extensions/` directory, open-agent also loads direct `*.ts`/`*.js` files and one-level subdirectories that have `index.ts`, `index.js`, or a manifest.
 
 Extension packages can also bundle sibling capability directories. When a package is loaded through `extensions:` or `--extension`/`-e`, the `omp-plugins` provider discovers its `skills/`, `hooks/pre|post/`, `tools/`, `commands/`, `rules/`, `prompts/`, and `.mcp.json`.
 
@@ -211,7 +211,7 @@ Full event catalog: see [hooks authoring guide](./authoring-hooks.md).
 |---|---|
 | Tools + commands + events in one module | **Extension** (`ExtensionAPI`) |
 | Pure event interception (policy, redaction) | **Extension** or **Hook** (both work; extension is preferred) |
-| Legacy hook module already exists | **Hook** (`HookAPI` from `@oh-my-pi/pi-coding-agent/extensibility/hooks`) |
+| Legacy hook module already exists | **Hook** (`HookAPI` from `@open-agents/coding-agent/extensibility/hooks`) |
 | Registering provider / custom message renderer | **Extension only** |
 | Shipping as a marketplace plugin | **Extension** (use `package.json` manifest) |
 
@@ -219,10 +219,10 @@ Extensions are a strict superset of hooks. New authoring should use `ExtensionAP
 
 ## Debugging
 
-Start omp with `--log-level debug` to see extension load diagnostics:
+Start open-agent with `--log-level debug` to see extension load diagnostics:
 
 ```
-omp --log-level debug
+open-agent --log-level debug
 ```
 
 Failed extension loads are logged with their path and error. Loaded extensions may also emit their own debug logs via `pi.logger`.
@@ -230,7 +230,7 @@ Failed extension loads are logged with their path and error. Loaded extensions m
 To temporarily disable a specific extension module by name without removing the file:
 
 ```yaml
-# ~/.omp/agent/config.yml
+# ~/.open-agent/agent/config.yml
 disabledExtensions:
   - extension-module:my-ext
 ```

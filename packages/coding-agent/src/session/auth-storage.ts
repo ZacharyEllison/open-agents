@@ -1,5 +1,5 @@
 /**
- * Re-exports from @oh-my-pi/pi-ai.
+ * Re-exports from @open-agents/ai.
  * All credential storage types and the AuthStorage class now live in the ai package.
  */
 
@@ -13,11 +13,5 @@ export type {
 	OAuthCredential,
 	SerializedAuthStorage,
 	StoredAuthCredential,
-} from "@oh-my-pi/pi-ai";
-export {
-	AuthBrokerClient,
-	AuthStorage,
-	REMOTE_REFRESH_SENTINEL,
-	RemoteAuthCredentialStore,
-	SqliteAuthCredentialStore,
-} from "@oh-my-pi/pi-ai";
+} from "@open-agents/ai";
+export { AuthStorage, NullAuthCredentialStore, SqliteAuthCredentialStore } from "@open-agents/ai";

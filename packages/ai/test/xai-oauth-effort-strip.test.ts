@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getBundledModel } from "@oh-my-pi/pi-ai/models";
+import { getBundledModel } from "@open-agents/ai/models";
 import { modelOmitsReasoningEffort } from "../src/model-thinking";
 
 // Pins fix #2 of the compaction effort-override bug. Before this fix,

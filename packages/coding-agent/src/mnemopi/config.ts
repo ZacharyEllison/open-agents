@@ -1,6 +1,6 @@
 import * as path from "node:path";
-import type { MnemopiOptions } from "@oh-my-pi/pi-mnemopi";
-import { getMemoriesDir } from "@oh-my-pi/pi-utils";
+import type { MnemopiOptions } from "@open-agents/mnemopi";
+import { getMemoriesDir } from "@open-agents/utils";
 import type { Settings } from "../config/settings";
 import * as git from "../utils/git";
 

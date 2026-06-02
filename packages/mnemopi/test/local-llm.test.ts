@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { createMockModel, registerMockApi } from "@oh-my-pi/pi-ai/providers/mock";
+import { createMockModel, registerMockApi } from "@open-agents/ai/providers/mock";
 import { CallableLlmBackend, resetHostLlmBackendForTests, setHostLlmBackend } from "../src/core/llm-backends";
 import {
 	buildHostPrompt,

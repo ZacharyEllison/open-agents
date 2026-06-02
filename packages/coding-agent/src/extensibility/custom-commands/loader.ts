@@ -6,7 +6,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getAgentDir, getProjectDir, isEnoent, logger } from "@oh-my-pi/pi-utils";
+import { getAgentDir, getProjectDir, isEnoent, logger } from "@open-agents/utils";
 import * as zod from "zod/v4";
 import { getConfigDirs } from "../../config";
 import { execCommand } from "../../exec/exec";
@@ -185,7 +185,7 @@ export async function loadCustomCommands(options: LoadCustomCommandsOptions = {}
 			execCommand(command, args, execOptions?.cwd ?? cwd, execOptions),
 		typebox,
 		zod,
-		pi: await import("@oh-my-pi/pi-coding-agent"),
+		pi: await import("@open-agents/coding-agent"),
 	};
 
 	// 1. Load bundled commands first (lowest priority - can be overridden)

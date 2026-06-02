@@ -1,8 +1,8 @@
-import { MismatchError as HashlineMismatchError } from "@oh-my-pi/hashline";
-import hashlineGrammar from "@oh-my-pi/hashline/grammar.lark" with { type: "text" };
-import hashlineDescription from "@oh-my-pi/hashline/prompt.md" with { type: "text" };
-import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import { prompt } from "@oh-my-pi/pi-utils";
+import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@open-agents/agent";
+import { MismatchError as HashlineMismatchError } from "@open-agents/hashline";
+import hashlineGrammar from "@open-agents/hashline/grammar.lark" with { type: "text" };
+import hashlineDescription from "@open-agents/hashline/prompt.md" with { type: "text" };
+import { prompt } from "@open-agents/utils";
 import {
 	createLspWritethrough,
 	type FileDiagnosticsResult,
@@ -17,6 +17,7 @@ import replaceDescription from "../prompts/tools/replace.md" with { type: "text"
 import type { ToolSession } from "../tools";
 import { truncateForPrompt } from "../tools/approval";
 import { isInternalUrlPath } from "../tools/path-utils";
+import { WORKER_ONLY_TIERS } from "../tools/tier-access";
 import { type EditMode, normalizeEditMode, resolveEditMode } from "../utils/edit-mode";
 import { executeHashlineSingle, type HashlineParams, hashlineEditParamsSchema } from "./hashline";
 import { type ApplyPatchParams, applyPatchSchema, expandApplyPatchToEntries } from "./modes/apply-patch";
@@ -25,7 +26,7 @@ import { executePatchSingle, type PatchEditEntry, type PatchParams, patchEditSch
 import { executeReplaceSingle, type ReplaceEditEntry, type ReplaceParams, replaceEditSchema } from "./modes/replace";
 import { type EditToolDetails, type EditToolPerFileResult, getLspBatchRequest, type LspBatchRequest } from "./renderer";
 
-export * from "@oh-my-pi/hashline";
+export * from "@open-agents/hashline";
 export { DEFAULT_EDIT_MODE, type EditMode, normalizeEditMode } from "../utils/edit-mode";
 export * from "./apply-patch";
 export * from "./diff";
@@ -65,7 +66,7 @@ function resolveConfiguredEditMode(rawEditMode: string): EditMode | undefined {
 
 	const editMode = normalizeEditMode(rawEditMode);
 	if (!editMode) {
-		throw new Error(`Invalid PI_EDIT_VARIANT: ${rawEditMode}`);
+		throw new Error(`Invalid OA_EDIT_VARIANT: ${rawEditMode}`);
 	}
 
 	return editMode;
@@ -82,7 +83,7 @@ function resolveAllowFuzzy(session: ToolSession, rawValue: string): boolean {
 		case "auto":
 			return session.settings.get("edit.fuzzyMatch");
 		default:
-			throw new Error(`Invalid PI_EDIT_FUZZY: ${rawValue}`);
+			throw new Error(`Invalid OA_EDIT_FUZZY: ${rawValue}`);
 	}
 }
 
@@ -93,7 +94,7 @@ function resolveFuzzyThreshold(session: ToolSession, rawValue: string): number {
 
 	const threshold = Number.parseFloat(rawValue);
 	if (Number.isNaN(threshold) || threshold < 0 || threshold > 1) {
-		throw new Error(`Invalid PI_EDIT_FUZZY_THRESHOLD: ${rawValue}`);
+		throw new Error(`Invalid OA_EDIT_FUZZY_THRESHOLD: ${rawValue}`);
 	}
 
 	return threshold;
@@ -294,6 +295,7 @@ export class EditTool implements AgentTool<TInput> {
 		`File: ${truncateForPrompt(extractApprovalPath(args))}`,
 	];
 	readonly name = "edit";
+	readonly allowedTiers = WORKER_ONLY_TIERS;
 	readonly label = "Edit";
 	readonly loadMode = "essential";
 	readonly nonAbortable = true;
@@ -309,9 +311,9 @@ export class EditTool implements AgentTool<TInput> {
 
 	constructor(private readonly session: ToolSession) {
 		const {
-			PI_EDIT_FUZZY: editFuzzy = "auto",
-			PI_EDIT_FUZZY_THRESHOLD: editFuzzyThreshold = "auto",
-			PI_EDIT_VARIANT: envEditVariant = "auto",
+			OA_EDIT_FUZZY: editFuzzy = "auto",
+			OA_EDIT_FUZZY_THRESHOLD: editFuzzyThreshold = "auto",
+			OA_EDIT_VARIANT: envEditVariant = "auto",
 		} = Bun.env;
 
 		this.#editMode = resolveConfiguredEditMode(envEditVariant);

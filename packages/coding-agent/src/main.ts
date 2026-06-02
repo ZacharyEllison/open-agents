@@ -9,8 +9,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { createInterface } from "node:readline/promises";
-import { EventLoopKeepalive } from "@oh-my-pi/pi-agent-core";
-import type { ImageContent } from "@oh-my-pi/pi-ai";
+import { EventLoopKeepalive } from "@open-agents/agent";
+import type { ImageContent } from "@open-agents/ai";
 import {
 	$env,
 	getProjectDir,
@@ -19,7 +19,7 @@ import {
 	postmortem,
 	setProjectDir,
 	VERSION,
-} from "@oh-my-pi/pi-utils";
+} from "@open-agents/utils";
 import chalk from "chalk";
 import { reset as resetCapabilities } from "./capability";
 import type { Args } from "./cli/args";
@@ -71,25 +71,12 @@ import type { LspStartupServerInfo } from "./tools";
 import { getChangelogPath, getNewEntries, parseChangelog } from "./utils/changelog";
 import { EventBus } from "./utils/event-bus";
 
-async function checkForNewVersion(currentVersion: string): Promise<string | undefined> {
-	if (!settings.get("startup.checkUpdate")) {
-		return;
-	}
-	try {
-		const response = await fetch("https://registry.npmjs.org/@oh-my-pi/pi-coding-agent/latest");
-		if (!response.ok) return undefined;
-
-		const data = (await response.json()) as { version?: string };
-		const latestVersion = data.version;
-
-		if (latestVersion && Bun.semver.order(latestVersion, currentVersion) > 0) {
-			return latestVersion;
-		}
-
-		return undefined;
-	} catch {
-		return undefined;
-	}
+// Local-only build: never phones home for update checks. The function is
+// retained as a no-op so the interactive-mode wiring (versionCheckPromise /
+// showNewVersionNotification) stays intact without performing any network
+// request. `_currentVersion` is unused now that there is nothing to compare.
+async function checkForNewVersion(_currentVersion: string): Promise<string | undefined> {
+	return undefined;
 }
 
 const HOST_DEFAULTED_SETTING_PATHS: SettingPath[] = [
@@ -105,7 +92,6 @@ const HOST_DEFAULTED_SETTING_PATHS: SettingPath[] = [
 	"task.maxConcurrency",
 	"task.maxRecursionDepth",
 	"task.disabledAgents",
-	"task.agentModelOverrides",
 	// Memory subsystems are off-by-default for RPC/ACP hosts; embedders that want
 	// memory should opt in explicitly through their own settings layer.
 	"memory.backend",
@@ -816,10 +802,10 @@ export async function runRootCommand(
 		applyAcpDefaultSettingOverrides(settingsInstance);
 	}
 	if (parsedArgs.noPty || parsedArgs.mode === "rpc-ui") {
-		Bun.env.PI_NO_PTY = "1";
+		Bun.env.OA_NO_PTY = "1";
 	}
 	if (parsedArgs.noTitle || parsedArgs.mode === "rpc" || parsedArgs.mode === "rpc-ui" || parsedArgs.mode === "acp") {
-		Bun.env.PI_NO_TITLE = "1";
+		Bun.env.OA_NO_TITLE = "1";
 	}
 	const pipedInput = await logger.time("readPipedInput", readPipedInput);
 	const autoPrint = pipedInput !== undefined && !parsedArgs.print && parsedArgs.mode === undefined;
@@ -830,9 +816,9 @@ export async function runRootCommand(
 	logger.time("initializeWithSettings", initializeWithSettings, settingsInstance);
 
 	// Apply model role overrides from CLI args or env vars (ephemeral, not persisted)
-	const smolModel = parsedArgs.smol ?? $env.PI_SMOL_MODEL;
-	const slowModel = parsedArgs.slow ?? $env.PI_SLOW_MODEL;
-	const planModel = parsedArgs.plan ?? $env.PI_PLAN_MODEL;
+	const smolModel = parsedArgs.smol ?? $env.OA_SMOL_MODEL;
+	const slowModel = parsedArgs.slow ?? $env.OA_SLOW_MODEL;
+	const planModel = parsedArgs.plan ?? $env.OA_PLAN_MODEL;
 	if (smolModel || slowModel || planModel) {
 		settingsInstance.overrideModelRoles({
 			smol: smolModel,
@@ -1087,9 +1073,9 @@ export async function runRootCommand(
 				process.stdout.write(`${chalk.dim(`Model scope: ${modelList} ${chalk.gray("(Ctrl+P to cycle)")}`)}\n`);
 			}
 
-			if ($env.PI_TIMING) {
+			if ($env.OA_TIMING) {
 				logger.printTimings();
-				if ($env.PI_TIMING === "x") {
+				if ($env.OA_TIMING === "x") {
 					process.exit(0);
 				}
 			}
@@ -1118,7 +1104,7 @@ export async function runRootCommand(
 				initialMessage,
 				initialImages,
 			});
-			if ($env.PI_TIMING) {
+			if ($env.OA_TIMING) {
 				logger.printTimings();
 			}
 			await session.dispose();

@@ -1,5 +1,5 @@
-import { type Component, matchesKey, padding, truncateToWidth, visibleWidth } from "@oh-my-pi/pi-tui";
-import { APP_NAME } from "@oh-my-pi/pi-utils";
+import { type Component, matchesKey, padding, truncateToWidth, visibleWidth } from "@open-agents/tui";
+import { APP_NAME } from "@open-agents/utils";
 import { gradientLogo, PI_LOGO } from "../components/welcome";
 import { theme } from "../theme/theme";
 import type { InteractiveModeContext } from "../types";

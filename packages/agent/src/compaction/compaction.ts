@@ -21,6 +21,7 @@ import { ThinkingLevel } from "../thinking";
 import type { AgentMessage, AgentTool } from "../types";
 import type { CompactionEntry, SessionEntry } from "./entries";
 import { type ConvertToLlm, convertToLlm, createBranchSummaryMessage, createCustomMessage } from "./messages";
+import type { OnnxSummarizer } from "./onnx-summarizer";
 import {
 	buildOpenAiNativeHistory,
 	getPreservedOpenAiRemoteCompactionData,
@@ -35,7 +36,6 @@ import compactionSummaryPrompt from "./prompts/compaction-summary.md" with { typ
 import compactionTurnPrefixPrompt from "./prompts/compaction-turn-prefix.md" with { type: "text" };
 import compactionUpdateSummaryPrompt from "./prompts/compaction-update-summary.md" with { type: "text" };
 import handoffDocumentPrompt from "./prompts/handoff-document.md" with { type: "text" };
-
 import {
 	computeFileLists,
 	createFileOps,
@@ -45,6 +45,8 @@ import {
 	serializeConversation,
 	upsertFileOperations,
 } from "./utils";
+
+export type { OnnxSummarizeRequest, OnnxSummarizer } from "./onnx-summarizer";
 
 // ============================================================================
 // File Operation Tracking
@@ -595,6 +597,30 @@ export interface SummaryOptions {
 	 * `resolveCompactionEffort` for the conversion contract.
 	 */
 	thinkingLevel?: ThinkingLevel;
+	/**
+	 * Optional on-device ONNX summarizer (coding-agent tiny worker). When set,
+	 * compaction tries local inference before remote/server paths. `null` from
+	 * the summarizer falls through to the configured server compactor model.
+	 */
+	onnxSummarizer?: OnnxSummarizer;
+}
+
+async function tryOnnxSummarization(
+	promptText: string,
+	maxTokens: number,
+	options: SummaryOptions | undefined,
+	signal?: AbortSignal,
+): Promise<string | undefined> {
+	const summarizer = options?.onnxSummarizer;
+	if (!summarizer) return undefined;
+
+	const fullPrompt = `${SUMMARIZATION_SYSTEM_PROMPT}\n\n${promptText}`;
+	const text = await summarizer.summarize({ promptText: fullPrompt, maxTokens, signal });
+	if (text === null || text.trim() === "") {
+		logger.debug("compaction: local ONNX summarization unavailable, using server model");
+		return undefined;
+	}
+	return text;
 }
 
 export async function generateSummary(
@@ -638,6 +664,9 @@ export async function generateSummary(
 			timestamp: Date.now(),
 		},
 	];
+
+	const onnxSummary = await tryOnnxSummarization(promptText, maxTokens, options, signal);
+	if (onnxSummary !== undefined) return onnxSummary;
 
 	if (options?.remoteEndpoint) {
 		const remote = await requestRemoteCompaction(
@@ -776,6 +805,9 @@ async function generateShortSummary(
 	}
 	promptText += formatAdditionalContext(options?.extraContext);
 	promptText += SHORT_SUMMARY_PROMPT;
+
+	const onnxSummary = await tryOnnxSummarization(promptText, maxTokens, options, signal);
+	if (onnxSummary !== undefined) return onnxSummary;
 
 	if (options?.remoteEndpoint) {
 		const remote = await requestRemoteCompaction(
@@ -986,6 +1018,7 @@ export async function compact(
 		metadata: options?.metadata,
 		convertToLlm: options?.convertToLlm,
 		telemetry: options?.telemetry,
+		onnxSummarizer: options?.onnxSummarizer,
 		// Honor /model thinking selection on every fan-out summarizer.
 		// Without this propagation, generateSummary / generateTurnPrefixSummary
 		// see options?.thinkingLevel === undefined and resolveCompactionEffort
@@ -1082,6 +1115,7 @@ export async function compact(
 			initiatorOverride: summaryOptions.initiatorOverride,
 			metadata: summaryOptions.metadata,
 			telemetry: summaryOptions.telemetry,
+			onnxSummarizer: summaryOptions.onnxSummarizer,
 			// Same propagation as summaryOptions above — generateShortSummary
 			// resolves its own reasoning via resolveCompactionEffort.
 			thinkingLevel: options?.thinkingLevel,
@@ -1122,6 +1156,9 @@ async function generateTurnPrefixSummary(
 	const llmMessages = (options?.convertToLlm ?? convertToLlm)(messages);
 	const conversationText = serializeConversation(llmMessages);
 	const promptText = `<conversation>\n${conversationText}\n</conversation>\n\n${TURN_PREFIX_SUMMARIZATION_PROMPT}`;
+	const onnxSummary = await tryOnnxSummarization(promptText, maxTokens, options, signal);
+	if (onnxSummary !== undefined) return onnxSummary;
+
 	const summarizationMessages = [
 		{
 			role: "user" as const,

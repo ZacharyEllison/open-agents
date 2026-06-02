@@ -10,8 +10,8 @@ import {
 	type RequestPermissionResponse,
 	type SessionNotification,
 } from "@agentclientprotocol/sdk";
-import type { Model } from "@oh-my-pi/pi-ai";
-import { TempDir } from "@oh-my-pi/pi-utils";
+import type { Model } from "@open-agents/ai";
+import { TempDir } from "@open-agents/utils";
 import { Settings } from "../src/config/settings";
 import { createAcpConnection } from "../src/modes/acp/acp-mode";
 import type { AgentSession } from "../src/session/agent-session";

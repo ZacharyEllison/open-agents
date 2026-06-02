@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { type Component, TUI } from "@oh-my-pi/pi-tui";
-import { terminalHasEagerEraseScrollbackRisk } from "@oh-my-pi/pi-tui/terminal";
+import { type Component, TUI } from "@open-agents/tui";
+import { terminalHasEagerEraseScrollbackRisk } from "@open-agents/tui/terminal";
 import { VirtualTerminal } from "./virtual-terminal";
 
 // Regression test for https://github.com/can1357/oh-my-pi/issues/1682

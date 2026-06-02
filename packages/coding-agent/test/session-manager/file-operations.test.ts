@@ -9,8 +9,8 @@ import {
 	resolveResumableSession,
 	type SessionHeader,
 	SessionManager,
-} from "@oh-my-pi/pi-coding-agent/session/session-manager";
-import { getConfigRootDir, getSessionsDir, Snowflake, setAgentDir } from "@oh-my-pi/pi-utils";
+} from "@open-agents/coding-agent/session/session-manager";
+import { getConfigRootDir, getSessionsDir, Snowflake, setAgentDir } from "@open-agents/utils";
 
 describe("loadEntriesFromFile", () => {
 	let tempDir: string;
@@ -163,7 +163,7 @@ describe("resolveResumableSession", () => {
 
 describe("SessionManager temp cwd session dirs", () => {
 	let testAgentDir: string;
-	const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
+	const originalAgentDir = process.env.OA_AGENT_DIR;
 	const fallbackAgentDir = path.join(getConfigRootDir(), "agent");
 
 	function expectedTempSessionDirName(tempCwd: string): string {
@@ -187,7 +187,7 @@ describe("SessionManager temp cwd session dirs", () => {
 			setAgentDir(originalAgentDir);
 		} else {
 			setAgentDir(fallbackAgentDir);
-			delete process.env.PI_CODING_AGENT_DIR;
+			delete process.env.OA_AGENT_DIR;
 		}
 		fs.rmSync(testAgentDir, { recursive: true, force: true });
 	});

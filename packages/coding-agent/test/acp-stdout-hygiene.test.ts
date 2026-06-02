@@ -113,7 +113,7 @@ describe("ACP stdout hygiene", () => {
 		// NOTE: we intentionally do NOT override HOME. Bun keys its transpile
 		// cache at `$HOME/.bun/install/cache`; pointing HOME at a fresh tmp
 		// dir forces a full re-transpile of the CLI's module graph on every
-		// run (~12s cold vs ~0.4s warm). XDG_* and PI_CODING_AGENT_DIR
+		// run (~12s cold vs ~0.4s warm). XDG_* and OA_AGENT_DIR
 		// already isolate PI's on-disk state for this smoke test.
 		const proc = Bun.spawn(["bun", cliEntry, "acp"], {
 			cwd: repoRoot,
@@ -124,8 +124,8 @@ describe("ACP stdout hygiene", () => {
 				...process.env,
 				XDG_DATA_HOME: xdg,
 				XDG_CONFIG_HOME: xdg,
-				PI_CODING_AGENT_DIR: agentDir,
-				PI_NO_TITLE: "1",
+				OA_AGENT_DIR: agentDir,
+				OA_NO_TITLE: "1",
 				NO_COLOR: "1",
 			},
 		});

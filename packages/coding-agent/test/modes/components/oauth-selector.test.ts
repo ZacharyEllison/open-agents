@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import { getOAuthProviders } from "@oh-my-pi/pi-ai/utils/oauth";
-import { OAuthSelectorComponent } from "@oh-my-pi/pi-coding-agent/modes/components/oauth-selector";
-import { initTheme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import type { AuthStorage } from "@oh-my-pi/pi-coding-agent/session/auth-storage";
+import { getOAuthProviders } from "@open-agents/ai/utils/oauth";
+import { OAuthSelectorComponent } from "@open-agents/coding-agent/modes/components/oauth-selector";
+import { initTheme } from "@open-agents/coding-agent/modes/theme/theme";
+import type { AuthStorage } from "@open-agents/coding-agent/session/auth-storage";
 
 beforeAll(async () => {
 	await initTheme();

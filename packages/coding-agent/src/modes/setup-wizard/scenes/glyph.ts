@@ -1,4 +1,4 @@
-import { type SelectItem, SelectList } from "@oh-my-pi/pi-tui";
+import { type SelectItem, SelectList } from "@open-agents/tui";
 import { getSelectListTheme, type SymbolPreset, setSymbolPreset, theme } from "../../theme/theme";
 import type { SetupScene, SetupSceneController, SetupSceneHost } from "./types";
 

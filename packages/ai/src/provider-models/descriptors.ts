@@ -3,51 +3,20 @@
  * used by both runtime model discovery (model-registry.ts) and catalog
  * generation (generate-models.ts).
  */
+import { ensureLlamaCpp } from "../local/llama-cpp";
 import type { ModelManagerOptions } from "../model-manager";
 import type { Api, KnownProvider } from "../types";
 import type { OAuthProvider } from "../utils/oauth/types";
-import { googleModelManagerOptions, googleVertexModelManagerOptions } from "./google";
-import { ollamaCloudModelManagerOptions } from "./ollama";
 import {
-	alibabaCodingPlanModelManagerOptions,
-	anthropicModelManagerOptions,
-	cerebrasModelManagerOptions,
-	cloudflareAiGatewayModelManagerOptions,
-	deepseekModelManagerOptions,
-	firepassModelManagerOptions,
-	fireworksModelManagerOptions,
-	githubCopilotModelManagerOptions,
-	groqModelManagerOptions,
-	huggingfaceModelManagerOptions,
-	kiloModelManagerOptions,
-	kimiCodeModelManagerOptions,
-	litellmModelManagerOptions,
+	janModelManagerOptions,
+	llamaCppModelManagerOptions,
+	llamafileModelManagerOptions,
 	lmStudioModelManagerOptions,
-	mistralModelManagerOptions,
-	moonshotModelManagerOptions,
-	nanoGptModelManagerOptions,
-	nvidiaModelManagerOptions,
+	localaiModelManagerOptions,
 	ollamaModelManagerOptions,
-	openaiModelManagerOptions,
-	opencodeGoModelManagerOptions,
-	opencodeZenModelManagerOptions,
-	openrouterModelManagerOptions,
-	qianfanModelManagerOptions,
-	qwenPortalModelManagerOptions,
-	syntheticModelManagerOptions,
-	togetherModelManagerOptions,
-	veniceModelManagerOptions,
-	vercelAiGatewayModelManagerOptions,
+	tabbyapiModelManagerOptions,
 	vllmModelManagerOptions,
-	waferPassModelManagerOptions,
-	waferServerlessModelManagerOptions,
-	xaiModelManagerOptions,
-	xaiOAuthModelManagerOptions,
-	xiaomiModelManagerOptions,
-	zenmuxModelManagerOptions,
-	zhipuCodingPlanModelManagerOptions,
 } from "./openai-compat";
-import { cursorModelManagerOptions, zaiModelManagerOptions } from "./special";
 
 /** Catalog discovery configuration for providers that support endpoint-based model listing. */
 export interface CatalogDiscoveryConfig {
@@ -88,268 +57,103 @@ export function allowsUnauthenticatedCatalogDiscovery(descriptor: CatalogProvide
 	return descriptor.catalogDiscovery.allowUnauthenticated ?? descriptor.allowUnauthenticated ?? false;
 }
 
-function descriptor(
+/** Config accepted by a {@link LocalServerManager}. */
+export interface LocalServerConfig {
+	baseUrl?: string;
+	executablePath?: string;
+	modelPath?: string;
+	contextSize?: number;
+	threads?: number;
+	autoStart?: boolean;
+}
+
+/** Handle to a running local inference server. */
+export interface LocalServerHandle {
+	readonly baseUrl: string;
+	readonly pid?: number;
+	stop(): Promise<void>;
+}
+
+/** Lifecycle manager for a local inference server (e.g. llama.cpp's llama-server). */
+export interface LocalServerManager {
+	ensureRunning(config: LocalServerConfig): Promise<LocalServerHandle>;
+	isRunning(config: LocalServerConfig): Promise<boolean>;
+}
+
+/** A provider descriptor describing a local-only inference runtime. */
+export interface LocalProviderDescriptor extends ProviderDescriptor {
+	readonly localProvider: true;
+	readonly defaultPort: number;
+	readonly defaultHost: string;
+	readonly serverManager?: LocalServerManager;
+}
+
+const llamaCppServerManager: LocalServerManager = {
+	ensureRunning: config => ensureLlamaCpp(config),
+	isRunning: async config => {
+		const baseUrl = (config.baseUrl ?? "http://127.0.0.1:8080").replace(/\/$/, "");
+		try {
+			const res = await fetch(`${baseUrl}/health`);
+			return res.status === 200;
+		} catch {
+			return false;
+		}
+	},
+};
+
+function localDescriptor(
 	providerId: KnownProvider,
 	defaultModel: string,
 	createModelManagerOptions: ProviderDescriptor["createModelManagerOptions"],
-	options: Pick<ProviderDescriptor, "allowUnauthenticated" | "dynamicModelsAuthoritative"> = {},
-): ProviderDescriptor {
+	defaultHost: string,
+	defaultPort: number,
+	serverManager?: LocalServerManager,
+): LocalProviderDescriptor {
 	return {
 		providerId,
 		defaultModel,
 		createModelManagerOptions,
-		...options,
-	};
-}
-
-function catalog(
-	label: string,
-	envVars: string[],
-	options: Pick<CatalogDiscoveryConfig, "oauthProvider" | "allowUnauthenticated"> = {},
-): CatalogDiscoveryConfig {
-	return {
-		label,
-		envVars,
-		...options,
-	};
-}
-
-function catalogDescriptor(
-	providerId: KnownProvider,
-	defaultModel: string,
-	createModelManagerOptions: ProviderDescriptor["createModelManagerOptions"],
-	catalogDiscovery: CatalogDiscoveryConfig,
-	options: Pick<ProviderDescriptor, "allowUnauthenticated" | "dynamicModelsAuthoritative"> = {},
-): ProviderDescriptor {
-	return {
-		...descriptor(providerId, defaultModel, createModelManagerOptions, options),
-		catalogDiscovery,
+		allowUnauthenticated: true,
+		localProvider: true,
+		defaultHost,
+		defaultPort,
+		serverManager,
 	};
 }
 
 /**
- * All standard providers. Special providers (google-antigravity, google-gemini-cli,
- * openai-codex) are handled separately because they require different config shapes.
+ * All built-in local inference runtimes. Discovery is unauthenticated and
+ * optional — unreachable providers are silently skipped at runtime.
  */
-export const PROVIDER_DESCRIPTORS: readonly ProviderDescriptor[] = [
-	descriptor("anthropic", "claude-sonnet-4-6", config => anthropicModelManagerOptions(config)),
-	catalogDescriptor(
-		"alibaba-coding-plan",
-		"qwen3.5-plus",
-		config => alibabaCodingPlanModelManagerOptions(config),
-		catalog("Alibaba Coding Plan", ["ALIBABA_CODING_PLAN_API_KEY"]),
+export const LOCAL_PROVIDER_DESCRIPTORS: readonly LocalProviderDescriptor[] = [
+	localDescriptor("ollama", "gpt-oss:20b", config => ollamaModelManagerOptions(config), "127.0.0.1", 11434),
+	localDescriptor(
+		"llama.cpp",
+		"default",
+		config => llamaCppModelManagerOptions(config),
+		"127.0.0.1",
+		8080,
+		llamaCppServerManager,
 	),
-	descriptor("openai", "gpt-5.4", config => openaiModelManagerOptions(config)),
-	descriptor("groq", "openai/gpt-oss-120b", config => groqModelManagerOptions(config)),
-	catalogDescriptor(
-		"huggingface",
-		"deepseek-ai/DeepSeek-R1",
-		config => huggingfaceModelManagerOptions(config),
-		catalog("Hugging Face", ["HUGGINGFACE_HUB_TOKEN", "HF_TOKEN"]),
-	),
-	catalogDescriptor(
-		"cerebras",
-		"zai-glm-4.6",
-		config => cerebrasModelManagerOptions(config),
-		catalog("Cerebras", ["CEREBRAS_API_KEY"]),
-	),
-	catalogDescriptor(
-		"fireworks",
-		"kimi-k2.6",
-		config => fireworksModelManagerOptions(config),
-		catalog("Fireworks", ["FIREWORKS_API_KEY"]),
-	),
-	// Fire Pass does not expose a /v1/models endpoint — the API returns HTTP 403
-	// on any catalog-discovery request, so dynamic model listing is not feasible.
-	//
-	// The single model `kimi-k2.6-turbo` is seeded via the `prevModelsJson`
-	// fallback in `generate-models.ts`, which preserves entries from the previous
-	// catalog snapshot when a provider does not surface them dynamically.
-	//
-	// IMPORTANT: Do NOT delete the firepass section from models.json. No
-	// descriptor here produces that entry dynamically — removing it from
-	// models.json would permanently drop the model from the catalog with no
-	// automated mechanism to restore it.
-	descriptor("firepass", "kimi-k2.6-turbo", config => firepassModelManagerOptions(config)),
-	catalogDescriptor(
-		"wafer-pass",
-		"GLM-5.1",
-		config => waferPassModelManagerOptions(config),
-		catalog("Wafer Pass", ["WAFER_PASS_API_KEY"], { oauthProvider: "wafer-pass" }),
-	),
-	catalogDescriptor(
-		"wafer-serverless",
-		"GLM-5.1",
-		config => waferServerlessModelManagerOptions(config),
-		catalog("Wafer Serverless", ["WAFER_SERVERLESS_API_KEY"], { oauthProvider: "wafer-serverless" }),
-	),
-	descriptor("xai", "grok-4-fast-non-reasoning", config => xaiModelManagerOptions(config)),
-	catalogDescriptor(
-		"xai-oauth",
-		"grok-4.3",
-		config => xaiOAuthModelManagerOptions(config),
-		catalog("xAI Grok OAuth (SuperGrok)", ["XAI_OAUTH_TOKEN", "XAI_API_KEY"], {
-			oauthProvider: "xai-oauth",
-		}),
-	),
-	catalogDescriptor(
-		"deepseek",
-		"deepseek-v4-pro",
-		config => deepseekModelManagerOptions(config),
-		catalog("DeepSeek", ["DEEPSEEK_API_KEY"]),
-	),
-	descriptor("mistral", "devstral-medium-latest", config => mistralModelManagerOptions(config)),
-	catalogDescriptor(
-		"nvidia",
-		"nvidia/llama-3.1-nemotron-70b-instruct",
-		config => nvidiaModelManagerOptions(config),
-		catalog("NVIDIA", ["NVIDIA_API_KEY"]),
-	),
-	catalogDescriptor(
-		"nanogpt",
-		"openai/gpt-5.4",
-		config => nanoGptModelManagerOptions(config),
-		catalog("NanoGPT", ["NANO_GPT_API_KEY"]),
-	),
-	descriptor("opencode-zen", "claude-sonnet-4-6", config => opencodeZenModelManagerOptions(config)),
-	descriptor("opencode-go", "kimi-k2.5", config => opencodeGoModelManagerOptions(config)),
-	catalogDescriptor(
-		"openrouter",
-		"openai/gpt-5.4",
-		config => openrouterModelManagerOptions(config),
-		catalog("OpenRouter", ["OPENROUTER_API_KEY"], { allowUnauthenticated: true }),
-	),
-	catalogDescriptor(
-		"kilo",
-		"anthropic/claude-sonnet-4.5",
-		config => kiloModelManagerOptions(config),
-		catalog("Kilo Gateway", ["KILO_API_KEY"], { allowUnauthenticated: true }),
-	),
-	catalogDescriptor(
-		"vercel-ai-gateway",
-		"anthropic/claude-sonnet-4-6",
-		config => vercelAiGatewayModelManagerOptions(config),
-		catalog("Vercel AI Gateway", ["VERCEL_AI_GATEWAY_API_KEY"], { allowUnauthenticated: true }),
-	),
-	catalogDescriptor(
-		"ollama",
-		"gpt-oss:20b",
-		config => ollamaModelManagerOptions(config),
-		catalog("Ollama", ["OLLAMA_API_KEY"]),
-		{ allowUnauthenticated: true },
-	),
-	catalogDescriptor(
-		"ollama-cloud",
-		"gpt-oss:120b",
-		config => ollamaCloudModelManagerOptions(config),
-		catalog("Ollama Cloud", ["OLLAMA_CLOUD_API_KEY"], { oauthProvider: "ollama-cloud" }),
-	),
-	catalogDescriptor(
-		"cloudflare-ai-gateway",
-		"claude-sonnet-4-5",
-		config => cloudflareAiGatewayModelManagerOptions(config),
-		catalog("Cloudflare AI Gateway", ["CLOUDFLARE_AI_GATEWAY_API_KEY"]),
-	),
-	catalogDescriptor(
-		"kimi-code",
-		"kimi-k2.5",
-		config => kimiCodeModelManagerOptions(config),
-		catalog("Kimi Code", ["KIMI_API_KEY"]),
-	),
-	catalogDescriptor(
-		"qwen-portal",
-		"coder-model",
-		config => qwenPortalModelManagerOptions(config),
-		catalog("Qwen Portal", ["QWEN_OAUTH_TOKEN", "QWEN_PORTAL_API_KEY"], { oauthProvider: "qwen-portal" }),
-	),
-	catalogDescriptor(
-		"synthetic",
-		"hf:zai-org/GLM-5.1",
-		config => syntheticModelManagerOptions(config),
-		catalog("Synthetic", ["SYNTHETIC_API_KEY"]),
-		{ dynamicModelsAuthoritative: true },
-	),
-	catalogDescriptor(
-		"venice",
-		"llama-3.3-70b",
-		config => veniceModelManagerOptions(config),
-		catalog("Venice", ["VENICE_API_KEY"], { allowUnauthenticated: true }),
-	),
-	catalogDescriptor(
-		"litellm",
-		"claude-opus-4-6",
-		config => litellmModelManagerOptions(config),
-		catalog("LiteLLM", ["LITELLM_API_KEY"], { allowUnauthenticated: true }),
-	),
-	descriptor("lm-studio", "llama-3-8b", config => lmStudioModelManagerOptions(config), { allowUnauthenticated: true }),
-	catalogDescriptor(
-		"vllm",
-		"gpt-oss-20b",
-		config => vllmModelManagerOptions(config),
-		catalog("vLLM", ["VLLM_API_KEY"], { allowUnauthenticated: true }),
-	),
-	catalogDescriptor(
-		"moonshot",
-		"kimi-k2.5",
-		config => moonshotModelManagerOptions(config),
-		catalog("Moonshot", ["MOONSHOT_API_KEY"]),
-	),
-	catalogDescriptor(
-		"qianfan",
-		"deepseek-v3.2",
-		config => qianfanModelManagerOptions(config),
-		catalog("Qianfan", ["QIANFAN_API_KEY"]),
-	),
-	catalogDescriptor(
-		"together",
-		"moonshotai/Kimi-K2.5",
-		config => togetherModelManagerOptions(config),
-		catalog("Together", ["TOGETHER_API_KEY"]),
-	),
-	catalogDescriptor(
-		"xiaomi",
-		"mimo-v2-flash",
-		config => xiaomiModelManagerOptions(config),
-		catalog("Xiaomi", ["XIAOMI_API_KEY"]),
-	),
-	catalogDescriptor(
-		"zenmux",
-		"anthropic/claude-opus-4.6",
-		config => zenmuxModelManagerOptions(config),
-		catalog("ZenMux", ["ZENMUX_API_KEY"]),
-	),
-	catalogDescriptor("zai", "glm-5.1", config => zaiModelManagerOptions(config), catalog("zAI", ["ZAI_API_KEY"])),
-	catalogDescriptor(
-		"zhipu-coding-plan",
-		"glm-5.1",
-		config => zhipuCodingPlanModelManagerOptions(config),
-		catalog("Zhipu Coding Plan", ["ZHIPU_API_KEY"]),
-	),
-	descriptor("github-copilot", "gpt-4o", config => githubCopilotModelManagerOptions(config)),
-	descriptor("google", "gemini-2.5-pro", config => googleModelManagerOptions(config)),
-	descriptor("google-vertex", "gemini-3-pro-preview", config => googleVertexModelManagerOptions(config), {
-		allowUnauthenticated: true,
-	}),
-	catalogDescriptor(
-		"cursor",
-		"claude-sonnet-4-6",
-		config => cursorModelManagerOptions(config),
-		catalog("Cursor", ["CURSOR_API_KEY"], { oauthProvider: "cursor" }),
-	),
-] as const;
+	localDescriptor("vllm", "gpt-oss-20b", config => vllmModelManagerOptions(config), "127.0.0.1", 8000),
+	localDescriptor("lm-studio", "llama-3-8b", config => lmStudioModelManagerOptions(config), "127.0.0.1", 1234),
+	localDescriptor("localai", "default", config => localaiModelManagerOptions(config), "127.0.0.1", 8080),
+	localDescriptor("jan", "default", config => janModelManagerOptions(config), "127.0.0.1", 1337),
+	localDescriptor("llamafile", "default", config => llamafileModelManagerOptions(config), "127.0.0.1", 8080),
+	localDescriptor("tabbyapi", "default", config => tabbyapiModelManagerOptions(config), "127.0.0.1", 5000),
+];
 
-/** Default model IDs for all known providers, built from descriptors + special providers. */
+/** Backward-compatible alias — all providers are now local. */
+export const PROVIDER_DESCRIPTORS: readonly ProviderDescriptor[] = LOCAL_PROVIDER_DESCRIPTORS;
+
+/** Default model IDs for all known (local) providers. */
 export const DEFAULT_MODEL_PER_PROVIDER: Record<KnownProvider, string> = {
-	...Object.fromEntries(PROVIDER_DESCRIPTORS.map(d => [d.providerId, d.defaultModel])),
-	// Providers not in PROVIDER_DESCRIPTORS (special auth or no standard discovery)
-	"alibaba-coding-plan": "qwen3.5-plus",
-	"amazon-bedrock": "us.anthropic.claude-opus-4-6-v1",
-	"google-antigravity": "gemini-3-pro-high",
-	"google-gemini-cli": "gemini-2.5-pro",
-	"google-vertex": "gemini-3-pro-preview",
-	minimax: "MiniMax-M2.5",
-	"minimax-code": "MiniMax-M2.5",
-	"minimax-code-cn": "MiniMax-M2.5",
-	"openai-codex": "gpt-5.4",
-	"gitlab-duo": "duo-chat-sonnet-4-5",
-} as Record<KnownProvider, string>;
+	ollama: "gpt-oss:20b",
+	"llama.cpp": "default",
+	vllm: "gpt-oss-20b",
+	"lm-studio": "llama-3-8b",
+	localai: "default",
+	jan: "default",
+	llamafile: "default",
+	tabbyapi: "default",
+};

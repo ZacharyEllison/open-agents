@@ -2,16 +2,16 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as ai from "@oh-my-pi/pi-ai";
-import { Effort, type Model } from "@oh-my-pi/pi-ai";
-import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
+import * as ai from "@open-agents/ai";
+import { Effort, type Model } from "@open-agents/ai";
+import { Settings } from "@open-agents/coding-agent/config/settings";
 import {
 	buildMemoryToolDeveloperInstructions,
 	getMemoryRoot,
 	startMemoryStartupTask,
-} from "@oh-my-pi/pi-coding-agent/memories";
-import * as memoryStorage from "@oh-my-pi/pi-coding-agent/memories/storage";
-import { getAgentDbPath, Snowflake } from "@oh-my-pi/pi-utils";
+} from "@open-agents/coding-agent/memories";
+import * as memoryStorage from "@open-agents/coding-agent/memories/storage";
+import { getAgentDbPath, Snowflake } from "@open-agents/utils";
 
 interface SessionFixture {
 	agentDir: string;

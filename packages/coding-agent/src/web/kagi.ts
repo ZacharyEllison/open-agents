@@ -6,7 +6,7 @@
  * through the shared {@link AuthStorage} broker (Bearer token), and responses
  * are categorized result buckets rather than the legacy flat object array.
  */
-import type { AuthStorage } from "@oh-my-pi/pi-ai";
+import type { AuthStorage } from "@open-agents/ai";
 import { withHardTimeout } from "./search/providers/utils";
 
 const KAGI_SEARCH_URL = "https://kagi.com/api/v1/search";

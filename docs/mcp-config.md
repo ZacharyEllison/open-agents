@@ -1,6 +1,6 @@
-# MCP configuration in OMP
+# MCP configuration in open-agent
 
-This guide explains how to add, edit, and validate MCP servers for the OMP coding agent.
+This guide explains how to add, edit, and validate MCP servers for the open-agent coding agent.
 
 Source of truth in code:
 
@@ -12,19 +12,19 @@ Source of truth in code:
 
 ## Preferred config locations
 
-OMP can discover MCP servers from multiple tools (`.claude/`, `.cursor/`, `.vscode/`, `opencode.json`, and more), but for OMP-native configuration you should usually use one of these primary files:
+open-agent can discover MCP servers from multiple tools (`.claude/`, `.cursor/`, `.vscode/`, `opencode.json`, and more), but for open-agent-native configuration you should usually use one of these primary files:
 
-- Project: `.omp/mcp.json`
-- User: `~/.omp/agent/mcp.json`
+- Project: `.open-agent/mcp.json`
+- User: `~/.open-agent/agent/mcp.json`
 
-The native provider also reads `.omp/.mcp.json` and `~/.omp/agent/.mcp.json` for compatibility, but OMP writes to the primary `mcp.json` paths above.
+The native provider also reads `.open-agent/.mcp.json` and `~/.open-agent/agent/.mcp.json` for compatibility, but open-agent writes to the primary `mcp.json` paths above.
 
-OMP also accepts fallback standalone files in the project root:
+open-agent also accepts fallback standalone files in the project root:
 
 - `mcp.json`
 - `.mcp.json`
 
-Use `.omp/mcp.json` or `~/.omp/agent/mcp.json` when you want OMP to own the configuration. Use root `mcp.json` / `.mcp.json` only when you want a portable fallback file that other MCP clients may also read.
+Use `.open-agent/mcp.json` or `~/.open-agent/agent/mcp.json` when you want open-agent to own the configuration. Use root `mcp.json` / `.mcp.json` only when you want a portable fallback file that other MCP clients may also read.
 
 ## Add a schema reference
 
@@ -37,11 +37,11 @@ Add this line at the top of the file for editor autocomplete and validation:
 }
 ```
 
-OMP now writes this automatically when `/mcp add`, `/mcp enable`, `/mcp disable`, `/mcp reauth`, or other config-writing flows create or update an OMP-managed MCP file.
+open-agent now writes this automatically when `/mcp add`, `/mcp enable`, `/mcp disable`, `/mcp reauth`, or other config-writing flows create or update an open-agent-managed MCP file.
 
 ## File shape
 
-OMP supports this top-level structure:
+open-agent supports this top-level structure:
 
 ```json
 {
@@ -61,7 +61,7 @@ Top-level keys:
 
 - `$schema` — optional JSON Schema URL for tooling
 - `mcpServers` — map of server name to server config
-- `disabledServers` — user-level denylist used to turn off discovered servers by name; runtime loading reads this list from `~/.omp/agent/mcp.json`
+- `disabledServers` — user-level denylist used to turn off discovered servers by name; runtime loading reads this list from `~/.open-agent/agent/mcp.json`
 
 Server names must match `^[a-zA-Z0-9_.-]{1,100}$`.
 
@@ -71,10 +71,10 @@ Shared fields for every transport:
 
 - `enabled?: boolean` — skip this server when `false`
 - `timeout?: number` — MCP request timeout in milliseconds; `0` disables client-side MCP timeouts
-- `auth?: { ... }` — auth metadata used by OMP for OAuth/API-key flows
+- `auth?: { ... }` — auth metadata used by open-agent for OAuth/API-key flows
 - `oauth?: { ... }` — explicit OAuth client settings used during auth/reauth
 
-Set `OMP_MCP_TIMEOUT_MS=0` to disable the client-side timeout for every MCP server in the current process. Set it to a positive millisecond value, such as `OMP_MCP_TIMEOUT_MS=120000`, to apply one global timeout without editing each server entry.
+Set `OA_MCP_TIMEOUT_MS=0` to disable the client-side timeout for every MCP server in the current process. Set it to a positive millisecond value, such as `OA_MCP_TIMEOUT_MS=120000`, to apply one global timeout without editing each server entry.
 
 ### `stdio` transport
 
@@ -168,7 +168,7 @@ Example:
 
 ## Auth fields
 
-OMP understands two auth-related objects.
+open-agent understands two auth-related objects.
 
 ### `auth`
 
@@ -182,7 +182,7 @@ OMP understands two auth-related objects.
 }
 ```
 
-Use this when OMP should remember how to rehydrate credentials for a server.
+Use this when open-agent should remember how to rehydrate credentials for a server.
 
 ### `oauth`
 
@@ -321,7 +321,7 @@ This is the part that usually trips people up.
 
 ### Discovery-time `${...}` expansion
 
-OMP expands `${VAR}` and `${VAR:-default}` placeholders while discovering MCP configs from OMP-native files and standalone fallback files. Expansion applies recursively to string values in `command`, `args`, `env`, `cwd`, `url`, `headers`, `auth`, and `oauth`; unresolved placeholders remain literal strings.
+open-agent expands `${VAR}` and `${VAR:-default}` placeholders while discovering MCP configs from open-agent-native files and standalone fallback files. Expansion applies recursively to string values in `command`, `args`, `env`, `cwd`, `url`, `headers`, `auth`, and `oauth`; unresolved placeholders remain literal strings.
 
 Example:
 
@@ -341,12 +341,12 @@ Example:
 
 ### Pre-connect env/header resolution
 
-Before OMP launches a stdio server or makes an HTTP/SSE request, it resolves stdio `env` values and HTTP/SSE `headers` values like this:
+Before open-agent launches a stdio server or makes an HTTP/SSE request, it resolves stdio `env` values and HTTP/SSE `headers` values like this:
 
-1. If a value starts with `!`, OMP runs the rest as a shell command with a 10s timeout and uses trimmed stdout.
+1. If a value starts with `!`, open-agent runs the rest as a shell command with a 10s timeout and uses trimmed stdout.
 2. If the command fails, times out, or prints only whitespace, that `env`/`headers` entry is omitted.
-3. Otherwise OMP checks whether the value names an environment variable.
-4. If that environment variable is set to a non-empty value, OMP uses the environment value; otherwise it uses the string literally.
+3. Otherwise open-agent checks whether the value names an environment variable.
+4. If that environment variable is set to a non-empty value, open-agent uses the environment value; otherwise it uses the string literally.
 
 Examples:
 
@@ -369,7 +369,7 @@ That means this is valid and convenient for local secrets:
 
 ## `disabledServers`
 
-`disabledServers` is read from the user config file (`~/.omp/agent/mcp.json`) when a server is discovered from any source and you want OMP to ignore it without editing that other tool's config.
+`disabledServers` is read from the user config file (`~/.open-agent/agent/mcp.json`) when a server is discovered from any source and you want open-agent to ignore it without editing that other tool's config.
 
 Example:
 
@@ -398,7 +398,7 @@ After editing, use:
 - `/mcp reconnect <name>` to reconnect one server without rediscovering all configs
 - `/mcp resources`, `/mcp prompts`, and `/mcp notifications` to inspect non-tool MCP capabilities
 
-## Validation rules OMP enforces
+## Validation rules open-agent enforces
 
 From `validateServerConfig()` in `packages/coding-agent/src/mcp/config.ts`:
 
@@ -410,16 +410,16 @@ From `validateServerConfig()` in `packages/coding-agent/src/mcp/config.ts`:
 Practical implications:
 
 - Omitting `type` means `stdio`
-- If you paste a remote server config and forget `"type": "http"`, OMP will treat it as `stdio` and complain that `command` is missing
+- If you paste a remote server config and forget `"type": "http"`, open-agent will treat it as `stdio` and complain that `command` is missing
 - `sse` remains valid for compatibility, but new hosted servers should usually be configured as `http`
 
 ## Discovery and precedence
 
-OMP does not merge duplicate server definitions across files. Discovery providers are prioritized, and the higher-priority definition wins. Separately, `disabledServers` from `~/.omp/agent/mcp.json` can suppress a discovered server by name.
+open-agent does not merge duplicate server definitions across files. Discovery providers are prioritized, and the higher-priority definition wins. Separately, `disabledServers` from `~/.open-agent/agent/mcp.json` can suppress a discovered server by name.
 
 In practice:
 
-- prefer `.omp/mcp.json` or `~/.omp/agent/mcp.json` when you want an OMP-specific override
+- prefer `.open-agent/mcp.json` or `~/.open-agent/agent/mcp.json` when you want an open-agent-specific override
 - keep server names unique across tools when possible
 - use `disabledServers` in the user config when a third-party config keeps reintroducing a server you do not want
 
@@ -431,7 +431,7 @@ You probably omitted `type: "http"` on a remote server.
 
 ### `Server "name": both "command" and "url" are set`
 
-Pick one transport. OMP treats `command` as stdio and `url` as http/sse.
+Pick one transport. open-agent treats `command` as stdio and `url` as http/sse.
 
 ### `/mcp add` worked but the server still does not connect
 
@@ -442,9 +442,9 @@ The JSON is valid, but the server may still be unreachable. Use `/mcp test <name
 - the remote URL is reachable
 - the OAuth or API token is valid
 
-### The server exists in another tool's config but not in OMP
+### The server exists in another tool's config but not in open-agent
 
-Run `/mcp list`. OMP discovers many third-party MCP files, but project-level loading can also be disabled via the `mcp.enableProjectConfig` setting, and a user-level `disabledServers` entry can suppress a server by name.
+Run `/mcp list`. open-agent discovers many third-party MCP files, but project-level loading can also be disabled via the `mcp.enableProjectConfig` setting, and a user-level `disabledServers` entry can suppress a server by name.
 
 ## References
 

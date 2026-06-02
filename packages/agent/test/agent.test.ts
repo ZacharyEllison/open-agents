@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { Agent, type AgentTool, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { SimpleStreamOptions } from "@oh-my-pi/pi-ai";
-import { z } from "@oh-my-pi/pi-ai";
-import { createMockModel } from "@oh-my-pi/pi-ai/providers/mock";
+import { Agent, type AgentTool, ThinkingLevel } from "@open-agents/agent";
+import type { SimpleStreamOptions } from "@open-agents/ai";
+import { z } from "@open-agents/ai";
+import { createMockModel } from "@open-agents/ai/providers/mock";
 import { createAssistantMessage } from "./helpers";
 
 describe("Agent", () => {

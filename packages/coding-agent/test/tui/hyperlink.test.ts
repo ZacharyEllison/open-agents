@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
-import { resetSettingsForTest, Settings, settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import { fileHyperlink, isHyperlinkEnabled, tryResolveInternalUrlSync } from "@oh-my-pi/pi-coding-agent/tui/hyperlink";
-import * as terminalCaps from "@oh-my-pi/pi-tui";
+import { resetSettingsForTest, Settings, settings } from "@open-agents/coding-agent/config/settings";
+import { fileHyperlink, isHyperlinkEnabled, tryResolveInternalUrlSync } from "@open-agents/coding-agent/tui/hyperlink";
+import * as terminalCaps from "@open-agents/tui";
 
 // OSC 8 sequence markers
 const OSC = "\x1b]";

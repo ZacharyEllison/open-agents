@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { buildOpenAiNativeHistory, requestOpenAiRemoteCompaction } from "@oh-my-pi/pi-agent-core/compaction/openai";
-import type { AssistantMessage, Model, ToolResultMessage } from "@oh-my-pi/pi-ai/types";
-import { hookFetch } from "@oh-my-pi/pi-utils";
+import { buildOpenAiNativeHistory, requestOpenAiRemoteCompaction } from "@open-agents/agent/compaction/openai";
+import type { AssistantMessage, Model, ToolResultMessage } from "@open-agents/ai/types";
+import { hookFetch } from "@open-agents/utils";
 
 function makeOpenAiModel(overrides: Partial<Model<"openai-responses">> = {}): Model<"openai-responses"> {
 	return {

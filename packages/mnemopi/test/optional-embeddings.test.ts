@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { getFastembedCacheDir } from "@oh-my-pi/pi-utils";
+import { getFastembedCacheDir } from "@open-agents/utils";
 import "./setup";
 import packageJson from "../package.json" with { type: "json" };
 import {

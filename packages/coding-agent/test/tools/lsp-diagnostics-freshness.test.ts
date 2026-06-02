@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
-import { createLspWritethrough } from "@oh-my-pi/pi-coding-agent/lsp";
-import * as lspClient from "@oh-my-pi/pi-coding-agent/lsp/client";
-import * as lspConfig from "@oh-my-pi/pi-coding-agent/lsp/config";
-import type { Diagnostic, LspClient, ServerConfig } from "@oh-my-pi/pi-coding-agent/lsp/types";
-import { fileToUri } from "@oh-my-pi/pi-coding-agent/lsp/utils";
-import { type ptree, TempDir } from "@oh-my-pi/pi-utils";
+import { createLspWritethrough } from "@open-agents/coding-agent/lsp";
+import * as lspClient from "@open-agents/coding-agent/lsp/client";
+import * as lspConfig from "@open-agents/coding-agent/lsp/config";
+import type { Diagnostic, LspClient, ServerConfig } from "@open-agents/coding-agent/lsp/types";
+import { fileToUri } from "@open-agents/coding-agent/lsp/utils";
+import { type ptree, TempDir } from "@open-agents/utils";
 
 const TEST_SERVER: ServerConfig = {
 	command: "test-lsp",

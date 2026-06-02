@@ -1,4 +1,4 @@
-import { $which } from "@oh-my-pi/pi-utils";
+import { $which } from "@open-agents/utils";
 import { theme } from "../../modes/theme/theme";
 import type { DoctorCheck } from "./types";
 

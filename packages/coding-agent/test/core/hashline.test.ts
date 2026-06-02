@@ -2,6 +2,14 @@ import { beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { resetSettingsForTest, Settings } from "@open-agents/coding-agent/config/settings";
+import {
+	type ExecuteHashlineSingleOptions,
+	executeHashlineSingle,
+	generateDiffString,
+	getFileSnapshotStore as getFileReadCache,
+	hashlineEditParamsSchema,
+} from "@open-agents/coding-agent/edit";
 import {
 	applyEdits,
 	buildCompactDiffPreview as buildCompactHashlineDiffPreview,
@@ -19,15 +27,7 @@ import {
 	Recovery,
 	type SplitOptions,
 	type WriteResult,
-} from "@oh-my-pi/hashline";
-import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
-import {
-	type ExecuteHashlineSingleOptions,
-	executeHashlineSingle,
-	generateDiffString,
-	getFileSnapshotStore as getFileReadCache,
-	hashlineEditParamsSchema,
-} from "@oh-my-pi/pi-coding-agent/edit";
+} from "@open-agents/hashline";
 import * as z from "zod/v4";
 
 /**
@@ -80,7 +80,7 @@ function tryRecoverHashlineWithCache(args: {
 	return recovered ? { ...recovered, lines: recovered.text } : null;
 }
 
-import type { ToolSession } from "@oh-my-pi/pi-coding-agent/tools";
+import type { ToolSession } from "@open-agents/coding-agent/tools";
 
 beforeAll(async () => {
 	resetSettingsForTest();

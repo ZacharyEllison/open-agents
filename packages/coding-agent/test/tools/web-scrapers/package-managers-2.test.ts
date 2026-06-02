@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { handleChocolatey } from "@oh-my-pi/pi-coding-agent/web/scrapers/chocolatey";
-import { handleDockerHub } from "@oh-my-pi/pi-coding-agent/web/scrapers/dockerhub";
-import { handleHackage } from "@oh-my-pi/pi-coding-agent/web/scrapers/hackage";
-import { handleMetaCPAN } from "@oh-my-pi/pi-coding-agent/web/scrapers/metacpan";
-import { handleRepology } from "@oh-my-pi/pi-coding-agent/web/scrapers/repology";
-import { handleTerraform } from "@oh-my-pi/pi-coding-agent/web/scrapers/terraform";
+import { handleChocolatey } from "@open-agents/coding-agent/web/scrapers/chocolatey";
+import { handleDockerHub } from "@open-agents/coding-agent/web/scrapers/dockerhub";
+import { handleHackage } from "@open-agents/coding-agent/web/scrapers/hackage";
+import { handleMetaCPAN } from "@open-agents/coding-agent/web/scrapers/metacpan";
+import { handleRepology } from "@open-agents/coding-agent/web/scrapers/repology";
+import { handleTerraform } from "@open-agents/coding-agent/web/scrapers/terraform";
 
 const SKIP = !Bun.env.WEB_FETCH_INTEGRATION;
 

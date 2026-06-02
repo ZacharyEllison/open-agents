@@ -1,148 +1,125 @@
-# Embedded Local Tiny-Model Experiments
+# Local models
 
-This document summarizes the experiments behind the optional **local** tiny-model paths for
-session-title generation (`providers.tinyModel`), Mnemopi memory extraction/consolidation
-(`providers.memoryModel`), and the `auto` thinking-level difficulty classifier
-(`providers.autoThinkingModel`, which reuses the memory-model registry). It is a factual engineering
-record for maintainers: what we measured, which recipes won, and which models we shipped. All three
-settings default to `online`, so existing users incur no downloads or on-device inference cost unless
-they opt in.
+open-agent is **local-first**: built-in providers are on-machine inference runtimes only. There is no cloud provider catalog in the default dispatch path. Unreachable endpoints are skipped during discovery; no API keys are required for the built-in local providers.
 
-## Runtime / environment findings
+## Supported runtimes
 
-- **Stack**: `@huggingface/transformers` (transformers.js) v4 running under Bun. In Bun the library
-  loads the **native `onnxruntime-node` backend** (not the WASM build).
-- **Device policy**: local tiny models default to CPU-only inference and retry once on CPU if an
-  explicit accelerated provider cannot initialize.
-  - Pick a provider persistently with the `providers.tinyModelDevice` setting (`default` keeps CPU),
-    or per-run with the `PI_TINY_DEVICE` env var (which overrides the setting).
-  - Accepted values are `cpu`, `gpu`, `metal`/`webgpu`, `auto`, `cuda`, `dml`, `coreml`, `wasm`,
-    `webnn`, `webnn-gpu`, `webnn-cpu`, and `webnn-npu`.
-  - Direct `coreml` remains opt-in via `PI_TINY_DEVICE=coreml`; it is not part of the default because
-    cached decoder-LLM ONNX loads can fail during session initialization.
-  - WebGPU/Metal works for the single-process eval harness, but the production worker forces
-    Darwin `gpu`/`webgpu`/`auto` requests back to CPU because ONNX Runtime/Bun currently
-    hard-crashes on worker teardown after WebGPU inference.
-  - Use `providers.tinyModelDevice` or `PI_TINY_DEVICE` only when explicitly opting out of the CPU
-    default.
-- **Quantization: q4 is the sweet spot** — smaller on disk, faster to load, and fast at inference.
-  q8/int8 loads slower _and_ infers slower on CPU. Every shipped model defaults to `q4`; override the
-  precision persistently with the `providers.tinyModelDtype` setting (`default` keeps `q4`, e.g. `fp16`
-  for higher fidelity), or per-run with `PI_TINY_DTYPE` (which overrides the setting). Accepts `auto`,
-  `fp32`, `fp16`, `q8`, `int8`, `uint8`, `q4`, `bnb4`, `q4f16`, `q2`, `q2f16`, `q1`, `q1f16`; an
-  unrecognized value fails loudly at worker startup.
-- **Load-time correction (important).** An earlier belief that "q4 >=1B models take minutes to load"
-  was a **measurement artifact** caused by running ~5 multi-GB HuggingFace downloads in parallel
-  (I/O saturation). Clean, isolated **warm** loads are all sub-3s:
-  - TinyLlama-1.1B q4: ~0.5s
-  - Llama-3.2-1B q4: ~2.8s (`graphOpt=all`) / ~0.5s (`disabled`)
-  - LFM2-1.2B q4: ~0.36s
-  - Qwen2.5-1.5B q4: ~1.5s
-  - Qwen3-1.7B q4: ~1.6s
-  - gemma-3-1b q4: ~1.1s
-  - Conclusion: **1B–1.7B models are viable on CPU.**
-- **`session_options.graphOptimizationLevel`** trades load vs inference speed: `disabled` = fastest
-  load, slightly slower inference; `all` = default.
-- **First run** downloads weights from the HF Hub to a cache dir (q4 weights ~200MB–1.1GB depending
-  on model); subsequent **warm** loads are sub-second to ~3s. Inference is async and
-  background-friendly for memory tasks; titles are semi-interactive.
+Defined in `packages/ai/src/provider-models/descriptors.ts` as `LOCAL_PROVIDER_DESCRIPTORS`:
 
-## Task 1: Session title generation (`providers.tinyModel`)
+| Provider | Default host:port | Default model id | Notes |
+| -------- | ----------------- | ---------------- | ----- |
+| **ollama** | `127.0.0.1:11434` | `gpt-oss:20b` | Native `/api/tags` enrichment |
+| **llama.cpp** | `127.0.0.1:8080` | `default` | Can auto-start `llama-server` (see below) |
+| **vllm** | `127.0.0.1:8000` | `gpt-oss-20b` | OpenAI-compatible; uses `max_model_len` for context |
+| **lm-studio** | `127.0.0.1:1234` | `llama-3-8b` | LM Studio local server |
+| **localai** | `127.0.0.1:8080` | `default` | OpenAI drop-in |
+| **jan** | `127.0.0.1:1337` | `default` | Jan desktop API |
+| **llamafile** | `127.0.0.1:8080` | `default` | Single-file executables |
+| **tabbyapi** | `127.0.0.1:5000` | `default` | ExLlamaV2 / TabbyAPI |
 
-**Task**: turn the first user message into a 3–6 word title. Tiny models (sub-1B) suffice.
+**Port conflict:** `llama.cpp`, `localai`, and `llamafile` all default to **8080**. Run only one on that port, or set distinct `baseUrl` values in `models.yml`.
 
-**Winning recipe**:
+## Keyless auth (`kNoAuth` / `allowUnauthenticated`)
 
-- Plain system prompt (no few-shot).
-- **Prefill** the assistant turn with `<title>` and **stop at `</title>`**, then take the first line.
-- Greedy decoding (`do_sample:false`), `enable_thinking:false` in the chat template.
+Local descriptors set `allowUnauthenticated: true`. At runtime:
 
-**What we learned**:
+- `ModelRegistry.getApiKey()` returns the sentinel **`kNoAuth`** (`"N/A"`) for providers in the keyless set when no credential is stored (`packages/coding-agent/src/config/model-registry.ts`).
+- `isAuthenticated(kNoAuth)` is **false**, but discovery and requests treat keyless providers as usable when `allowUnauthenticated` is set on the descriptor.
+- `resolveModelOverrideWithAuthFallback` treats `kNoAuth` like a valid credential so subagents are not rerouted to a different provider (#1008).
 
-- **Few-shot examples HURT sub-0.6B models** for titles; the tag-prefill rescues even 270M models.
-- **Token biasing (`bad_words_ids`) is a confirmed no-op** here — the prefill already controls the
-  opener.
+`AuthStorage.createKeyless()` uses `NullAuthCredentialStore` — no SQLite vault, no OAuth. Optional env-based keys (e.g. `OLLAMA_API_KEY`) still work if you enable auth on a local endpoint.
 
-**Leaderboard** (tag trick, CPU, warm):
+## Configuring providers (`models.yml`)
 
-| Model         | Verdict                             |
-| ------------- | ----------------------------------- |
-| LFM2-350M     | Best speed/quality balance (~212MB) |
-| Qwen3-0.6B    | Most robust                         |
-| gemma-3-270m  | Smallest viable                     |
-| Qwen2.5-0.5B  | Acceptable                          |
-| SmolLM2-135M  | Too small                           |
-| flan-t5-small | Rejected — just echoes the input    |
+Default path: `~/.open-agent/agent/models.yml` (see [configuration.md](./configuration.md)).
 
-**Shipped local options**: `lfm2-350m`, `qwen3-0.6b`, `gemma-270m`, `qwen2.5-0.5b`, `lfm2-700m`.
-**Default**: `online` (pi/smol).
+Minimal example — Ollama only:
 
-## Task 2: Mnemopi memory (`providers.memoryModel`)
+```yaml
+providers:
+  ollama:
+    baseUrl: http://127.0.0.1:11434
+```
 
-Mnemopi runs two small-LLM tasks:
+Override discovery or pin models:
 
-1. **Extraction** — pull durable, structured items from a single message.
-2. **Consolidation** — summarize a list of memories into 1–3 faithful sentences.
+```yaml
+providers:
+  ollama:
+    baseUrl: http://127.0.0.1:11434
+    discovery:
+      type: ollama
+    models:
+      - id: my-model
+        name: My Model
+        api: openai-completions
+        contextWindow: 128000
+        maxTokens: 8192
+```
 
-These need **bigger models than titles: 1B–1.7B**. We tested LFM2-1.2B, Qwen2.5-1.5B, Qwen3-1.7B,
-and gemma-3-1b (q4, CPU) via four parallel agents each running 27–31 experiments.
+Disable a provider globally via `config.yml`:
 
-### Extraction findings
+```yaml
+disabledProviders:
+  - tabbyapi
+```
 
-The stock 5-category JSON prompt fails on small models in two ways:
+## llama.cpp lifecycle (`LlamaCppConfig`)
 
-1. The all-empty example `{"facts":[],...}` gets **copied verbatim** → 0 facts extracted.
-2. Capable models emit **JSON objects inside arrays**, which Mnemopi's `String(item)` coerces into
-   the literal string `[object Object]`.
+When `providers.llama.cpp` (or discovery type `llama.cpp`) is used, `ensureLlamaCpp` in `packages/ai/src/local/llama-cpp.ts` may spawn `llama-server`:
 
-The robust fix is a **one-item-per-line output format** (consumed by Mnemopi's parser line-fallback)
-or a **flat JSON array of strings**. Every model also over-extracts pure small talk; an explicit
-chit-chat → NONE example is the best mitigation.
+| Field | Meaning | Default |
+| ----- | ------- | ------- |
+| `executablePath` | Path to `llama-server` binary | Search `PATH` |
+| `modelPath` | `.gguf` file (required to auto-start) | — |
+| `baseUrl` | Server URL | `http://127.0.0.1:8080` |
+| `contextSize` | `-c` flag | `4096` |
+| `threads` | `-t` flag | `os.availableParallelism()` |
+| `autoStart` | Spawn when health check fails | `true` when `modelPath` is set |
 
-### Technique polarity flips vs titles
+If a healthy server already exists at `baseUrl`, it is reused. `models.yml` provider fields map into `LlamaCppModelManagerConfig` (`executablePath`, `modelPath`, `contextSize`, `threads`, `autoStart`, `baseUrl`) via `llamaCppModelManagerOptions`.
 
-- At 1B+, **few-shot is the dominant quality lever**: e.g. Qwen2.5-1.5B extraction F1 0.52 → 0.83
-  going 1 → 3 shots; gemma recall 0.65 → 0.92 with 2 shots.
-- **Prefill HURTS extraction** — it forces output on small talk, producing false positives.
-- **System-split** (instructions in the system role) helps models that have a system role.
-- **Greedy >= temperature** for both tasks.
-- **Token biasing** is again a no-op.
+Example:
 
-### Per-model verdicts (head-to-head, 16-fixture set)
+```yaml
+providers:
+  llama.cpp:
+    baseUrl: http://127.0.0.1:8080
+    modelPath: /models/my-model.gguf
+    executablePath: /usr/local/bin/llama-server
+    contextSize: 8192
+```
 
-- **Qwen3-1.7B** — most disciplined extraction: returns empty on small talk, no buried-fact leak,
-  preserves language, clean flat JSON. Weaknesses: coarse granularity, missed a multi-turn value
-  update.
-- **Qwen2.5-1.5B** — best extraction granularity (atomic facts), caught the value update, zero
-  small-talk leakage. Weaknesses: weakest consolidation (run-on, no dedup) and one degenerate
-  buried-fact output.
-- **gemma-3-1b** — best consolidation (dedup works, faithful, clean single-memory). Weaknesses: leaks
-  small talk and translated German.
-- **LFM2-1.2B** — solid and fastest to load. Weaknesses: `Label: value` noise, small-talk + buried
-  leaks, a fluffy single-memory summary.
+## Choosing models per tier
 
-### Recommendation
+Assign models in `config.yml` (not `models.yml`):
 
-Extraction favors **precision** (do not pollute long-term memory) → **Qwen3-1.7B is the best single
-pick** (its consolidation is good enough). If running a second model for consolidation, **gemma-3-1b**
-wins that task.
+```yaml
+modelTiers:
+  interface: ollama/qwen2.5:3b
+  worker: ollama/qwen2.5:32b
+  compactor: ollama/qwen2.5:1.5b
+```
 
-**Shipped local options**: `qwen3-1.7b` (recommended), `gemma-3-1b`, `qwen2.5-1.5b`, `lfm2-1.2b`.
-**Default**: `online` (the configured smol model).
+See [architecture.md](./architecture.md) for how tiers interact with tools and compaction.
 
-### Known Mnemopi parser bugs (surfaced by these experiments)
+## On-device tiny models
 
-- `String(item)` produces `[object Object]` on object array items.
-- The line-fallback drops items `<=10` chars, so a correct short fact like `Name: Can` is discarded.
+Separate from the eight HTTP runtimes, open-agent can run **small ONNX/transformers.js models** on CPU for auxiliary tasks (defaults keep these **`online`** / server-based so nothing downloads until you opt in):
 
+| Setting | Purpose |
+| ------- | ------- |
+| `providers.tinyModel` | Session title generation |
+| `providers.memoryModel` | Mnemopi extraction / consolidation |
+| `providers.autoThinkingModel` | `auto` thinking-level classifier |
+| `providers.compactorOnnxModel` | Compaction summaries (compactor tier); falls back to `modelTiers.compactor` on failure |
 
-## Integration notes
+Env overrides: `OA_TINY_DEVICE`, `OA_TINY_DTYPE` (see [configuration.md](./configuration.md)).
 
-- `providers.tinyModel`, `providers.memoryModel`, and `providers.autoThinkingModel` default to
-  `online`, so existing users get **no downloads or on-device inference cost** unless they opt in.
-- Local inference runs **in a worker** (off the main thread); models are cached on disk and
-  downloaded on first use.
-- The memory local path applies the refined recipes (line-format + small-talk-guarded extraction
-  prompt, hardened consolidation prompt) via Mnemopi prompt overrides; the **online path is
-  unchanged**.
-- `providers.autoThinkingModel` uses the same shipped local options as `providers.memoryModel`.
+Local options reuse a shared 1B–1.7B q4 registry; compactor ONNX shares the memory-model model list. Runtime notes (CPU default, load times, shipped model ids) are in the historical maintainer doc sections — implementation: `packages/coding-agent/src/tiny/`, `packages/coding-agent/src/compaction/compactor-onnx.ts`.
+
+## Related docs
+
+- [configuration.md](./configuration.md) — paths, env vars, migration from `.omp`
+- [architecture.md](./architecture.md) — interface / worker / compactor behavior
+- [models.md](./models.md) — full `models.yml` schema (being updated for local-only defaults)

@@ -1,6 +1,6 @@
 # AI tool-schema normalization
 
-`@oh-my-pi/pi-ai` exposes one unified schema normalizer that providers consume
+`@open-agents/ai` exposes one unified schema normalizer that providers consume
 before tools are sent on the wire. All walkers live in
 `packages/ai/src/utils/schema/normalize.ts`; the operational contract is
 `packages/ai/src/utils/schema/CONSTRAINTS.md`.
@@ -12,7 +12,7 @@ share the same option-driven walk.
 
 ## Entry points
 
-All exports live under `@oh-my-pi/pi-ai/utils/schema`:
+All exports live under `@open-agents/ai/utils/schema`:
 
 - `normalizeSchema(value, options)` — generic option-driven walker.
 - `normalizeSchemaForGoogle(value)` — Gemini / Vertex / Gemini CLI.
@@ -29,7 +29,7 @@ All exports live under `@oh-my-pi/pi-ai/utils/schema`:
   from `normalize.ts`.
 - `adaptSchemaForStrict(schema, strict)` from `./adapt` — thin composer that
   wraps `tryEnforceStrictSchema` for provider call sites and consults
-  `PI_NO_STRICT` (env `PI_NO_STRICT`) for the global bypass.
+  `OA_NO_STRICT` (env `OA_NO_STRICT`) for the global bypass.
 
 Removed in the unified-flow refactor:
 
