@@ -347,7 +347,7 @@ export const SETTINGS_SCHEMA = {
 
 	"interface.compactionThresholdTokens": {
 		type: "number",
-		default: 16000,
+		default: -1,
 		ui: {
 			tab: "context",
 			label: "Interface Compaction Token Limit",
@@ -368,12 +368,12 @@ export const SETTINGS_SCHEMA = {
 		type: "string",
 		default: "medium",
 		ui: {
-			tab: "models",
+			tab: "model",
 			label: "Interface Thinking Level",
 			description:
 				"Thinking level for the interface tier. Medium is recommended — the interface gathers context and delegates, it does not need deep reasoning chains.",
 			options: [
-				{ value: "none", label: "None", description: "No thinking" },
+				{ value: "off", label: "Off", description: "No thinking" },
 				{ value: "minimal", label: "Minimal", description: "Brief thinking" },
 				{ value: "low", label: "Low", description: "Light thinking" },
 				{ value: "medium", label: "Medium", description: "Recommended for interface" },
@@ -405,12 +405,12 @@ export const SETTINGS_SCHEMA = {
 		type: "string",
 		default: "high",
 		ui: {
-			tab: "models",
+			tab: "model",
 			label: "Worker Thinking Level",
 			description:
 				"Thinking level for the worker tier. High is recommended — workers perform deep reasoning on delegated tasks.",
 			options: [
-				{ value: "none", label: "None", description: "No thinking" },
+				{ value: "off", label: "Off", description: "No thinking" },
 				{ value: "minimal", label: "Minimal", description: "Brief thinking" },
 				{ value: "low", label: "Low", description: "Light thinking" },
 				{ value: "medium", label: "Medium", description: "Moderate thinking" },

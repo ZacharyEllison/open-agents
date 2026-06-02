@@ -1030,8 +1030,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	// Resolves the session/agent thinking level using the same precedence we
 	// apply at startup: explicit option → persisted session entry → default
-	// role's explicit selector → selected model's defaultLevel → global
-	// settings default. Run again after extension role reclaim so the final
+	// role's explicit selector → tier setting → selected model's defaultLevel →
+	// global settings default. Run again after extension role reclaim so the
 	// model's own defaults aren't masked by an earlier fallback model's.
 	const pickInitialThinkingLevel = (selectedModel: Model | undefined): ConfiguredThinkingLevel | undefined => {
 		let level = options.thinkingLevel;
@@ -1041,15 +1041,15 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		if (level === undefined && !hasExplicitModel && !hasThinkingEntry && defaultRoleSpec.explicitThinkingLevel) {
 			level = defaultRoleSpec.thinkingLevel;
 		}
-		if (level === undefined && selectedModel?.thinking?.defaultLevel !== undefined) {
-			level = selectedModel.thinking.defaultLevel;
-		}
 		if (level === undefined) {
 			const tierKey = taskDepth === 0 ? "interface.thinkingLevel" : "worker.thinkingLevel";
 			const tierLevel = parseThinkingLevel(settings.get(tierKey));
 			if (tierLevel !== undefined) {
 				level = tierLevel;
 			}
+		}
+		if (level === undefined && selectedModel?.thinking?.defaultLevel !== undefined) {
+			level = selectedModel.thinking.defaultLevel;
 		}
 		if (level === undefined) {
 			level = settings.get("defaultThinkingLevel");
