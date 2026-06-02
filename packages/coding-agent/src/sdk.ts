@@ -1695,6 +1695,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				secretsEnabled,
 				workspaceTree: workspaceTreePromise,
 				memoryRootEnabled: memoryBackend.id === "local",
+				isInterfaceTier: taskDepth === 0,
 			});
 
 			if (options.systemPrompt === undefined) {

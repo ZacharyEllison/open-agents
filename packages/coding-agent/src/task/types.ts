@@ -81,6 +81,10 @@ const createTaskSchema = (options: { isolationEnabled: boolean; simpleMode: Task
 	if (contextEnabled) {
 		schema = schema.extend({
 			context: z.string().optional().describe("shared background prepended to each assignment"),
+			context_files: z
+				.array(z.string())
+				.optional()
+				.describe("file paths to pre-load into the worker's context (avoids redundant reads)"),
 		});
 	}
 
@@ -133,6 +137,7 @@ export function getTaskSchema(options: { isolationEnabled: boolean; simpleMode: 
 export interface TaskParams {
 	agent: string;
 	context?: string;
+	context_files?: string[];
 	schema?: string;
 	tasks: TaskItem[];
 	isolated?: boolean;

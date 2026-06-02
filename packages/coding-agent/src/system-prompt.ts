@@ -363,6 +363,8 @@ export interface BuildSystemPromptOptions {
 	workspaceTree?: WorkspaceTree | Promise<WorkspaceTree>;
 	/** Whether the local memory://root summary is active. */
 	memoryRootEnabled?: boolean;
+	/** Whether the current session is running as the interface tier (drives context pre-gathering guidance). */
+	isInterfaceTier?: boolean;
 }
 
 /** Result of building provider-facing system prompt messages. */
@@ -396,6 +398,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		secretsEnabled = false,
 		workspaceTree: providedWorkspaceTree,
 		memoryRootEnabled = false,
+		isInterfaceTier = false,
 	} = options;
 	const resolvedCwd = cwd ?? getProjectDir();
 
@@ -575,6 +578,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		secretsEnabled,
 		hasMemoryRoot: memoryRootEnabled,
 		hasObsidian: hasObsidian(),
+		isInterfaceTier,
 	};
 	const rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 	const systemPrompt = [rendered];

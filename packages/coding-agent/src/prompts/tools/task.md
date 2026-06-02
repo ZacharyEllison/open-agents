@@ -24,7 +24,8 @@ Subagents have no conversation history. Every fact, file path, and direction the
  - `.id`: CamelCase, ≤32 chars
  - `.description`: UI label only — subagent never sees it
  - `.assignment`: complete self-contained instructions; one-liners and missing acceptance criteria are PROHIBITED
-{{#if contextEnabled}}- `context`: shared background prepended to every assignment; session-specific only{{/if}}
+{{#if contextEnabled}}- `context`: shared background prepended to every assignment; session-specific only
+- `context_files`: file paths you have already read; their contents are pre-loaded into the worker's context so it can edit directly without re-reading{{/if}}
 {{#if customSchemaEnabled}}- `schema`: JTD schema for expected structured output (do not put format rules in assignments){{/if}}
 {{#if isolationEnabled}}- `isolated`: run in isolated env; use when tasks edit overlapping files{{/if}}
 </parameters>
@@ -38,6 +39,7 @@ Subagents have no conversation history. Every fact, file path, and direction the
 - Pass large payloads via `local://<path>` URIs, not inline. {{#if contextEnabled}} (other than the context){{/if}}
 {{#if contextEnabled}}- Put shared constraints in `context` once; do not duplicate across assignments.{{/if}}
 - Prefer agents that investigate **and** edit in one pass; only spin a read-only discovery step when affected files are genuinely unknown.
+{{#if contextEnabled}}- **Pre-load context.** Before dispatching, read the files the worker will need and pass their paths via `context_files`. The worker is slow at discovery — every file you pre-load saves it a round-trip.{{/if}}
 </rules>
 
 <parallelization>

@@ -168,6 +168,8 @@ export interface ExecutorOptions {
 	artifactsDir?: string;
 	/** Path to parent conversation context file */
 	contextFile?: string;
+	/** File paths pre-read by the interface tier; contents injected into the worker system prompt. */
+	preloadedFiles?: string[];
 	eventBus?: EventBus;
 	contextFiles?: ContextFileEntry[];
 	skills?: Skill[];
@@ -1211,6 +1213,19 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 
 			const { normalized: normalizedOutputSchema } = normalizeSchema(outputSchema);
 
+			let preloadedFilesContent: string | undefined;
+			if (options.preloadedFiles?.length) {
+				const sections = await Promise.all(
+					options.preloadedFiles.map(async filePath => {
+						const content = await Bun.file(filePath)
+							.text()
+							.catch(() => `(unreadable: ${filePath})`);
+						return `## ${filePath}\n\`\`\`\n${content}\n\`\`\``;
+					}),
+				);
+				preloadedFilesContent = sections.join("\n\n");
+			}
+
 			const { session } = await awaitAbortable(
 				createAgentSession({
 					cwd: worktree ?? cwd,
@@ -1235,6 +1250,8 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 							contextFile: contextFileForPrompt,
 							ircPeers: ircEnabled ? renderIrcPeerRoster(id) : "",
 							ircSelfId: ircEnabled ? id : "",
+							hasPreloadedFiles: !!preloadedFilesContent,
+							preloadedFiles: preloadedFilesContent ?? "",
 						});
 						return defaultPrompt.length === 0
 							? [subagentPrompt]

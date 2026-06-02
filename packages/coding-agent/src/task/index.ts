@@ -186,6 +186,9 @@ function validateTaskModeParams(simpleMode: TaskSimpleMode, params: TaskParams):
 	if (!contextEnabled && params.context !== undefined) {
 		disallowedFields.push("context");
 	}
+	if (!contextEnabled && params.context_files !== undefined) {
+		disallowedFields.push("context_files");
+	}
 	if (!customSchemaEnabled && params.schema !== undefined) {
 		disallowedFields.push("schema");
 	}
@@ -567,10 +570,11 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 	): Promise<AgentToolResult<TaskToolDetails>> {
 		const startTime = Date.now();
 		const { agents, projectAgentsDir } = await discoverAgents(this.session.cwd);
-		const { agent: agentName, context, schema: outputSchema } = params;
+		const { agent: agentName, context, context_files: contextFiles, schema: outputSchema } = params;
 		const simpleMode = this.#getTaskSimpleMode();
 		const { contextEnabled, customSchemaEnabled } = getTaskSimpleModeCapabilities(simpleMode);
 		const sharedContext = contextEnabled ? context?.trim() : undefined;
+		const sharedContextFiles = contextEnabled ? contextFiles : undefined;
 		const isolationMode = this.session.settings.get("task.isolation.mode");
 		const isolationRequested = "isolated" in params ? params.isolated === true : false;
 		const isIsolated = isolationMode !== "none" && isolationRequested;
@@ -892,6 +896,7 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 						task: renderSubagentUserPrompt(task.assignment, simpleMode),
 						assignment: task.assignment.trim(),
 						context: sharedContext,
+						preloadedFiles: sharedContextFiles,
 						description: task.description,
 						index,
 						id: task.id,
@@ -949,6 +954,7 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 						task: renderSubagentUserPrompt(task.assignment, simpleMode),
 						assignment: task.assignment.trim(),
 						context: sharedContext,
+						preloadedFiles: sharedContextFiles,
 						description: task.description,
 						index,
 						id: task.id,

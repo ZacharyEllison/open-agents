@@ -10,6 +10,16 @@ CONTEXT
 {{context}}
 {{/if}}
 
+{{#if hasPreloadedFiles}}
+FILES
+===================================
+
+The following files have been pre-loaded by the interface. You do not need to
+read or search for them — reference and edit directly.
+
+{{preloadedFiles}}
+
+{{/if}}
 COOP
 ===================================
 
