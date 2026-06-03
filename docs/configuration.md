@@ -39,9 +39,9 @@ Replaces **`modelRoles`**. Stored as a flat record in `config.yml`:
 
 ```yaml
 modelTiers:
-  interface: ollama/qwen2.5:3b
-  worker: ollama/qwen2.5:32b
-  compactor: ollama/qwen2.5:1.5b
+  interface: llama.cpp/gemma4-26b-a4b:off   # MoE ~4B active, fast prefill
+  worker: llama.cpp/qwen3.6-27b             # dense 27B, deep reasoning + MTP
+  compactor: llama.cpp/gemma4-26b-a4b:off   # fallback; reuses interface (no extra slot)
 ```
 
 Values are model patterns (same grammar as the old roles):
@@ -51,11 +51,24 @@ Values are model patterns (same grammar as the old roles):
 - `pi/interface`, `pi/worker`, `pi/compactor` (tier aliases)
 - Legacy role names in keys are normalized on read (`default` → `interface`, `smol` → `compactor`, etc.)
 
-Optional thinking suffix: `ollama/my-model:high`.
+Optional thinking suffix: `provider/model:high` (or `:off` to disable reasoning tokens entirely — recommended for the interface tier to minimize prefill).
 
 Runtime helpers: `settings.getModelTier()`, `settings.setModelTier()`, `settings.getModelTiers()`.
 
-See [architecture.md](./architecture.md) for how tiers affect tools, compaction, and `task`.
+See [local-models.md](./local-models.md) for model selection guidance and [architecture.md](./architecture.md) for how tiers affect tools, compaction, and `task`.
+
+### On-device compactor (recommended)
+
+Set `providers.compactorOnnxModel` to run compaction summaries on CPU via ONNX instead of using a server model slot:
+
+```yaml
+providers:
+  compactorOnnxModel: qwen3-1.7b   # downloads ONNX weights on first use (~1.7 GB)
+```
+
+When enabled, the compactor tier runs entirely on-device — no model slot on llama-server, no swapping. On ONNX failure it falls back to `modelTiers.compactor` (which should reuse an already-loaded model to avoid a 3rd model swap).
+
+See [docs/examples/local-llama-config.yml](./examples/local-llama-config.yml) for a complete example config.
 
 ## `providers.*` settings
 

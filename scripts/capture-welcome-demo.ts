@@ -41,8 +41,8 @@ await initTheme("dark");
 
 const welcome = new WelcomeComponent(
 	pkg.version,
-	"qwen2.5-coder:7b",
-	"ollama",
+	"gemma4-26b-a4b",
+	"llama.cpp",
 	[
 		{ name: "open-agents README capture", timeAgo: "just now" },
 		{ name: "local model wiring", timeAgo: "2h" },

@@ -92,13 +92,42 @@ providers:
 
 ## Choosing models per tier
 
-Assign models in `config.yml` (not `models.yml`):
+Assign models in `config.yml` (not `models.yml`). The key constraint is **co-residency**: your interface and worker models must both fit in `LLAMA_MODELS_MAX` simultaneously, or the server swaps models on every turn (adding 10–30s of load time).
+
+### Recommended: llama.cpp with MoE interface
+
+Use a **Mixture-of-Experts model** for the interface tier. MoE models (like Gemma 4 26B-A4B, which activates only ~4B parameters per token) prefill 3–5x faster than a dense model of comparable knowledge — the single biggest lever for reducing time-to-first-token.
 
 ```yaml
 modelTiers:
-  interface: ollama/qwen2.5:3b
-  worker: ollama/qwen2.5:32b
-  compactor: ollama/qwen2.5:1.5b
+  interface: llama.cpp/gemma4-26b-a4b:off   # MoE ~4B active, fast prefill
+  worker: llama.cpp/qwen3.6-27b             # dense 27B, deep reasoning + MTP
+  compactor: llama.cpp/gemma4-26b-a4b:off   # fallback; reuses already-loaded interface
+providers:
+  compactorOnnxModel: qwen3-1.7b            # on-device ONNX, off the server entirely
+```
+
+Why this works:
+
+- **Interface** (`gemma4-26b-a4b`): MoE architecture means only ~4B params activate per token despite 26B total. Prefill at 600+ tok/s on Apple Silicon — a 27k-token prompt in ~45s vs 90s+ on a dense 14B.
+- **Worker** (`qwen3.6-27b`): dense reasoning model with MTP speculative decoding. Handles editing, planning, and deep analysis. Gets focused context per task, not the full conversation.
+- **Compactor** (ONNX `qwen3-1.7b`): runs on CPU via transformers.js — no model slot, no server load. Falls back to `modelTiers.compactor` (the interface model, already resident) if ONNX fails.
+- **Co-residency**: exactly 2 models loaded (`LLAMA_MODELS_MAX=2`). The compactor fallback reuses the interface slot — no 3rd model swap.
+
+The `:off` thinking suffix on the interface disables reasoning tokens for maximum speed. The `interface.thinkingLevel` setting provides an alternative if you want some reasoning without the suffix.
+
+See [docs/examples/local-llama-config.yml](./examples/local-llama-config.yml) for a complete, copy-pasteable config.
+For llama-server setup: [llama-cpp-local-model-server.md](./llama-cpp-local-model-server.md).
+
+### Alternative: Ollama
+
+For a simpler setup (Ollama handles model management):
+
+```yaml
+modelTiers:
+  interface: ollama/gemma3:4b
+  worker: ollama/qwen3:32b
+  compactor: ollama/gemma3:4b
 ```
 
 See [architecture.md](./architecture.md) for how tiers interact with tools and compaction.
@@ -122,4 +151,6 @@ Local options reuse a shared 1B–1.7B q4 registry; compactor ONNX shares the me
 
 - [configuration.md](./configuration.md) — paths, env vars, migration from `.omp`
 - [architecture.md](./architecture.md) — interface / worker / compactor behavior
+- [llama-cpp-local-model-server.md](./llama-cpp-local-model-server.md) — `llama-server` setup, `config.ini` presets, KV cache tuning
+- [prefill-latency-local-kv-cache.md](./prefill-latency-local-kv-cache.md) — prompt layering and cache reuse strategies
 - [models.md](./models.md) — full `models.yml` schema (being updated for local-only defaults)

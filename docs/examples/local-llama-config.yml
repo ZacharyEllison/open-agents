@@ -1,0 +1,46 @@
+# open-agent config.yml — recommended llama.cpp local setup
+#
+# Copy to ~/.open-agent/agent/config.yml
+#
+# Prerequisites:
+#   - llama-server running with a models-preset config.ini
+#     (see docs/llama-cpp-local-model-server.md)
+#   - At least 2 models loaded: a MoE interface + a dense worker
+#
+# Adjust model names to match your config.ini [section] names.
+
+# Disable Ollama discovery (using llama.cpp only)
+disabledProviders:
+  - ollama
+
+# Prefer llama.cpp for model resolution
+modelProviderOrder:
+  - llama.cpp
+
+# 3-tier model assignments
+#   interface: MoE for fast prefill (context gathering + delegation)
+#   worker:    dense for deep reasoning (editing + planning)
+#   compactor: reuse interface (fallback if ONNX fails — no 3rd model swap)
+modelTiers:
+  interface: llama.cpp/gemma4-26b-a4b:off
+  worker: llama.cpp/qwen3.6-27b
+  compactor: llama.cpp/gemma4-26b-a4b:off
+
+# On-device ONNX compactor — runs on CPU, not the llama-server
+# Downloads ~1.7 GB of ONNX weights on first compaction.
+# Set to "online" to use the server compactor tier instead.
+providers:
+  compactorOnnxModel: qwen3-1.7b
+  tinyModel: online
+  autoThinkingModel: online
+
+# Thinking defaults
+defaultThinkingLevel: auto
+
+# Compaction tuning
+# The interface compacts aggressively to keep prefill fast.
+# The worker uses the global threshold (larger context is fine for tasks).
+compaction:
+  thresholdTokens: 52000
+  reserveTokens: 8192
+  keepRecentTokens: 16384
