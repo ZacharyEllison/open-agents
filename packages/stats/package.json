@@ -3,16 +3,16 @@
 	"name": "@open-agents/stats",
 	"version": "15.8.1",
 	"description": "Local observability dashboard for pi AI usage statistics",
-	"homepage": "https://omp.sh",
+	"homepage": "https://github.com/ZacharyEllison/open-agents",
 	"author": "Can Boluk",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/can1357/oh-my-pi.git",
+		"url": "git+https://github.com/ZacharyEllison/open-agents.git",
 		"directory": "packages/stats"
 	},
 	"bugs": {
-		"url": "https://github.com/can1357/oh-my-pi/issues"
+		"url": "https://github.com/ZacharyEllison/open-agents/issues"
 	},
 	"keywords": [
 		"ai",
@@ -61,7 +61,8 @@
 		"src",
 		"build.ts",
 		"tailwind.config.js",
-		"README.md"
+		"README.md",
+		"../../LICENSE"
 	],
 	"exports": {
 		".": {

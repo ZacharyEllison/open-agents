@@ -3,7 +3,7 @@
 	"name": "@open-agents/tui",
 	"version": "15.8.1",
 	"description": "Terminal User Interface library with differential rendering for efficient text-based applications",
-	"homepage": "https://omp.sh",
+	"homepage": "https://github.com/ZacharyEllison/open-agents",
 	"author": "Can Boluk",
 	"contributors": [
 		"Mario Zechner"
@@ -11,11 +11,11 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/can1357/oh-my-pi.git",
+		"url": "git+https://github.com/ZacharyEllison/open-agents.git",
 		"directory": "packages/tui"
 	},
 	"bugs": {
-		"url": "https://github.com/can1357/oh-my-pi/issues"
+		"url": "https://github.com/ZacharyEllison/open-agents/issues"
 	},
 	"keywords": [
 		"tui",
@@ -52,7 +52,8 @@
 	"files": [
 		"src",
 		"README.md",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"../../LICENSE"
 	],
 	"exports": {
 		".": {

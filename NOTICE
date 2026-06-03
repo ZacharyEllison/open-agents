@@ -1,0 +1,48 @@
+open-agent
+Copyright (c) 2025 Mario Zechner
+Copyright (c) 2025-2026 Can Bölük  
+Copyright (c) 2026 Zachary Ellison
+
+This product includes software developed by:
+
+---
+
+Pi (https://github.com/badlogic/pi-mono)
+Copyright (c) 2025 Mario Zechner
+License: MIT
+
+oh-my-pi (https://github.com/can1357/oh-my-pi)
+Copyright (c) 2025-2026 Can Bölük
+License: MIT
+
+brush-shell (https://github.com/reubeno/brush)
+Copyright (c) Reuben Olinsky
+License: MIT
+Used in: crates/brush-core-vendored/, crates/brush-builtins-vendored/
+
+ast-grep (https://github.com/nickel-org/ast-grep)
+Copyright (c) Herrington Darkholme
+License: MIT
+Used in: crates/pi-ast/src/language/ (language definitions)
+
+OpenTUI (https://github.com/anomalyco/opentui)
+Copyright (c) Anomaly
+License: MIT
+Used in: packages/tui/src/stdin-buffer.ts, packages/tui/src/keys.ts
+
+hermes-agent (https://github.com/NousResearch/hermes-agent)
+Copyright (c) NousResearch
+License: MIT
+Used in: packages/coding-agent/src/lib/xai-http.ts, packages/coding-agent/src/tools/tts.ts
+
+@agentclientprotocol/sdk
+License: Apache-2.0
+Used as dependency in: packages/coding-agent
+
+puppeteer-core
+License: Apache-2.0
+Used as dependency in: packages/coding-agent
+
+@huggingface/transformers
+License: Apache-2.0
+Used as optional dependency in: packages/coding-agent

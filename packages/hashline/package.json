@@ -3,16 +3,16 @@
 	"name": "@open-agents/hashline",
 	"version": "15.8.1",
 	"description": "Hashline: a compact, line-anchored patch language and applier. Pluggable FS/IO so it works over disk, in-memory, or any custom backend.",
-	"homepage": "https://omp.sh",
+	"homepage": "https://github.com/ZacharyEllison/open-agents",
 	"author": "Can Boluk",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/can1357/oh-my-pi.git",
+		"url": "git+https://github.com/ZacharyEllison/open-agents.git",
 		"directory": "packages/hashline"
 	},
 	"bugs": {
-		"url": "https://github.com/can1357/oh-my-pi/issues"
+		"url": "https://github.com/ZacharyEllison/open-agents/issues"
 	},
 	"keywords": [
 		"patch",
@@ -43,7 +43,8 @@
 		"bun": ">=1.3.14"
 	},
 	"files": [
-		"src"
+		"src",
+		"../../LICENSE"
 	],
 	"exports": {
 		".": {

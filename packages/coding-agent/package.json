@@ -3,7 +3,7 @@
 	"name": "@open-agents/coding-agent",
 	"version": "15.8.1",
 	"description": "Coding agent CLI with read, bash, edit, write tools and session management",
-	"homepage": "https://omp.sh",
+	"homepage": "https://github.com/ZacharyEllison/open-agents",
 	"author": "Can Boluk",
 	"contributors": [
 		"Mario Zechner"
@@ -11,11 +11,11 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/can1357/oh-my-pi.git",
+		"url": "git+https://github.com/ZacharyEllison/open-agents.git",
 		"directory": "packages/coding-agent"
 	},
 	"bugs": {
-		"url": "https://github.com/can1357/oh-my-pi/issues"
+		"url": "https://github.com/ZacharyEllison/open-agents/issues"
 	},
 	"keywords": [
 		"coding-agent",
@@ -84,7 +84,8 @@
 		"scripts",
 		"examples",
 		"README.md",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"../../LICENSE"
 	],
 	"exports": {
 		".": {
