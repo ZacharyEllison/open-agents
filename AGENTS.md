@@ -15,7 +15,7 @@ This repo contains multiple packages, but **`packages/coding-agent/`** is the pr
 | `packages/coding-agent` | Main CLI application (primary focus)                 |
 | `packages/tui`          | Terminal UI library with differential rendering      |
 | `packages/natives`      | Bindings for native text/image/grep operations       |
-| `packages/stats`        | Local observability dashboard (`omp stats`)          |
+| `packages/stats`        | Local observability dashboard (`open-agent stats`)   |
 | `packages/utils`        | Shared utilities (logger, streams, temp files)       |
 | `crates/pi-natives`     | Rust crate for performance-critical text/grep ops    |
 
@@ -235,8 +235,8 @@ Location: `packages/*/CHANGELOG.md` (per package).
 - Never modify already-released sections (e.g., `## [0.12.2]`) — they are immutable.
 
 **Attribution:**
-- Internal (from issues): `Fixed foo bar ([#123](https://github.com/can1357/oh-my-pi/issues/123))`.
-- External contributions: `Added feature X ([#456](https://github.com/can1357/oh-my-pi/pull/456) by [@username](https://github.com/username))`.
+- Internal (from issues): `Fixed foo bar ([#123](https://github.com/ZacharyEllison/open-agents/issues/123))`.
+- External contributions: `Added feature X ([#456](https://github.com/ZacharyEllison/open-agents/pull/456) by [@username](https://github.com/username))`.
 
 ## Releasing
 

@@ -2,17 +2,17 @@
 	"type": "module",
 	"name": "@open-agents/swarm-extension",
 	"version": "15.8.1",
-	"description": "Swarm orchestration extension for omp",
-	"homepage": "https://omp.sh",
+	"description": "Swarm orchestration extension for open-agent",
+	"homepage": "https://github.com/ZacharyEllison/open-agents",
 	"author": "Derek Rynd",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/can1357/oh-my-pi.git",
+		"url": "git+https://github.com/ZacharyEllison/open-agents.git",
 		"directory": "packages/swarm-extension"
 	},
 	"bugs": {
-		"url": "https://github.com/can1357/oh-my-pi/issues"
+		"url": "https://github.com/ZacharyEllison/open-agents/issues"
 	},
 	"keywords": [
 		"swarm",

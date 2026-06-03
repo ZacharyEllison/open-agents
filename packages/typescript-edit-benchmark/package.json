@@ -8,7 +8,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/can1357/oh-my-pi.git",
+		"url": "git+https://github.com/ZacharyEllison/open-agents.git",
 		"directory": "packages/typescript-edit-benchmark"
 	},
 	"main": "./src/index.ts",

@@ -994,9 +994,10 @@ async function createClient(
 		// `cli-agent` marketplace category. `User-Agent` overrides the default OpenAI
 		// SDK UA so traffic is identifiable in upstream provider logs.
 		// https://openrouter.ai/docs/app-attribution
-		headers["User-Agent"] = `Oh-My-Pi/${packageJson.version}`;
-		headers["HTTP-Referer"] = "https://omp.sh/";
-		headers["X-OpenRouter-Title"] = "Oh-My-Pi";
+		headers["User-Agent"] = `open-agent/${packageJson.version}`;
+		headers["HTTP-Referer"] = "https://github.com/ZacharyEllison/open-agents";
+		headers["X-OpenRouter-Title"] = "open-agent";
+		headers["X-Title"] = "open-agent";
 		headers["X-OpenRouter-Categories"] = "cli-agent";
 		// Always-on response caching: identical requests return cached responses for free.
 		// TTL 1h; first call hits the provider, every identical call within the window

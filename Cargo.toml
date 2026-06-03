@@ -8,8 +8,8 @@ version = "15.8.1"
 edition = "2024"
 license = "MIT"
 authors = ["Can Boluk"]
-homepage = "https://omp.sh/"
-repository = "https://github.com/can1357/oh-my-pi"
+homepage = "https://github.com/ZacharyEllison/open-agents"
+repository = "https://github.com/ZacharyEllison/open-agents"
 
 [patch.crates-io]
 brush-core = { path = "crates/brush-core-vendored" }

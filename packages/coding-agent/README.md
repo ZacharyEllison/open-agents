@@ -4,7 +4,7 @@ Core implementation package for the `open-agent` coding agent in the `open-agent
 
 For installation, setup, provider configuration, model roles, slash commands, and full CLI reference, see:
 - [Monorepo README (local)](../../README.md)
-- [Monorepo README (GitHub)](https://github.com/can1357/oh-my-pi#readme)
+- [Monorepo README (GitHub)](https://github.com/ZacharyEllison/open-agents#readme)
 
 Package-specific references:
 - [CHANGELOG](./CHANGELOG.md)

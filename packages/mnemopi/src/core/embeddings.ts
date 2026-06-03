@@ -209,9 +209,10 @@ async function embedApi(texts: readonly string[]): Promise<EmbeddingMatrix | nul
 
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
-		"User-Agent": `Oh-My-Pi/${packageJson.version}`,
-		"HTTP-Referer": "https://omp.sh/",
-		"X-OpenRouter-Title": "Oh-My-Pi",
+		"User-Agent": `open-agent/${packageJson.version}`,
+		"HTTP-Referer": "https://github.com/ZacharyEllison/open-agents",
+		"X-OpenRouter-Title": "open-agent",
+		"X-Title": "open-agent",
 		"X-OpenRouter-Categories": "cli-agent",
 	};
 	if (apiKey !== "") {

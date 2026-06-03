@@ -2,7 +2,7 @@
  * `omp install <target>` — top-level convenience over `omp plugin install` /
  * `omp plugin link`.
  *
- * The docs (omp.sh/docs/extension-authoring) advertise
+ * The docs (https://github.com/ZacharyEllison/open-agents/blob/main/docs/extension-authoring.md) advertise
  *
  *   omp install ./my-extension
  *
