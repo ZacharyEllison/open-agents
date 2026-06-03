@@ -24,6 +24,8 @@ export * from "./fuzzy";
 export * from "./keybindings";
 // Kitty keyboard protocol helpers
 export * from "./keys";
+// Mouse event parsing and click routing helpers
+export * from "./mouse";
 // Mermaid diagram support
 // Input buffering for batch splitting
 export * from "./stdin-buffer";

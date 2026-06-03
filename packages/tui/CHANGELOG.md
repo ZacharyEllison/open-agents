@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added SGR mouse reporting and click-to-cursor placement in the TUI `Editor` (left-button press routes through viewport-aware child region tracking).
+
 ## [15.8.1] - 2026-06-02
 
 ### Fixed

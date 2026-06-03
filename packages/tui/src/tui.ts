@@ -6,6 +6,7 @@ import * as path from "node:path";
 import { performance } from "node:perf_hooks";
 import { $flag, getDebugLogPath } from "@open-agents/utils";
 import { isKeyRelease, matchesKey } from "./keys";
+import { isMouseClickable, type MouseEvent, parseMouseEvent } from "./mouse";
 import { type Terminal, terminalHasEagerEraseScrollbackRisk } from "./terminal";
 import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } from "./terminal-capabilities";
 import {
@@ -334,6 +335,7 @@ export class TUI extends Container {
 	#eagerNativeScrollbackRebuild = false;
 	#hasEverRendered = false;
 	#stopped = false;
+	#childRegions = new Map<Component, { start: number; end: number }>();
 
 	// Overlay stack for modal components rendered on top of base content
 	overlayStack: {
@@ -342,6 +344,22 @@ export class TUI extends Container {
 		preFocus: Component | null;
 		hidden: boolean;
 	}[] = [];
+
+	render(width: number): string[] {
+		width = Math.max(1, width);
+		const lines: string[] = [];
+		const regions = new Map<Component, { start: number; end: number }>();
+		let offset = 0;
+		for (const child of this.children) {
+			const start = offset;
+			const childLines = child.render(width);
+			offset += childLines.length;
+			lines.push(...childLines);
+			regions.set(child, { start, end: offset });
+		}
+		this.#childRegions = regions;
+		return lines;
+	}
 
 	constructor(terminal: Terminal, showHardwareCursor?: boolean) {
 		super();
@@ -766,6 +784,12 @@ export class TUI extends Container {
 	}
 
 	#handleInput(data: string): void {
+		const mouseEvent = parseMouseEvent(data);
+		if (mouseEvent?.type === "press" && mouseEvent.button === 0) {
+			this.#handleMouseClick(mouseEvent);
+			return;
+		}
+
 		if (this.#inputListeners.size > 0) {
 			let current = data;
 			for (const listener of this.#inputListeners) {
@@ -818,6 +842,21 @@ export class TUI extends Container {
 			this.#focusedComponent.handleInput(data);
 			this.requestRender();
 		}
+	}
+
+	#handleMouseClick(event: MouseEvent): void {
+		const focused = this.#focusedComponent;
+		if (!isMouseClickable(focused)) return;
+
+		const region = this.#childRegions.get(focused);
+		if (!region) return;
+
+		const contentLine = this.#viewportTopRow + (event.row - 1);
+		if (contentLine < region.start || contentLine >= region.end) return;
+
+		const localTerminalRow = contentLine - region.start + 1;
+		focused.handleMouseClick(localTerminalRow, event.col);
+		this.requestRender(false, { allowUnknownViewportMutation: true });
 	}
 
 	#consumeCellSizeResponse(data: string): boolean {

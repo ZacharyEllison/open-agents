@@ -22,6 +22,9 @@ export interface EditorComponent extends Component {
 	/** Handle raw terminal input (key presses, paste sequences, etc.) */
 	handleInput(data: string): void;
 
+	/** Place the cursor from a mouse click (1-based row/col relative to this editor's render box). */
+	handleMouseClick?(terminalRow: number, terminalCol: number): void;
+
 	// =========================================================================
 	// Callbacks (required)
 	// =========================================================================

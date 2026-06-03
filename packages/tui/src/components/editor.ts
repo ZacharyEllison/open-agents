@@ -338,6 +338,7 @@ export class Editor implements Component, Focusable {
 
 	// Store last layout width for cursor navigation
 	#lastLayoutWidth: number = 80;
+	#lastRenderWidth: number = 80;
 	#paddingXOverride: number | undefined;
 	#maxHeight?: number;
 	#scrollOffset: number = 0;
@@ -691,7 +692,58 @@ export class Editor implements Component, Focusable {
 		this.#scrollOffset = Math.min(this.#scrollOffset, maxOffset);
 	}
 
+	handleMouseClick(terminalRow: number, terminalCol: number): void {
+		if (terminalRow < 1 || terminalCol < 1) return;
+
+		const width = this.#lastRenderWidth;
+		const paddingX = this.#getEditorPaddingX();
+		const borderVisible = this.#borderVisible;
+		const promptGutter = this.#getPromptGutter(width, paddingX);
+
+		const topChromeRows = borderVisible ? 1 : 0;
+		const leftChromeCols = borderVisible ? paddingX + 1 : (promptGutter?.width ?? 0);
+
+		const localRow = terminalRow - topChromeRows;
+		const localCol = terminalCol - leftChromeCols;
+		if (localRow < 1 || localCol < 1) return;
+
+		const layoutWidth = this.#getLayoutWidth(width, paddingX);
+		const layoutLines = this.#layoutText(layoutWidth);
+		const layoutLineIndex = localRow - 1 + this.#scrollOffset;
+		if (layoutLineIndex < 0 || layoutLineIndex >= layoutLines.length) return;
+
+		const visualLines = this.#buildVisualLineMap(layoutWidth);
+		const entry = visualLines[layoutLineIndex];
+		if (!entry) return;
+
+		const logicalLine = this.#state.lines[entry.logicalLine] ?? "";
+		const segmentText = logicalLine.slice(entry.startCol, entry.startCol + entry.length);
+		const targetDisplayCol = localCol - 1;
+		const segmentDisplayWidth = visibleWidth(segmentText);
+
+		const isLastSegmentOfLine =
+			layoutLineIndex === visualLines.length - 1 ||
+			visualLines[layoutLineIndex + 1]?.logicalLine !== entry.logicalLine;
+		const maxDisplayCol = isLastSegmentOfLine ? segmentDisplayWidth : Math.max(0, segmentDisplayWidth - 1);
+		const clampedDisplayCol = Math.min(targetDisplayCol, maxDisplayCol);
+
+		let displayAcc = 0;
+		let stringOffset = 0;
+		for (const g of segmenter.segment(segmentText)) {
+			const w = visibleWidth(g.segment);
+			if (displayAcc + w > clampedDisplayCol) break;
+			displayAcc += w;
+			stringOffset += g.segment.length;
+		}
+
+		this.#resetKillSequence();
+		this.#state.cursorLine = entry.logicalLine;
+		this.#state.cursorCol = entry.startCol + stringOffset;
+		this.#preferredVisualCol = clampedDisplayCol;
+	}
+
 	render(width: number): string[] {
+		this.#lastRenderWidth = width;
 		const paddingX = this.#getEditorPaddingX();
 		const borderVisible = this.#borderVisible;
 		const promptGutter = this.#getPromptGutter(width, paddingX);
