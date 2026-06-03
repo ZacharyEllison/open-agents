@@ -16,6 +16,10 @@
   Fork of <a href="https://github.com/can1357/oh-my-pi">oh-my-pi</a> (omp) by <a href="https://github.com/can1357">@can1357</a>, itself a fork of <a href="https://github.com/badlogic/pi-mono">Pi</a> by <a href="https://github.com/mariozechner">@mariozechner</a>.
 </p>
 
+<p align="center">
+  <a href="docs/README.md"><strong>Documentation hub</strong></a> — architecture, local models, configuration, contributing
+</p>
+
 ## What this fork is
 
 **open-agent** takes the batteries-included coding harness from [omp / oh-my-pi](https://github.com/can1357/oh-my-pi) and points it in one direction: **run entirely on your own machine.** No cloud providers, no sign-in, no key management, no telemetry. The whole agent talks only to model runtimes you host locally.
@@ -68,13 +72,13 @@ System prompts are deliberately minimal — small local models have limited cont
 > open-agent is a source-first fork. Clone and run with [Bun](https://bun.sh) (`bun ≥ 1.3.14`).
 
 ```sh
-git clone <your-fork-url> open-agent
-cd open-agent
+git clone https://github.com/ZacharyEllison/open-agents.git open-agents
+cd open-agents
 bun install
 bun run packages/coding-agent/src/cli.ts
 ```
 
-The binary builds out to `dist/open-agent`.
+The binary builds out to `packages/coding-agent/dist/open-agent`.
 
 ### Shell completions
 
@@ -91,6 +95,25 @@ eval "$(open-agent completions bash)"
 open-agent completions fish > ~/.config/fish/completions/open-agent.fish
 ```
 
+## Quick Start
+
+1. Start a local model runtime (e.g. [Ollama](https://ollama.com)):
+
+   ```bash
+   ollama serve
+   ollama pull llama3.2
+   ```
+
+2. Run the agent:
+
+   ```bash
+   bun run dev
+   ```
+
+3. Type a prompt — the interface model gathers context and delegates to the worker for execution.
+
+For model configuration, see [docs/local-models.md](docs/local-models.md) and [docs/configuration.md](docs/configuration.md).
+
 ## Build & Run Locally
 
 ### Prerequisites
@@ -103,8 +126,8 @@ open-agent completions fish > ~/.config/fish/completions/open-agent.fish
 ### Clone and install
 
 ```sh
-git clone <your-fork-url> open-agent
-cd open-agent
+git clone https://github.com/ZacharyEllison/open-agents.git open-agents
+cd open-agents
 bun install
 ```
 
@@ -278,6 +301,12 @@ The [Agent Client Protocol](https://github.com/zed-industries/agent-client-proto
 
 An extension is a TypeScript module: same tool API, same slash-command registry, same hotkey table, same TUI primitives the built-ins use. On first run, open-agent inherits whatever is already on disk — rules, skills, and local MCP servers from `.claude`, `.cursor`, `.windsurf`, `.gemini`, `.codex`, `.cline`, `.github/copilot`, and `.vscode`. No migration script.
 
+## Contributing
+
+See [docs/contributing.md](docs/contributing.md) for development setup, conventions, and PR workflow.
+
+For architecture details: [docs/architecture.md](docs/architecture.md).
+
 ## Acknowledgements
 
 open-agent stands entirely on the work of others:
@@ -298,12 +327,12 @@ This fork's contribution is a focused one: making the harness fully local-first 
 
 | Package | Description |
 | --------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **[pi-ai](packages/ai)** | Local-first multi-runtime LLM client with streaming |
-| **[pi-agent-core](packages/agent)** | Agent runtime with tool calling and tiered model state |
-| **[pi-coding-agent](packages/coding-agent)** | Interactive coding agent CLI and SDK |
-| **[pi-tui](packages/tui)** | Terminal UI library with differential rendering |
-| **[pi-natives](packages/natives)** | N-API bindings for grep, shell, image, text, syntax highlighting, and more |
-| **[pi-utils](packages/utils)** | Shared utilities (logging, streams, dirs/env/process helpers) |
+| **[@open-agents/ai](packages/ai)** | Local-first multi-runtime LLM client with streaming |
+| **[@open-agents/agent](packages/agent)** | Agent runtime with tool calling and tiered model state |
+| **[@open-agents/coding-agent](packages/coding-agent)** | Interactive coding agent CLI and SDK |
+| **[@open-agents/tui](packages/tui)** | Terminal UI library with differential rendering |
+| **[@open-agents/natives](packages/natives)** | N-API bindings for grep, shell, image, text, syntax highlighting, and more |
+| **[@open-agents/utils](packages/utils)** | Shared utilities (logging, streams, dirs/env/process helpers) |
 
 ### Rust Crates
 
