@@ -353,10 +353,12 @@ This fork's contribution is a focused one: making the harness fully local-first 
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
+
+This is a fork of MIT-licensed upstream projects. The fork's additional code and the combined work are distributed under AGPL-3.0-or-later.
 
 © 2025 Mario Zechner  
 © 2025-2026 Can Bölük  
-open-agent fork © 2026
+© 2026 Zachary Ellison
 
 _made for terminals that stay open_

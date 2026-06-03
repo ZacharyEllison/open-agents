@@ -5,7 +5,7 @@
 	"description": "Hashline: a compact, line-anchored patch language and applier. Pluggable FS/IO so it works over disk, in-memory, or any custom backend.",
 	"homepage": "https://github.com/ZacharyEllison/open-agents",
 	"author": "Can Boluk",
-	"license": "MIT",
+	"license": "AGPL-3.0-or-later",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/ZacharyEllison/open-agents.git",
