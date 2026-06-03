@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Capture the open-agent TUI welcome screen for docs/assets/demo.png
+# Capture a static welcome screen PNG (legacy). For the README demo GIF, run: vhs scripts/demo.tape
 #
 # Requires: bun, aha (brew install aha), Google Chrome, ImageMagick
 # Usage: ./scripts/capture-demo.sh

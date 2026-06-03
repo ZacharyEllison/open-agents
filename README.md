@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.png" alt="open-agent TUI demo" width="720">
+  <img src="docs/assets/demo.gif" alt="open-agent TUI demo" width="720">
 </p>
 
 <p align="center">
