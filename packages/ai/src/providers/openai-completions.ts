@@ -1279,6 +1279,18 @@ function buildParams(
 			throw new Error(`Model ${model.provider}/${model.id} has no supported reasoning efforts`);
 		}
 		params.reasoning_effort = mapReasoningEffort(minEffort, compat.reasoningEffortMap) as Effort;
+	} else if (
+		supportsReasoningParams &&
+		options?.disableReasoning &&
+		!options?.reasoning &&
+		model.reasoning &&
+		!compat.supportsReasoningEffort &&
+		compat.thinkingFormat === "openai"
+	) {
+		// Last-resort fallback for local servers (llama.cpp, vLLM, etc.) that
+		// lack a dedicated thinkingFormat but respect chat_template_kwargs to
+		// control thinking token generation via the Jinja template.
+		params.chat_template_kwargs = { enable_thinking: false };
 	}
 
 	if (compat.disableReasoningOnToolChoice && params.tool_choice !== undefined) {

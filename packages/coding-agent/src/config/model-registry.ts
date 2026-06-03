@@ -1743,6 +1743,7 @@ export class ModelRegistry {
 						supportsStore: false,
 						supportsDeveloperRole: false,
 						supportsReasoningEffort: false,
+						thinkingFormat: "qwen-chat-template",
 					},
 				}),
 			);
