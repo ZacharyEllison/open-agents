@@ -1135,4 +1135,98 @@ describe("agentLoopContinue with AgentMessage", () => {
 		expect(messages.map(message => message.role)).toEqual(["user", "assistant", "user", "assistant"]);
 		expect(messages[2]).toMatchObject({ role: "user", content: "follow-up" });
 	});
+
+	it("runs onDisallowedTierTool instead of tier-denied error when hook returns a result", async () => {
+		const toolSchema = z.object({ path: z.string() });
+		const executed: string[] = [];
+		const tool: AgentTool<typeof toolSchema, { path: string }> = {
+			name: "edit",
+			label: "Edit",
+			description: "Edit tool",
+			parameters: toolSchema,
+			allowedTiers: ["worker"],
+			async execute(_toolCallId, params) {
+				executed.push(params.path);
+				return {
+					content: [{ type: "text", text: `edited ${params.path}` }],
+					details: { path: params.path },
+				};
+			},
+		};
+
+		const context: AgentContext = { systemPrompt: [""], messages: [], tools: [tool] };
+		const mock = createMockModel({
+			responses: [
+				{ content: [{ type: "toolCall", id: "tool-1", name: "edit", arguments: { path: "a.ts" } }] },
+				{ content: ["done"] },
+			],
+		});
+		const config: AgentLoopConfig = {
+			model: mock.model,
+			activeTier: "interface",
+			convertToLlm: identityConverter,
+			onDisallowedTierTool: async ({ tool, args, toolCall }, signal, onUpdate) => {
+				const raw = await tool.execute(toolCall.id, args, signal, onUpdate);
+				return raw;
+			},
+		};
+
+		const events: AgentEvent[] = [];
+		const stream = agentLoop([createUserMessage("edit a.ts")], context, config, undefined, mock.stream);
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(executed).toEqual(["a.ts"]);
+		const toolEnd = events.find(e => e.type === "tool_execution_end");
+		expect(toolEnd).toBeDefined();
+		if (toolEnd?.type === "tool_execution_end") {
+			expect(toolEnd.isError).toBeFalsy();
+			expect(toolEnd.result.content).toEqual([{ type: "text", text: "edited a.ts" }]);
+		}
+	});
+
+	it("surfaces tier-denied error when onDisallowedTierTool returns undefined", async () => {
+		const toolSchema = z.object({ path: z.string() });
+		const tool: AgentTool<typeof toolSchema, { path: string }> = {
+			name: "edit",
+			label: "Edit",
+			description: "Edit tool",
+			parameters: toolSchema,
+			allowedTiers: ["worker"],
+			async execute(_toolCallId, params) {
+				return {
+					content: [{ type: "text", text: "should not run" }],
+					details: { path: params.path },
+				};
+			},
+		};
+
+		const context: AgentContext = { systemPrompt: [""], messages: [], tools: [tool] };
+		const mock = createMockModel({
+			responses: [
+				{ content: [{ type: "toolCall", id: "tool-1", name: "edit", arguments: { path: "a.ts" } }] },
+				{ content: ["done"] },
+			],
+		});
+		const config: AgentLoopConfig = {
+			model: mock.model,
+			activeTier: "interface",
+			convertToLlm: identityConverter,
+			onDisallowedTierTool: async () => undefined,
+		};
+
+		const events: AgentEvent[] = [];
+		const stream = agentLoop([createUserMessage("edit a.ts")], context, config, undefined, mock.stream);
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		const toolEnd = events.find(e => e.type === "tool_execution_end");
+		expect(toolEnd).toBeDefined();
+		if (toolEnd?.type === "tool_execution_end") {
+			expect(toolEnd.isError).toBe(true);
+			expect(JSON.stringify(toolEnd.result)).toContain("requires the worker tier");
+		}
+	});
 });

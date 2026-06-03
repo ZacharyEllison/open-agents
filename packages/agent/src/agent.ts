@@ -233,6 +233,11 @@ export interface AgentOptions {
 	afterToolCall?: AgentLoopConfig["afterToolCall"];
 
 	/**
+	 * Called when the active tier cannot invoke a tool. See {@link AgentLoopConfig.onDisallowedTierTool}.
+	 */
+	onDisallowedTierTool?: AgentLoopConfig["onDisallowedTierTool"];
+
+	/**
 	 * Opt-in OpenTelemetry instrumentation. Passing `{}` enables the loop's
 	 * GenAI-semantic-convention spans using the global tracer provider. See
 	 * {@link AgentLoopConfig.telemetry} for the full surface.
@@ -328,6 +333,7 @@ export class Agent {
 	 * message emission. Reassign at any time to swap the implementation.
 	 */
 	afterToolCall?: AgentLoopConfig["afterToolCall"];
+	onDisallowedTierTool?: AgentLoopConfig["onDisallowedTierTool"];
 
 	constructor(opts: AgentOptions = {}) {
 		this.#state = { ...this.#state, ...opts.initialState };
@@ -369,6 +375,7 @@ export class Agent {
 		this.#onHarmonyLeak = opts.onHarmonyLeak;
 		this.beforeToolCall = opts.beforeToolCall;
 		this.afterToolCall = opts.afterToolCall;
+		this.onDisallowedTierTool = opts.onDisallowedTierTool;
 		this.#telemetry = opts.telemetry;
 		this.#appendOnlyContext = opts.appendOnlyContext;
 	}
@@ -988,6 +995,9 @@ export class Agent {
 			appendOnlyContext: this.#appendOnlyContext,
 			beforeToolCall: this.beforeToolCall ? (ctx, signal) => this.beforeToolCall?.(ctx, signal) : undefined,
 			afterToolCall: this.afterToolCall ? (ctx, signal) => this.afterToolCall?.(ctx, signal) : undefined,
+			onDisallowedTierTool: this.onDisallowedTierTool
+				? (ctx, signal, onUpdate) => this.onDisallowedTierTool?.(ctx, signal, onUpdate)
+				: undefined,
 			onAssistantMessageEvent: this.#onAssistantMessageEvent,
 			onHarmonyLeak: this.#onHarmonyLeak,
 			getToolChoice,

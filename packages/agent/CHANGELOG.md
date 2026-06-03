@@ -5,6 +5,7 @@
 ### Added
 
 - Added harness-level tool call argument auto-correction before schema validation (`fixupToolArgs`), repairing common model mistakes such as missing `find`/`search` paths, string-or-array type confusion, and scalar coercions.
+- Added `onDisallowedTierTool` to `AgentLoopConfig` so harnesses can auto-execute worker-only tools from the interface tier instead of returning a tier-denied error.
 
 ## [15.8.0] - 2026-06-02
 

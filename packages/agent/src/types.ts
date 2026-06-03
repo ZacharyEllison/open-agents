@@ -278,6 +278,15 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 		context: AfterToolCallContext,
 		signal?: AbortSignal,
 	) => Promise<AfterToolCallResult | undefined> | AfterToolCallResult | undefined;
+
+	/**
+	 * Called when a tool defines `allowedTiers` that exclude the active tier (e.g.
+	 * interface calling a worker-only tool). Return a tool result to execute on
+	 * behalf of the model instead of the default tier-denied error. Return
+	 * `undefined` to fall through to the error.
+	 */
+	onDisallowedTierTool?: OnDisallowedTierTool;
+
 	/**
 	 * Opt-in OpenTelemetry instrumentation. Passing `{}` enables the loop's
 	 * GenAI-semantic-convention spans (`invoke_agent`, `chat`, `execute_tool`)
@@ -331,6 +340,24 @@ export interface AfterToolCallResult {
 	/** If provided, replaces the error flag carried with the tool result. */
 	isError?: boolean;
 }
+
+/** Context passed to `onDisallowedTierTool`. */
+export interface DisallowedTierToolContext {
+	assistantMessage: AssistantMessage;
+	toolCall: AgentToolCall;
+	/** Validated arguments (post `beforeToolCall`, pre `transformToolCallArguments`). */
+	args: Record<string, unknown>;
+	context: AgentContext;
+	tool: AgentTool;
+	activeTier: ModelTier;
+	toolContext?: AgentToolContext;
+}
+
+export type OnDisallowedTierTool = (
+	context: DisallowedTierToolContext,
+	signal?: AbortSignal,
+	onUpdate?: AgentToolUpdateCallback,
+) => Promise<AgentToolResult | undefined> | AgentToolResult | undefined;
 
 /** Context passed to `beforeToolCall`. */
 export interface BeforeToolCallContext {

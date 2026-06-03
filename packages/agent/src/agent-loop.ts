@@ -1052,6 +1052,7 @@ async function executeToolCalls(
 		intentTracing,
 		beforeToolCall,
 		afterToolCall,
+		onDisallowedTierTool,
 	} = config;
 	type ToolCallContent = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
 	const toolCalls = assistantMessage.content.filter((c): c is ToolCallContent => c.type === "toolCall");
@@ -1209,9 +1210,6 @@ async function executeToolCalls(
 		await runInActiveSpan(toolSpan, async () => {
 			try {
 				if (!tool) throw new Error(`Tool ${toolCall.name} not found`);
-				if (!isToolAllowedForTier(tool, activeTier)) {
-					throw new Error(tierDeniedToolMessage(toolCall.name));
-				}
 
 				let effectiveArgs: Record<string, unknown>;
 				try {
@@ -1249,24 +1247,56 @@ async function executeToolCalls(
 							toolCalls: toolCallInfos,
 						})
 					: undefined;
-				const rawResult = await tool.execute(
-					toolCall.id,
-					transformToolCallArguments ? transformToolCallArguments(effectiveArgs, toolCall.name) : effectiveArgs,
-					tool.nonAbortable ? undefined : toolSignal,
-					partialResult => {
-						stream.push({
-							type: "tool_execution_update",
-							toolCallId: toolCall.id,
-							toolName: toolCall.name,
-							args: effectiveArgs,
-							partialResult: coerceToolResult(partialResult).result,
-						});
-					},
-					toolContext,
-				);
-				const coerced = coerceToolResult(rawResult);
-				result = coerced.result;
-				if (coerced.malformed || result.isError) isError = true;
+				const executionArgs = transformToolCallArguments
+					? transformToolCallArguments(effectiveArgs, toolCall.name)
+					: effectiveArgs;
+				const emitPartialResult = (partialResult: unknown): void => {
+					stream.push({
+						type: "tool_execution_update",
+						toolCallId: toolCall.id,
+						toolName: toolCall.name,
+						args: effectiveArgs,
+						partialResult: coerceToolResult(partialResult).result,
+					});
+				};
+
+				if (!isToolAllowedForTier(tool, activeTier)) {
+					if (onDisallowedTierTool) {
+						const delegated = await onDisallowedTierTool(
+							{
+								assistantMessage,
+								toolCall,
+								args: executionArgs,
+								context: currentContext,
+								tool,
+								activeTier,
+								toolContext,
+							},
+							tool.nonAbortable ? undefined : toolSignal,
+							emitPartialResult,
+						);
+						if (delegated) {
+							const coerced = coerceToolResult(delegated);
+							result = coerced.result;
+							if (coerced.malformed || result.isError) isError = true;
+						} else {
+							throw new Error(tierDeniedToolMessage(toolCall.name));
+						}
+					} else {
+						throw new Error(tierDeniedToolMessage(toolCall.name));
+					}
+				} else {
+					const rawResult = await tool.execute(
+						toolCall.id,
+						executionArgs,
+						tool.nonAbortable ? undefined : toolSignal,
+						emitPartialResult,
+						toolContext,
+					);
+					const coerced = coerceToolResult(rawResult);
+					result = coerced.result;
+					if (coerced.malformed || result.isError) isError = true;
+				}
 			} catch (e) {
 				caughtError = e;
 				result = {

@@ -6,6 +6,10 @@
 
 - Allowed the interface tier to invoke `bash` for read-only shell commands (git status/log/diff/pull, file listing, package listing, `bun check`/`bun test`, etc.) while blocking destructive patterns; mutating tools (`edit`, `write`, …) remain worker-only.
 
+### Fixed
+
+- Fixed interface-tier calls to worker-only tools (`edit`, `write`, `checkpoint`, `rewind`) returning a tier-denied error; the harness now auto-executes them directly so the model receives a normal tool result without an extra `task` delegation hop.
+
 ## [15.8.1] - 2026-06-02
 
 ### Fixed
