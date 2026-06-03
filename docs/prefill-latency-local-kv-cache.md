@@ -145,4 +145,4 @@ For a typical coding session with ~8K system prompt + tools, ~4K project context
 - [ ] Route worker tasks to a pool of slots (focused context per task)
 - [ ] Implement async compaction with atomic prefix swap
 - [ ] Add prewarm on session start and between turns
-- [ ] Expose prefill token count in `/metrics` for observability (`omp stats`)
+- [ ] Expose prefill token count in `/metrics` for observability (`open-agent stats`)

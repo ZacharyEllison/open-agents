@@ -13,9 +13,9 @@ import {
 	type MessageAttribution,
 	type Model,
 	type Usage,
-} from "@oh-my-pi/pi-ai";
-import { countTokens } from "@oh-my-pi/pi-natives";
-import { logger, prompt } from "@oh-my-pi/pi-utils";
+} from "@open-agents/ai";
+import { countTokens } from "@open-agents/natives";
+import { logger, prompt } from "@open-agents/utils";
 import { type AgentTelemetry, instrumentedCompleteSimple } from "../telemetry";
 import { ThinkingLevel } from "../thinking";
 import type { AgentMessage, AgentTool } from "../types";

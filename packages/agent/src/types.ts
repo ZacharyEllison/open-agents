@@ -369,7 +369,7 @@ export interface AfterToolCallContext {
  *
  * @example
  * ```typescript
- * declare module "@oh-my-pi/agent" {
+ * declare module "@open-agents/agent" {
  *   interface CustomAgentMessages {
  *     artifact: ArtifactMessage;
  *     notification: NotificationMessage;

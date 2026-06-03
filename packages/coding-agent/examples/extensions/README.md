@@ -1,6 +1,6 @@
 # Extension Examples
 
-Example extensions for pi-coding-agent.
+Example extensions for @open-agents/coding-agent.
 
 ## Usage
 

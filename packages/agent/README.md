@@ -1,17 +1,17 @@
-# @oh-my-pi/pi-agent
+# @open-agents/agent
 
 Stateful agent with tool execution and event streaming. Built on `@open-agents/ai`.
 
 ## Installation
 
 ```bash
-npm install @oh-my-pi/pi-agent
+npm install @open-agents/agent
 ```
 
 ## Quick Start
 
 ```typescript
-import { Agent } from "@oh-my-pi/pi-agent";
+import { Agent } from "@open-agents/agent";
 import { getModel } from "@open-agents/ai";
 
 const agent = new Agent({
@@ -255,7 +255,7 @@ steering until the current turn completes.
 Extend `AgentMessage` via declaration merging:
 
 ```typescript
-declare module "@oh-my-pi/pi-agent" {
+declare module "@open-agents/agent" {
 	interface CustomAgentMessages {
 		notification: { role: "notification"; text: string; timestamp: number };
 	}
@@ -328,7 +328,7 @@ Thrown errors are caught by the agent and reported to the LLM as tool errors wit
 For browser apps that proxy through a backend:
 
 ```typescript
-import { Agent, streamProxy } from "@oh-my-pi/pi-agent";
+import { Agent, streamProxy } from "@open-agents/agent";
 
 const agent = new Agent({
 	streamFn: (model, context, options) =>
@@ -345,7 +345,7 @@ const agent = new Agent({
 For direct control without the Agent class:
 
 ```typescript
-import { agentLoop, agentLoopContinue } from "@oh-my-pi/pi-agent";
+import { agentLoop, agentLoopContinue } from "@open-agents/agent";
 
 const context: AgentContext = {
 	systemPrompt: ["You are helpful."],
@@ -445,7 +445,7 @@ fold N summaries with `aggregateAgentRunSummaries` / `aggregateAgentRunCoverage`
 import {
 	aggregateAgentRunSummaries,
 	aggregateAgentRunCoverage,
-} from "@oh-my-pi/pi-agent";
+} from "@open-agents/agent";
 
 const summaries: AgentRunSummary[] = [];
 const coverages: AgentRunCoverage[] = [];

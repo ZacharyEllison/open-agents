@@ -13,7 +13,7 @@ interface XAICredentials {
 }
 
 export function ohMyPiXAIUserAgent(): string {
-	return "oh-my-pi/xai";
+	return "open-agent/xai";
 }
 
 type XAIProvider = "xai-oauth" | "xai";

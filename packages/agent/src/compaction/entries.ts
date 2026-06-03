@@ -1,4 +1,4 @@
-import type { ImageContent, MessageAttribution, ServiceTier, TextContent } from "@oh-my-pi/pi-ai";
+import type { ImageContent, MessageAttribution, ServiceTier, TextContent } from "@open-agents/ai";
 import type { AgentMessage } from "../types";
 
 export interface SessionEntryBase {

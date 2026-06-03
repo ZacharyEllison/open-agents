@@ -1,5 +1,5 @@
 /**
- * Swarm agent execution via oh-my-pi's subagent infrastructure.
+ * Swarm agent execution via open-agent's subagent infrastructure.
  *
  * Wraps `runSubprocess` to spawn individual swarm agents with full tool access.
  * Each agent runs in the swarm workspace with its task instructions as the user prompt.
@@ -32,7 +32,7 @@ export interface SwarmExecutorOptions {
 }
 
 /**
- * Execute a single swarm agent as an oh-my-pi subagent.
+ * Execute a single swarm agent as an open-agent subagent.
  *
  * The agent receives:
  * - System prompt: built from role + extra_context
