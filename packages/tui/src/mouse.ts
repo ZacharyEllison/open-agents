@@ -14,11 +14,28 @@ export interface MouseClickable {
 	handleMouseClick(terminalRow: number, terminalCol: number): void;
 }
 
+export interface MouseSelectable extends MouseClickable {
+	handleMouseDragStart(terminalRow: number, terminalCol: number): void;
+	handleMouseDrag(terminalRow: number, terminalCol: number): void;
+	handleMouseDragEnd(terminalRow: number, terminalCol: number): void;
+}
+
 export function isMouseClickable(component: Component | null): component is Component & MouseClickable {
 	return (
 		component !== null &&
 		"handleMouseClick" in component &&
 		typeof (component as MouseClickable).handleMouseClick === "function"
+	);
+}
+
+export function isMouseSelectable(component: Component | null): component is Component & MouseSelectable {
+	if (component === null) return false;
+	const c = component as unknown as Record<string, unknown>;
+	return (
+		typeof c.handleMouseDragStart === "function" &&
+		typeof c.handleMouseDrag === "function" &&
+		typeof c.handleMouseDragEnd === "function" &&
+		typeof c.handleMouseClick === "function"
 	);
 }
 

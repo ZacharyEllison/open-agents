@@ -206,10 +206,16 @@ export class CustomEditor extends Editor {
 			return;
 		}
 
-		// Intercept configured clear shortcut
-		if (this.#matchesAction(data, "app.clear") && this.onClear) {
-			this.onClear();
-			return;
+		// Intercept configured clear shortcut — but if there's a selection, copy it instead
+		if (this.#matchesAction(data, "app.clear")) {
+			if (this.hasSelection()) {
+				this.copySelection();
+				return;
+			}
+			if (this.onClear) {
+				this.onClear();
+				return;
+			}
 		}
 
 		// Intercept configured exit shortcut. Always consume the shortcut so it

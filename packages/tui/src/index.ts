@@ -26,6 +26,8 @@ export * from "./keybindings";
 export * from "./keys";
 // Mouse event parsing and click routing helpers
 export * from "./mouse";
+// Clipboard (OSC 52 + native fallback)
+export * from "./clipboard";
 // Mermaid diagram support
 // Input buffering for batch splitting
 export * from "./stdin-buffer";

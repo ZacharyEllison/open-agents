@@ -6,7 +6,7 @@ import * as path from "node:path";
 import { performance } from "node:perf_hooks";
 import { $flag, getDebugLogPath } from "@open-agents/utils";
 import { isKeyRelease, matchesKey } from "./keys";
-import { isMouseClickable, type MouseEvent, parseMouseEvent } from "./mouse";
+import { isMouseClickable, isMouseSelectable, type MouseEvent, parseMouseEvent } from "./mouse";
 import { type Terminal, terminalHasEagerEraseScrollbackRisk } from "./terminal";
 import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } from "./terminal-capabilities";
 import {
@@ -300,6 +300,7 @@ export class TUI extends Container {
 	#previousHeight = 0;
 	#focusedComponent: Component | null = null;
 	#inputListeners = new Set<InputListener>();
+	#mouseDragActive = false;
 
 	/** Global callback for debug key (Shift+Ctrl+D). Called before input is forwarded to focused component. */
 	onDebug?: () => void;
@@ -785,8 +786,10 @@ export class TUI extends Container {
 
 	#handleInput(data: string): void {
 		const mouseEvent = parseMouseEvent(data);
-		if (mouseEvent?.type === "press" && mouseEvent.button === 0) {
-			this.#handleMouseClick(mouseEvent);
+		if (mouseEvent) {
+			if (mouseEvent.button === 0 || (mouseEvent.type === "move" && this.#mouseDragActive)) {
+				this.#handleMouseEvent(mouseEvent);
+			}
 			return;
 		}
 
@@ -844,7 +847,7 @@ export class TUI extends Container {
 		}
 	}
 
-	#handleMouseClick(event: MouseEvent): void {
+	#handleMouseEvent(event: MouseEvent): void {
 		const focused = this.#focusedComponent;
 		if (!isMouseClickable(focused)) return;
 
@@ -855,8 +858,27 @@ export class TUI extends Container {
 		if (contentLine < region.start || contentLine >= region.end) return;
 
 		const localTerminalRow = contentLine - region.start + 1;
-		focused.handleMouseClick(localTerminalRow, event.col);
-		this.requestRender(false, { allowUnknownViewportMutation: true });
+
+		if (event.type === "press") {
+			if (isMouseSelectable(focused)) {
+				this.#mouseDragActive = true;
+				focused.handleMouseDragStart(localTerminalRow, event.col);
+			} else {
+				focused.handleMouseClick(localTerminalRow, event.col);
+			}
+			this.requestRender(false, { allowUnknownViewportMutation: true });
+		} else if (event.type === "move" && this.#mouseDragActive) {
+			if (isMouseSelectable(focused)) {
+				focused.handleMouseDrag(localTerminalRow, event.col);
+				this.requestRender(false, { allowUnknownViewportMutation: true });
+			}
+		} else if (event.type === "release" && this.#mouseDragActive) {
+			this.#mouseDragActive = false;
+			if (isMouseSelectable(focused)) {
+				focused.handleMouseDragEnd(localTerminalRow, event.col);
+				this.requestRender(false, { allowUnknownViewportMutation: true });
+			}
+		}
 	}
 
 	#consumeCellSizeResponse(data: string): boolean {
