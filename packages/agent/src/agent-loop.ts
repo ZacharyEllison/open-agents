@@ -15,7 +15,7 @@ import {
 	validateToolArguments,
 	zodToWireSchema,
 } from "@open-agents/ai";
-import { sanitizeText } from "@open-agents/utils";
+import { logger, sanitizeText } from "@open-agents/utils";
 import {
 	createHarmonyAuditEvent,
 	detectHarmonyLeakInAssistantMessage,
@@ -42,6 +42,7 @@ import {
 	startExecuteToolSpan,
 	startInvokeAgentSpan,
 } from "./telemetry";
+import { fixupToolArgs } from "./tool-call-fixup";
 import type {
 	AgentContext,
 	AgentEvent,
@@ -1171,6 +1172,13 @@ async function executeToolCalls(
 				} catch {
 					// intent function must never break tool execution
 				}
+			}
+		}
+		if (tool) {
+			const { args: fixedArgs, corrections } = fixupToolArgs(tool, argsForExecution);
+			if (corrections.length > 0) {
+				logger.debug("Auto-corrected tool call", { tool: tool.name, corrections });
+				argsForExecution = fixedArgs;
 			}
 		}
 		record.args = argsForExecution;

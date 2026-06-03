@@ -15,6 +15,8 @@ export * from "./run-collector";
 export * from "./telemetry";
 // Thinking selectors
 export * from "./thinking";
+// Tool argument fixups (harness)
+export * from "./tool-call-fixup";
 // Types
 export * from "./types";
 // Yield utilities for Bun event-loop busy-wait prevention

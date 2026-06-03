@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added harness-level tool call argument auto-correction before schema validation (`fixupToolArgs`), repairing common model mistakes such as missing `find`/`search` paths, string-or-array type confusion, and scalar coercions.
+
 ## [15.8.0] - 2026-06-02
 
 ### Fixed
