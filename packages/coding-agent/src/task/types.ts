@@ -61,8 +61,8 @@ const assignmentDescription = "per-task instructions; self-contained";
 
 const createTaskItemSchema = (_contextEnabled: boolean) =>
 	z.object({
-		id: z.string().max(48).describe("camelcase identifier"),
-		description: z.string().describe("ui label, not seen by subagent"),
+		id: z.string().max(48).optional().describe("camelcase identifier; auto-generated if omitted"),
+		description: z.string().optional().describe("ui label, not seen by subagent; defaults to assignment summary"),
 		assignment: z.string().describe(assignmentDescription),
 	});
 
@@ -141,6 +141,22 @@ export interface TaskParams {
 	schema?: string;
 	tasks: TaskItem[];
 	isolated?: boolean;
+}
+
+/** Task item with id and description guaranteed present (after normalization). */
+export interface NormalizedTaskItem {
+	id: string;
+	description: string;
+	assignment: string;
+}
+
+/** Fill missing id/description fields with sensible defaults. */
+export function normalizeTaskItems(items: TaskItem[]): NormalizedTaskItem[] {
+	return items.map((task, i) => ({
+		...task,
+		id: task.id?.trim() || `Task${i + 1}`,
+		description: task.description?.trim() || task.assignment.slice(0, 80).trim(),
+	}));
 }
 
 /** A code review finding reported by the reviewer agent */

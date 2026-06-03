@@ -1236,9 +1236,12 @@ function buildParams(
 	} else if (supportsReasoningParams && compat.thinkingFormat === "qwen" && model.reasoning) {
 		// Qwen uses top-level enable_thinking: boolean
 		params.enable_thinking = !!options?.reasoning && !options?.disableReasoning;
-	} else if (supportsReasoningParams && compat.thinkingFormat === "qwen-chat-template" && model.reasoning) {
+	} else if (supportsReasoningParams && compat.thinkingFormat === "qwen-chat-template") {
+		// Always send chat_template_kwargs for qwen-chat-template providers (llama.cpp,
+		// vLLM). When model.reasoning is false (auto-discovered), this suppresses
+		// thinking that the server may enable by default in its config.ini preset.
 		params.chat_template_kwargs = {
-			enable_thinking: !!options?.reasoning && !options?.disableReasoning,
+			enable_thinking: !!model.reasoning && !!options?.reasoning && !options?.disableReasoning,
 		};
 	} else if (supportsReasoningParams && compat.thinkingFormat === "openrouter" && model.reasoning) {
 		// OpenRouter normalizes reasoning across providers via a nested reasoning object.

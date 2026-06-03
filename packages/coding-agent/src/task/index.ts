@@ -33,6 +33,7 @@ import {
 	type AgentDefinition,
 	type AgentProgress,
 	getTaskSchema,
+	normalizeTaskItems,
 	type SingleResult,
 	type TaskParams,
 	type TaskToolDetails,
@@ -229,7 +230,7 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 		const tasks = Array.isArray(params.tasks) ? params.tasks : [];
 		const firstTask = tasks[0];
 		if (firstTask) {
-			lines.push(`Task: ${truncateForPrompt(firstTask.id)}`);
+			lines.push(`Task: ${truncateForPrompt(firstTask.id ?? "Task1")}`);
 			lines.push(`Assignment:\n${truncateForPrompt(firstTask.assignment)}`);
 			if (tasks.length > 1) {
 				lines.push(`+${tasks.length - 1} more task${tasks.length === 2 ? "" : "s"}`);
@@ -317,7 +318,7 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 			};
 		}
 
-		const taskItems = params.tasks ?? [];
+		const taskItems = normalizeTaskItems(params.tasks ?? []);
 		if (taskItems.length === 0) {
 			return this.#executeSync(_toolCallId, params, signal, onUpdate);
 		}
@@ -681,17 +682,11 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 			};
 		}
 
-		const tasks = params.tasks;
-		const missingTaskIndexes: number[] = [];
-		const idIndexes = new Map<string, number[]>();
+		const tasks = normalizeTaskItems(params.tasks);
 
+		const idIndexes = new Map<string, number[]>();
 		for (let i = 0; i < tasks.length; i++) {
-			const id = tasks[i]?.id;
-			if (typeof id !== "string" || id.trim() === "") {
-				missingTaskIndexes.push(i);
-				continue;
-			}
-			const normalizedId = id.toLowerCase();
+			const normalizedId = tasks[i].id.toLowerCase();
 			const indexes = idIndexes.get(normalizedId);
 			if (indexes) {
 				indexes.push(i);
@@ -703,30 +698,16 @@ export class TaskTool implements AgentTool<TaskToolSchemaInstance, TaskToolDetai
 		const duplicateIds: Array<{ id: string; indexes: number[] }> = [];
 		for (const [normalizedId, indexes] of idIndexes.entries()) {
 			if (indexes.length > 1) {
-				duplicateIds.push({
-					id: tasks[indexes[0]]?.id ?? normalizedId,
-					indexes,
-				});
+				duplicateIds.push({ id: tasks[indexes[0]].id ?? normalizedId, indexes });
 			}
 		}
 
-		if (missingTaskIndexes.length > 0 || duplicateIds.length > 0) {
-			const problems: string[] = [];
-			if (missingTaskIndexes.length > 0) {
-				problems.push(`Missing task ids at indexes: ${missingTaskIndexes.join(", ")}`);
+		if (duplicateIds.length > 0) {
+			for (const { indexes } of duplicateIds) {
+				for (let j = 1; j < indexes.length; j++) {
+					tasks[indexes[j]].id = `${tasks[indexes[j]].id}_${j}`;
+				}
 			}
-			if (duplicateIds.length > 0) {
-				const details = duplicateIds.map(entry => `${entry.id} (indexes ${entry.indexes.join(", ")})`).join("; ");
-				problems.push(`Duplicate task ids detected (case-insensitive): ${details}`);
-			}
-			return {
-				content: [{ type: "text", text: `Invalid tasks: ${problems.join(". ")}` }],
-				details: {
-					projectAgentsDir,
-					results: [],
-					totalDurationMs: 0,
-				},
-			};
 		}
 
 		let repoRoot: string | null = null;
