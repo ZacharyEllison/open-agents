@@ -111,7 +111,7 @@ Why this works:
 
 - **Interface** (`gemma4-26b-a4b`): MoE architecture means only ~4B params activate per token despite 26B total. Prefill at 600+ tok/s on Apple Silicon — a 27k-token prompt in ~45s vs 90s+ on a dense 14B.
 - **Worker** (`qwen3.6-27b`): dense reasoning model with MTP speculative decoding. Handles editing, planning, and deep analysis. Gets focused context per task, not the full conversation.
-- **Compactor** (ONNX `qwen3-1.7b`): runs on CPU via transformers.js — no model slot, no server load. Falls back to `modelTiers.compactor` (the interface model, already resident) if ONNX fails.
+- **Compactor** (ONNX `qwen3-1.7b`): runs on CPU via transformers.js — no model slot, no server load. Downloads weights from HuggingFace Hub on first use and caches them locally (works offline after that). Falls back to `modelTiers.compactor` (the interface model, already resident) if ONNX fails.
 - **Co-residency**: exactly 2 models loaded (`LLAMA_MODELS_MAX=2`). The compactor fallback reuses the interface slot — no 3rd model swap.
 
 The `:off` thinking suffix on the interface disables reasoning tokens for maximum speed. The `interface.thinkingLevel` setting provides an alternative if you want some reasoning without the suffix.

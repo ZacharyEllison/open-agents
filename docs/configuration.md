@@ -68,6 +68,8 @@ providers:
 
 When enabled, the compactor tier runs entirely on-device — no model slot on llama-server, no swapping. On ONNX failure it falls back to `modelTiers.compactor` (which should reuse an already-loaded model to avoid a 3rd model swap).
 
+The ONNX weights are downloaded from HuggingFace Hub on first use and cached persistently at `~/.open-agent/agent/cache/tiny-models/`. Subsequent loads use the local cache (with a lightweight version check if online; works fully offline after the initial download).
+
 See [docs/examples/local-llama-config.yml](./examples/local-llama-config.yml) for a complete example config.
 
 ## `providers.*` settings

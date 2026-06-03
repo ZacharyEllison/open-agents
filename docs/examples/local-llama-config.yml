@@ -26,8 +26,10 @@ modelTiers:
   worker: llama.cpp/qwen3.6-27b
   compactor: llama.cpp/gemma4-26b-a4b:off
 
-# On-device ONNX compactor — runs on CPU, not the llama-server
-# Downloads ~1.7 GB of ONNX weights on first compaction.
+# On-device ONNX compactor — runs on CPU, not the llama-server.
+# Downloads ONNX weights from HuggingFace Hub on first compaction and caches
+# them at ~/.open-agent/agent/cache/tiny-models/. Subsequent loads use the
+# local cache (works offline after the initial download).
 # Set to "online" to use the server compactor tier instead.
 providers:
   compactorOnnxModel: qwen3-1.7b
