@@ -130,6 +130,17 @@ export class WelcomeComponent implements Component {
 		this.lspServers = servers;
 	}
 
+	/** Render one frame with a fixed shimmer tick (README/VHS capture; no timer). */
+	withShimmerTick(tick: number, termWidth: number): string[] {
+		const prev = this.#shimmerTick;
+		this.#shimmerTick = tick;
+		try {
+			return this.render(termWidth);
+		} finally {
+			this.#shimmerTick = prev;
+		}
+	}
+
 	render(termWidth: number): string[] {
 		// Box dimensions - responsive with max width and small-terminal support
 		const maxWidth = 100;

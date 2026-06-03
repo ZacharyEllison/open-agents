@@ -37,9 +37,9 @@ spinner_line() {
 
 clear
 
-# Phase 1: welcome / triforce (real renderer output)
-bun "$ROOT/scripts/capture-welcome-demo.ts"
-sleep 2.5
+# Phase 1: welcome / triforce shimmer (~3.5s, matches live TUI ~8 fps)
+bun "$ROOT/scripts/capture-welcome-demo.ts" --animate
+sleep 0.4
 
 # Phase 2: transition into an active session
 printf '\n'
