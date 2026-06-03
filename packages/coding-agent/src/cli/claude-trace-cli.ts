@@ -5,11 +5,14 @@
  * certificate, drives Claude Code through a headless PTY/xterm, and returns the
  * first completed /v1/messages request/response exchange.
  */
+import * as fs from "node:fs";
 import * as net from "node:net";
+import * as os from "node:os";
 import * as path from "node:path";
 import * as tls from "node:tls";
 import * as zlib from "node:zlib";
 import { PtySession } from "@open-agents/natives";
+import { $which } from "@open-agents/utils";
 import xterm from "@xterm/headless";
 
 const DEFAULT_PROXY_HOST = "127.0.0.1";
@@ -26,55 +29,51 @@ const TEXT_DECODER = new TextDecoder();
 
 // Debug-only local MITM certificate. Claude is launched with
 // NODE_TLS_REJECT_UNAUTHORIZED=0, so the certificate has no trust value; it only
-// lets Node's TLS stack complete the CONNECT tunnel handshake.
-export const CLAUDE_TRACE_DEBUG_CERT = `-----BEGIN CERTIFICATE-----
-MIIDFzCCAf+gAwIBAgIUAe9omAqLbydZc5ZYZGhwbbpMSF0wDQYJKoZIhvcNAQEL
-BQAwGzEZMBcGA1UEAwwQb21wLWNsYXVkZS10cmFjZTAeFw0yNjA2MDIwODA2MjFa
-Fw0zNjA1MzAwODA2MjFaMBsxGTAXBgNVBAMMEG9tcC1jbGF1ZGUtdHJhY2UwggEi
-MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCmpGe5T8B0oA2L82Rn5JJdXOBS
-ZX0DyBjiIK+Tqe8T3oAr41XDLnweqtrMDSBDYbVqAoKjNbaTUSYYcxSm0MAVs63w
-08SfJmShZM9pElfANqXqMiyhksFgji7JEyt/rbbId207a7s5KvRvm3g/sxN/wGtr
-C5LCLMlc2GWEGD8qrVIQbmLw884qvtXi70RFUPP3Wpy4wGMWSdE+9IA27R5cMJS5
-oHsO4HGB6J8VzLY+HGY2yr4BJ9qrAyjd1UetFd9RdcjyWpsbAfX8nWP+uleTNOiT
-ExNz7dPt/k6OPLNmI1iT/ruRS0uUzHZTimPd67TPQR/70RaW7Bh5wArawGw9AgMB
-AAGjUzBRMB0GA1UdDgQWBBQa4Ir8P3GAolZoPiuB4V2cq3riAjAfBgNVHSMEGDAW
-gBQa4Ir8P3GAolZoPiuB4V2cq3riAjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3
-DQEBCwUAA4IBAQClPYki235gDEUu7eDm60qsAGWxbKVv4pSh+vB+xgNgzMk4aOuU
-mSfp8Y8covwklph8VfDoKTaEGqqX0Q5s74Ctl6Mwy7b0u8Zztk/g4GynLocI7TQD
-ftZMgZka49+FkEsjp+XZtQbO4vOL5UsccpsLhFQQQuhVyiJ4gNo/VzgvSDkBuf3Q
-Rz7xFiDKCqFEoMPty4+nKEw5832FJ5mDCOyMk6fGSO8Wbt/hmRQQFu2cSdoBs0OT
-AQQJETQjPkKeTDX4jdSAlOeKwfyjfdfgeQuMkzX8xafisJa66MLPzOVbIuGbvbWD
-QVCd76iYPcfNK+JZUhmAUvTHSuwgJMZ6+NgI
------END CERTIFICATE-----`;
+// lets Node's TLS stack complete the CONNECT tunnel handshake. Generated at runtime
+// so no private key material is committed to the repository.
+let claudeTraceDebugTlsMaterial: { cert: string; key: string } | undefined;
 
-export const CLAUDE_TRACE_DEBUG_KEY = `-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCmpGe5T8B0oA2L
-82Rn5JJdXOBSZX0DyBjiIK+Tqe8T3oAr41XDLnweqtrMDSBDYbVqAoKjNbaTUSYY
-cxSm0MAVs63w08SfJmShZM9pElfANqXqMiyhksFgji7JEyt/rbbId207a7s5KvRv
-m3g/sxN/wGtrC5LCLMlc2GWEGD8qrVIQbmLw884qvtXi70RFUPP3Wpy4wGMWSdE+
-9IA27R5cMJS5oHsO4HGB6J8VzLY+HGY2yr4BJ9qrAyjd1UetFd9RdcjyWpsbAfX8
-nWP+uleTNOiTExNz7dPt/k6OPLNmI1iT/ruRS0uUzHZTimPd67TPQR/70RaW7Bh5
-wArawGw9AgMBAAECggEADX2mhA3H0pPuj35J36X/5Me9xWM//AwOr6febwGalazg
-Ctg3EOZ01/VptzaiKQetAdhoLmxidooNn9HD7JQJKPid7q7w7m1+R26mN/xrLD2A
-WyBqv+iQoo+ANs5y1BMChuIxmVY/FwFk6UWDNlekuXqgzPln4okbrYTmBbaszniO
-Mu1SI/3fpnTA3iJ634FUSRVoUPP8r0WEEUtpW1wAhsJR701gvKRYw/+YcRglkhm7
-T4l6TuBcgIVzUqAc3oZLHVIMKN0ZprZSeopSRozTcUANfYONakvK9Hx1qf+/rmTR
-qZHg2uOxlqvxyABnwdk8rmyFx8YqUeN9jaAbbXxtBQKBgQDQRjc0gVg4STqcFqUu
-FW35MZ88S7+xTuRd/EG1dpsu2lptx1yhSLTsF5GfxBQKXCQUfWrpkyuCmlV6s+wJ
-H0LSyAJQ4ffBsFterQz7dRKTlhRJNk5PYn8jjNCAuBYVSbQZqZ3yZgG3CT3G5+PZ
-8Ln3tJHqTRfP5B8KTMcNYiLI0wKBgQDM0/gdb9Dvdz/32GIpxwNNIb52IxnNVVrm
-M69+4XNg6CqvctZFuaMQ03W2J5IKAdESaCGLz9pwHZRjfBORcw3BPKD2QkfN5NJg
-hWvLlfAsblCYiCCjTCB6rf1OJOQ5fHoNFh1wqDaQCk0flsb9nlZmQQR5ZUHaJhSC
-QqMmeKvMrwKBgQDDzp+sH0Z/dGlDwg59auw/caWRHG4WFmOg8L4eCmoO/H4z41B0
-2VQu+mGQYNmue733/Yl8Gz62xL5EY88vLFK4tA1pWWiCknj0Y6Fm70QNuPVNd17c
-R2/cTlDgEzG/xdEqp0q1T62hFXEdBXoztZxBA2SDcQNIEeIU3uXs8SxevQKBgFp4
-acf+wody4aNERR900sV32RtvJ49lWxAA1kwxone0NF5oV7JWa2scK4r4cW3QHZuG
-uQJ7HV2WAxvqCu6cpf+rGuGKpxKPNkkBxXoX0Qye8SReRCQ8lL/7J74jV1b43yP2
-l6xR8D+w/R2tyFjvXfQuVZ6VFgAX/8kFS/DLLf7rAoGAcnFgCwyzcq6FWL8iW23J
-GnbZ0IQk6SPch87MzMmnOFlEXrCf5l832vwI65tNzOoB0yQoWVfBv5sb4Zy9zeFj
-FbkpRZC0Kfi9PLzDV4IawoIINYthOJxIKJg+yrmrUWCggXxwdzYIYKLRIskMXoYs
-mNMXfUstElEcKO7+DKiPi6U=
------END PRIVATE KEY-----`;
+function loadClaudeTraceDebugTlsMaterial(): { cert: string; key: string } {
+	if (claudeTraceDebugTlsMaterial) return claudeTraceDebugTlsMaterial;
+	const openssl = $which("openssl");
+	if (!openssl) {
+		throw new Error("openssl not found on PATH; required for claude-trace local MITM TLS");
+	}
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "omp-claude-trace-"));
+	const keyPath = path.join(dir, "key.pem");
+	const certPath = path.join(dir, "cert.pem");
+	try {
+		const result = Bun.spawnSync(
+			[
+				openssl,
+				"req",
+				"-x509",
+				"-newkey",
+				"rsa:2048",
+				"-nodes",
+				"-days",
+				"1",
+				"-subj",
+				"/CN=omp-claude-trace",
+				"-keyout",
+				keyPath,
+				"-out",
+				certPath,
+			],
+			{ stdout: "pipe", stderr: "pipe" },
+		);
+		if (result.exitCode !== 0) {
+			throw new Error(`openssl cert generation failed: ${result.stderr.toString("utf8")}`);
+		}
+		claudeTraceDebugTlsMaterial = {
+			cert: fs.readFileSync(certPath, "utf8"),
+			key: fs.readFileSync(keyPath, "utf8"),
+		};
+		return claudeTraceDebugTlsMaterial;
+	} finally {
+		fs.rmSync(dir, { recursive: true, force: true });
+	}
+}
 
 export interface HeaderEntry {
 	name: string;
@@ -582,14 +581,12 @@ export class ClaudeMessagesProxy {
 	}
 
 	async #openMitmTunnelAsync(socket: net.Socket, target: ConnectTarget, rest: Buffer): Promise<void> {
+		const { cert, key } = loadClaudeTraceDebugTlsMaterial();
 		const clientReady = Promise.withResolvers<tls.TLSSocket>();
-		const tlsServer = tls.createServer(
-			{ cert: CLAUDE_TRACE_DEBUG_CERT, key: CLAUDE_TRACE_DEBUG_KEY, ALPNProtocols: ["http/1.1"] },
-			clientTls => {
-				this.#track(clientTls);
-				clientReady.resolve(clientTls);
-			},
-		);
+		const tlsServer = tls.createServer({ cert, key, ALPNProtocols: ["http/1.1"] }, clientTls => {
+			this.#track(clientTls);
+			clientReady.resolve(clientTls);
+		});
 		tlsServer.once("error", error => clientReady.reject(error));
 		const listening = Promise.withResolvers<void>();
 		tlsServer.listen(0, DEFAULT_PROXY_HOST, () => listening.resolve());

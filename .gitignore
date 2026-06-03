@@ -26,12 +26,6 @@ agent.db
 secrets.yml
 auth-broker.token
 install-id
-.env.*
-*.pem
-*.key
-credentials.json
-service-account*.json
-agent.db
 
 # Editors
 .vscode/
