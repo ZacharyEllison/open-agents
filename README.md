@@ -13,6 +13,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/assets/demo.png" alt="open-agent TUI demo" width="720">
+</p>
+
+<p align="center">
   Fork of <a href="https://github.com/can1357/oh-my-pi">oh-my-pi</a> (omp) by <a href="https://github.com/can1357">@can1357</a>, itself a fork of <a href="https://github.com/badlogic/pi-mono">Pi</a> by <a href="https://github.com/mariozechner">@mariozechner</a>.
 </p>
 
