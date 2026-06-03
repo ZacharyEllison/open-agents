@@ -579,6 +579,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		hasMemoryRoot: memoryRootEnabled,
 		hasObsidian: hasObsidian(),
 		isInterfaceTier,
+		isWorkerTier: !isInterfaceTier,
 	};
 	const rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 	const systemPrompt = [rendered];
