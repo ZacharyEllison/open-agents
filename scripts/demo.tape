@@ -16,4 +16,4 @@ Set PlaybackSpeed 1.0
 Set LoopOffset 88%
 
 Type "bash scripts/demo-session.sh" Enter
-Sleep 17s
+Sleep 12s
