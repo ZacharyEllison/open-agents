@@ -12,8 +12,21 @@ set -e
 
 REPO="ZacharyEllison/open-agents"
 PACKAGE="@open-agents/coding-agent"
-INSTALL_DIR="${PI_INSTALL_DIR:-$HOME/.local/bin}"
+BINARY_NAME="open-agent"
 MIN_BUN_VERSION="1.3.14"
+
+# Install destination: explicit override, root → /usr/local/bin, else ~/.local/bin
+resolve_install_dir() {
+    if [ -n "${PI_INSTALL_DIR:-}" ]; then
+        echo "$PI_INSTALL_DIR"
+        return
+    fi
+    if [ "$(id -u)" -eq 0 ]; then
+        echo "/usr/local/bin"
+        return
+    fi
+    echo "$HOME/.local/bin"
+}
 
 # Parse arguments
 MODE=""
@@ -179,12 +192,14 @@ install_via_bun() {
         }
     fi
     echo ""
-    echo "✓ Installed omp via bun"
-    echo "Run 'omp' to get started!"
+    echo "✓ Installed ${BINARY_NAME} via bun"
+    echo "Run '${BINARY_NAME}' to get started!"
 }
 
 # Install binary from GitHub releases
 install_binary() {
+    INSTALL_DIR="$(resolve_install_dir)"
+
     # Detect platform
     OS="$(uname -s)"
     ARCH="$(uname -m)"
@@ -201,42 +216,32 @@ install_binary() {
         *)             echo "Unsupported architecture: $ARCH"; exit 1 ;;
     esac
 
-    BINARY="omp-${PLATFORM}-${ARCH}"
-    # Get release tag
-    if [ -n "$REF" ]; then
-        echo "Fetching release $REF..."
-        if RELEASE_JSON=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${REF}"); then
-            LATEST=$(echo "$RELEASE_JSON" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-        else
-            echo "Release tag not found: $REF"
-            echo "For branch/commit installs, use --source with --ref."
-            exit 1
-        fi
-    else
-        echo "Fetching latest release..."
-        RELEASE_JSON=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest")
-        LATEST=$(echo "$RELEASE_JSON" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-    fi
+    ASSET="${BINARY_NAME}-${PLATFORM}-${ARCH}"
 
-    if [ -z "$LATEST" ]; then
-        echo "Failed to fetch release tag"
-        exit 1
+    if [ -n "$REF" ]; then
+        TAG="$REF"
+        case "$TAG" in
+            v*) ;;
+            *) TAG="v${TAG}" ;;
+        esac
+        echo "Installing release ${TAG}..."
+        BINARY_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
+    else
+        echo "Fetching latest release binary..."
+        BINARY_URL="https://github.com/${REPO}/releases/latest/download/${ASSET}"
     fi
-    echo "Using version: $LATEST"
 
     mkdir -p "$INSTALL_DIR"
-    # Download binary
-    BINARY_URL="https://github.com/${REPO}/releases/download/${LATEST}/${BINARY}"
-    echo "Downloading ${BINARY}..."
-    curl -fsSL "$BINARY_URL" -o "${INSTALL_DIR}/omp"
-    chmod +x "${INSTALL_DIR}/omp"
+    echo "Downloading ${ASSET}..."
+    curl -fsSL "$BINARY_URL" -o "${INSTALL_DIR}/${BINARY_NAME}"
+    chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     echo ""
-    echo "✓ Installed omp to ${INSTALL_DIR}/omp"
+    echo "✓ Installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}"
 
     # Check if in PATH
     case ":$PATH:" in
-        *":$INSTALL_DIR:"*) echo "Run 'omp' to get started!" ;;
-        *) echo "Add ${INSTALL_DIR} to your PATH, then run 'omp'" ;;
+        *":$INSTALL_DIR:"*) echo "Run '${BINARY_NAME}' to get started!" ;;
+        *) echo "Add ${INSTALL_DIR} to your PATH, then run '${BINARY_NAME}'" ;;
     esac
 }
 

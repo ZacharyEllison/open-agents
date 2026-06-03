@@ -1,0 +1,94 @@
+name: Release
+
+on:
+   push:
+      tags:
+         - "v*"
+
+permissions:
+   contents: read
+
+jobs:
+   build:
+      strategy:
+         fail-fast: false
+         matrix:
+            include:
+               - runs-on: macos-14
+                 asset: open-agent-darwin-arm64
+               - runs-on: macos-13
+                 asset: open-agent-darwin-x64
+               - runs-on: ubuntu-latest
+                 asset: open-agent-linux-x64
+      runs-on: ${{ matrix.runs-on }}
+      steps:
+         - uses: actions/checkout@v4
+
+         - uses: oven-sh/setup-bun@v2
+           with:
+              bun-version: "1.3"
+
+         - uses: dtolnay/rust-toolchain@nightly
+           with:
+              toolchain: nightly-2026-04-29
+
+         - name: Prepend rustup toolchain bin to PATH
+           shell: bash
+           run: |
+              toolchain_bin="$(dirname "$(rustup which cargo)")"
+              echo "$toolchain_bin" >> "$GITHUB_PATH"
+
+         - name: Install Linux system dependencies
+           if: runner.os == 'Linux'
+           run: |
+              sudo apt-get update
+              sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep imagemagick
+              sudo ln -s "$(which fdfind)" /usr/local/bin/fd
+              sudo ln -sf /usr/bin/convert /usr/local/bin/magick
+
+         - run: bun install --frozen-lockfile
+
+         - run: bun run build:native
+
+         - run: bun --cwd packages/coding-agent run build
+
+         - name: Rename release binary
+           run: mv packages/coding-agent/dist/open-agent "${{ matrix.asset }}"
+
+         - name: Smoke test binary
+           run: ./${{ matrix.asset }} --version
+
+         - uses: actions/upload-artifact@v4
+           with:
+              name: ${{ matrix.asset }}
+              path: ${{ matrix.asset }}
+
+   release:
+      needs: build
+      runs-on: ubuntu-latest
+      permissions:
+         contents: write
+      steps:
+         - uses: actions/checkout@v4
+
+         - uses: oven-sh/setup-bun@v2
+           with:
+              bun-version: "1.3"
+
+         - name: Generate release notes from CHANGELOGs
+           run: bun scripts/ci-release-notes.ts "${{ github.ref_name }}"
+
+         - uses: actions/download-artifact@v4
+           with:
+              path: release-assets
+              merge-multiple: true
+
+         - uses: softprops/action-gh-release@v2
+           with:
+              tag_name: ${{ github.ref_name }}
+              files: |
+                 release-assets/open-agent-darwin-arm64
+                 release-assets/open-agent-darwin-x64
+                 release-assets/open-agent-linux-x64
+              body_path: release-notes.md
+              generate_release_notes: true
