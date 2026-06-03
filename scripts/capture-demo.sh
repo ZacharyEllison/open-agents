@@ -1,33 +1,71 @@
 #!/usr/bin/env bash
-# Capture a demo screenshot of open-agent TUI
-# Requires: termshot (brew install homeport/tap/termshot) or similar
+# Capture the open-agent TUI welcome screen for docs/assets/demo.png
 #
+# Requires: bun, aha (brew install aha), Google Chrome, ImageMagick
 # Usage: ./scripts/capture-demo.sh
-#
-# Alternative manual approach:
-#   1. Run: bun run dev
-#   2. Take a screenshot of the terminal showing the welcome screen
-#   3. Save to: docs/assets/demo.png
 
 set -euo pipefail
 
-OUTDIR="$(dirname "$0")/../docs/assets"
-mkdir -p "$OUTDIR"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+OUT="$ROOT/docs/assets/demo.png"
+TMP="${TMPDIR:-/tmp}/open-agent-demo-capture"
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
-echo "To capture a demo screenshot:"
-echo ""
-echo "  Option 1: Use termshot"
-echo "    brew install homeport/tap/termshot"
-echo "    termshot --show-cmd -- bun run dev"
-echo "    mv *.png $OUTDIR/demo.png"
-echo ""
-echo "  Option 2: Manual"
-echo "    1. Run: bun run dev"
-echo "    2. Screenshot the terminal (Cmd+Shift+4 on macOS)"
-echo "    3. Save to: $OUTDIR/demo.png"
-echo ""
-echo "  Option 3: SVG via svg-term"
-echo "    npm install -g svg-term-cli"
-echo "    # Record with asciinema first, then convert"
-echo "    asciinema rec /tmp/demo.cast"
-echo "    svg-term --in /tmp/demo.cast --out $OUTDIR/demo.svg"
+mkdir -p "$TMP" "$(dirname "$OUT")"
+
+if ! command -v aha >/dev/null 2>&1; then
+	echo "error: aha not found (brew install aha)" >&2
+	exit 1
+fi
+if [[ ! -x "$CHROME" ]]; then
+	echo "error: Google Chrome not found at $CHROME" >&2
+	exit 1
+fi
+if ! command -v magick >/dev/null 2>&1; then
+	echo "error: ImageMagick magick not found" >&2
+	exit 1
+fi
+
+bun "$ROOT/scripts/capture-welcome-demo.ts" >"$TMP/welcome.ansi"
+
+aha --black --no-header <"$TMP/welcome.ansi" >"$TMP/body.html"
+
+cat >"$TMP/welcome.html" <<'HTML'
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body {
+    margin: 0;
+    padding: 24px;
+    background: #0d0d0d;
+  }
+  #terminal {
+    font-family: "SF Mono", "Menlo", "Monaco", "Cascadia Code", "Consolas", monospace;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: pre;
+    letter-spacing: 0;
+  }
+</style>
+</head>
+<body>
+<div id="terminal">
+HTML
+cat "$TMP/body.html" >>"$TMP/welcome.html"
+cat >>"$TMP/welcome.html" <<'HTML'
+</div>
+</body>
+</html>
+HTML
+
+"$CHROME" --headless=new --disable-gpu --hide-scrollbars \
+	--window-size=1100,700 \
+	--screenshot="$TMP/raw.png" \
+	"file://$TMP/welcome.html"
+
+magick "$TMP/raw.png" -trim +repage -bordercolor '#0d0d0d' -border 20x20 \
+	-resize '720x>' "$OUT"
+
+echo "Wrote $OUT ($(magick identify -format '%wx%h' "$OUT"))"
