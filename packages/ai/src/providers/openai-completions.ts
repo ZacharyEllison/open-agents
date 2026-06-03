@@ -379,6 +379,38 @@ function getTrailingPartialDeepseekToken(text: string): string {
 	if (tail.length > 256) return "";
 	return tail;
 }
+// Gemma models (gemma-3, gemma-4) on llama.cpp leak channel/tool-call special
+// tokens into visible content when the server's config.ini has `reasoning = true`
+// but the template doesn't properly gate them. Tokens follow the pattern
+// `<|channel>thought`, `<channel|>`, `<|tool_call>`, `<tool_call|>`, etc.
+// Also matches `</code>}` fragments that precede leaked tool markers.
+const GEMMA_SPECIAL_TOKEN_REGEX = /<\|?[a-z_]{1,32}\|?>|<\/code>}\s*/g;
+const GEMMA_SPECIAL_TOKEN_AT_START_REGEX = /^\s*(?:<\|?[a-z_]{1,32}\|?>|<\/code>})/;
+const GEMMA_SPECIAL_TOKEN_AT_END_REGEX = /(?:<\|?[a-z_]{1,32}\|?>|<\/code>}\s*)\s*$/;
+
+function stripGemmaSpecialTokens(text: string): string {
+	const stripped = text.replace(GEMMA_SPECIAL_TOKEN_REGEX, "");
+	if (stripped === text) return text;
+
+	let normalized = stripped;
+	if (GEMMA_SPECIAL_TOKEN_AT_START_REGEX.test(text)) normalized = normalized.replace(/^\s+/u, "");
+	if (GEMMA_SPECIAL_TOKEN_AT_END_REGEX.test(text)) normalized = normalized.replace(/\s+$/u, "");
+	return normalized;
+}
+
+function getTrailingPartialGemmaToken(text: string): string {
+	// Hold back trailing `<|` or `<` that might be the start of a special token
+	const lastOpen = text.lastIndexOf("<|");
+	if (lastOpen !== -1) {
+		const tail = text.slice(lastOpen);
+		if (!tail.includes("|>") && !tail.includes(">")) {
+			if (tail.length <= 64) return tail;
+		}
+	}
+	if (text.endsWith("<")) return "<";
+	return "";
+}
+
 const OPENAI_COMPLETIONS_FIRST_EVENT_TIMEOUT_MESSAGE =
 	"OpenAI completions stream timed out while waiting for the first event";
 
@@ -539,6 +571,8 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			// so users don't see raw `<｜...｜>` tokens.
 			const stripDeepseekChatTemplateTokens =
 				/deepseek/i.test(model.id) && (model.provider === "nvidia" || model.provider === "deepseek");
+			const stripGemmaChatTemplateTokens =
+				/gemma/i.test(model.id) && (model.provider === "llama.cpp" || model.provider === "ollama");
 			type ToolCallStreamBlock = ToolCall & { partialArgs?: string; streamIndex?: number; lastParseLen?: number };
 			type OpenAIStreamBlock = TextContent | ThinkingContent | ToolCallStreamBlock;
 			const pendingToolCallBlocks: ToolCallStreamBlock[] = [];
@@ -658,11 +692,29 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 				const stripped = stripDeepseekSpecialTokens(flushable);
 				if (stripped && (stripped === flushable || stripped.trim().length > 0)) appendTextDelta(stripped);
 			};
+			let gemmaStripBuffer = "";
+			const flushGemmaStripBuffer = (final: boolean): void => {
+				if (gemmaStripBuffer.length === 0) return;
+				let flushable: string;
+				if (final) {
+					flushable = gemmaStripBuffer;
+					gemmaStripBuffer = "";
+				} else {
+					const trailing = getTrailingPartialGemmaToken(gemmaStripBuffer);
+					flushable = gemmaStripBuffer.slice(0, gemmaStripBuffer.length - trailing.length);
+					gemmaStripBuffer = trailing;
+				}
+				const stripped = stripGemmaSpecialTokens(flushable);
+				if (stripped && (stripped === flushable || stripped.trim().length > 0)) appendTextDelta(stripped);
+			};
 			const appendProcessedText = (processedText: string): void => {
 				if (processedText.length === 0) return;
 				if (stripDeepseekChatTemplateTokens) {
 					deepseekStripBuffer += processedText;
 					flushDeepseekStripBuffer(false);
+				} else if (stripGemmaChatTemplateTokens) {
+					gemmaStripBuffer += processedText;
+					flushGemmaStripBuffer(false);
 				} else {
 					appendTextDelta(processedText);
 				}
@@ -896,6 +948,9 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 
 			if (stripDeepseekChatTemplateTokens) {
 				flushDeepseekStripBuffer(true);
+			}
+			if (stripGemmaChatTemplateTokens) {
+				flushGemmaStripBuffer(true);
 			}
 
 			if (currentBlock?.type === "toolCall") {
