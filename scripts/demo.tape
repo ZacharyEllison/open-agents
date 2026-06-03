@@ -15,5 +15,8 @@ Set TypingSpeed 10ms
 Set PlaybackSpeed 1.0
 Set LoopOffset 88%
 
+Hide
 Type "bash scripts/demo-session.sh" Enter
-Sleep 12s
+Sleep 500ms
+Show
+Sleep 11s

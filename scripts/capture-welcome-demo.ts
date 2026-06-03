@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import { WelcomeComponent } from "../packages/coding-agent/src/modes/components/welcome";
 import { initTheme, theme } from "../packages/coding-agent/src/modes/theme/theme";
+import { padding, visibleWidth } from "@open-agents/tui";
 import { renderStatusLine } from "../packages/coding-agent/src/tui";
 
 const SHIMMER_TICK_MS = 125;
@@ -57,10 +58,22 @@ Math.random = originalRandom;
 
 const termWidth = 100;
 
+function padLineToWidth(line: string, width: number): string {
+	const vis = visibleWidth(line);
+	if (vis >= width) {
+		return line;
+	}
+	return line + padding(width - vis);
+}
+
 function writeFrame(tick: number): void {
 	for (const line of welcome.withShimmerTick(tick, termWidth)) {
-		process.stdout.write(`${line}\n`);
+		process.stdout.write(`${padLineToWidth(line, termWidth)}\n`);
 	}
+}
+
+function buildWelcomeLines(tick: number): string[] {
+	return welcome.withShimmerTick(tick, termWidth).map(line => padLineToWidth(line, termWidth));
 }
 
 function dimRule(): string {
@@ -167,41 +180,58 @@ function buildPromptLine(frame: number): string {
 	return `${promptPrefix()}${placeholder}`;
 }
 
-function writeFullDemoFrame(frame: number): void {
-	const tick = frame - 1;
-	writeFrame(tick);
-	process.stdout.write("\n");
-	process.stdout.write(`${dimRule()}\n`);
-	process.stdout.write("\n");
+function buildFullDemoLines(frame: number): string[] {
+	const lines = buildWelcomeLines(frame - 1);
+	lines.push(padLineToWidth("", termWidth));
+	lines.push(padLineToWidth(dimRule(), termWidth));
+	lines.push(padLineToWidth("", termWidth));
 
 	const interaction = buildInteraction(frame);
 	for (const line of interaction) {
-		process.stdout.write(`${line}\n`);
+		lines.push(padLineToWidth(line, termWidth));
 	}
 	if (interaction.length > 0) {
-		process.stdout.write("\n");
+		lines.push(padLineToWidth("", termWidth));
 	}
 
-	process.stdout.write(`${buildPromptLine(frame)}\n`);
+	lines.push(padLineToWidth(buildPromptLine(frame), termWidth));
+	return lines;
+}
+
+function writeLinesAtHome(lines: string[], lineCount: number, moveHome: boolean): void {
+	if (moveHome) {
+		process.stdout.write("\x1b[H");
+	}
+	for (let i = 0; i < lineCount; i++) {
+		process.stdout.write(`${lines[i] ?? padLineToWidth("", termWidth)}\n`);
+	}
 }
 
 if (fullDemo) {
+	let maxFrameLines = 0;
 	for (let frame = 1; frame <= FULL_DEMO_FRAMES; frame++) {
-		if (frame > 1) {
-			process.stdout.write("\x1b[2J\x1b[H");
-		}
-		writeFullDemoFrame(frame);
+		maxFrameLines = Math.max(maxFrameLines, buildFullDemoLines(frame).length);
+	}
+
+	for (let frame = 1; frame <= FULL_DEMO_FRAMES; frame++) {
+		const lines = buildFullDemoLines(frame);
+		writeLinesAtHome(lines, maxFrameLines, frame > 1);
 		if (frame < FULL_DEMO_FRAMES) {
 			await Bun.sleep(SHIMMER_TICK_MS);
 		}
 	}
 } else if (animate) {
 	const ticks = Math.ceil(SHIMMER_ANIM_MS / SHIMMER_TICK_MS);
+	let maxFrameLines = 0;
+	const frames: string[][] = [];
 	for (let t = 0; t < ticks; t++) {
-		if (t > 0) {
-			process.stdout.write("\x1b[2J\x1b[H");
-		}
-		writeFrame(t);
+		const lines = buildWelcomeLines(t);
+		frames.push(lines);
+		maxFrameLines = Math.max(maxFrameLines, lines.length);
+	}
+
+	for (let t = 0; t < ticks; t++) {
+		writeLinesAtHome(frames[t]!, maxFrameLines, t > 0);
 		if (t < ticks - 1) {
 			await Bun.sleep(SHIMMER_TICK_MS);
 		}
