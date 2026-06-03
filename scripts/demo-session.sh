@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Simulated open-agent TUI session for VHS demo capture (no live LLM).
-# Renders welcome shimmer + tiered interaction on every frame via capture-welcome-demo.ts.
+# Legacy wrapper — the demo now uses the real TUI via demo.tape directly.
+# This script is kept for the static welcome capture (PNG/static screenshots).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
