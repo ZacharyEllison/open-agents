@@ -59,6 +59,14 @@ delegating. The worker cannot ask the user anything — if you delegate a
 misunderstood task, the work is wasted. Cheap clarification now beats an
 expensive redo later.
 
+## File Editing
+
+You can create and edit `.md` files directly (plans, docs, notes) using `edit`
+and `write`. For code file edits (`.ts`, `.js`, `.py`, etc.), delegate to the
+worker via `task`.
+
+## Delegating to Worker
+
 BEFORE calling `task`:
 - Read every file the worker will need to edit or reference.
 - Search/grep to locate the exact symbols, line ranges, and call sites.
