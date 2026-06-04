@@ -16,6 +16,7 @@ import { truncateForPrompt } from "./approval";
 import { resolveEvalBackends } from "./eval-backends";
 import { upsertStatusEvent } from "./eval-render";
 import { resolveOutputMaxColumns, resolveOutputSinkHeadBytes } from "./output-meta";
+import { WORKER_ONLY_TIERS } from "./tier-access";
 import { ToolAbortError, ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 import { clampTimeout } from "./tool-timeouts";
@@ -148,6 +149,7 @@ async function resolveBackend(session: ToolSession, language: EvalLanguage): Pro
 
 export class EvalTool implements AgentTool<typeof evalSchema> {
 	readonly name = "eval";
+	readonly allowedTiers = WORKER_ONLY_TIERS;
 	readonly approval = "exec" as const;
 	readonly formatApprovalDetails = (args: unknown): string[] => {
 		const params = args as Partial<EvalToolParams>;

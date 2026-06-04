@@ -33,6 +33,7 @@ import {
 	splitGroupsByBlankLine,
 } from "./render-utils";
 import { queueResolveHandler } from "./resolve";
+import { WORKER_ONLY_TIERS } from "./tier-access";
 import { ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 
@@ -165,6 +166,7 @@ export interface AstEditToolDetails {
 
 export class AstEditTool implements AgentTool<typeof astEditSchema, AstEditToolDetails> {
 	readonly name = "ast_edit";
+	readonly allowedTiers = WORKER_ONLY_TIERS;
 	readonly approval = (args: unknown) => {
 		const paths = Array.isArray((args as Partial<z.infer<typeof astEditSchema>>).paths)
 			? ((args as Partial<z.infer<typeof astEditSchema>>).paths as string[])

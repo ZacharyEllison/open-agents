@@ -484,6 +484,13 @@ export class Settings {
 		}
 	}
 
+	/**
+	 * Clear a model tier assignment, resetting it to auto (default resolution).
+	 */
+	clearModelTier(tier: ModelTier): void {
+		this.setModelTier(tier, "auto");
+	}
+
 	/** @deprecated Use setModelTier */
 	setModelRole(role: ModelTier | string, modelId: string): void {
 		this.setModelTier(Settings.#resolveTierKey(role) as ModelTier, modelId);

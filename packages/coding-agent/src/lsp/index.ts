@@ -14,6 +14,7 @@ import lspDescription from "../prompts/tools/lsp.md" with { type: "text" };
 import type { ToolSession } from "../tools";
 import { truncateForPrompt } from "../tools/approval";
 import { formatPathRelativeToCwd, resolveToCwd } from "../tools/path-utils";
+import { WORKER_ONLY_TIERS } from "../tools/tier-access";
 import { ToolAbortError, ToolError, throwIfAborted } from "../tools/tool-errors";
 import { clampTimeout } from "../tools/tool-timeouts";
 import {
@@ -1185,6 +1186,7 @@ export function createLspWritethrough(cwd: string, options?: WritethroughOptions
  */
 export class LspTool implements AgentTool<typeof lspSchema, LspToolDetails, Theme> {
 	readonly name = "lsp";
+	readonly allowedTiers = WORKER_ONLY_TIERS;
 	readonly approval = (args: unknown): ToolApprovalDecision => {
 		const rawAction = (args as Partial<LspParams>).action;
 		const action = typeof rawAction === "string" ? rawAction.toLowerCase() : "";

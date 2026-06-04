@@ -364,6 +364,24 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"interface.contextFileMaxChars": {
+		type: "number",
+		default: -1,
+		ui: {
+			tab: "context",
+			label: "Interface Context File Limit",
+			description:
+				"Max characters of project context files (e.g. AGENTS.md) injected into the interface tier prompt. The interface delegates edits, so it rarely needs the full coding rules — trimming cuts prefill. -1 keeps the full content; 0 skips context files entirely. The worker always receives the full content.",
+			options: [
+				{ value: "-1", label: "Full", description: "Inject context files in full" },
+				{ value: "0", label: "Skip", description: "Omit context files from the interface prompt" },
+				{ value: "2000", label: "2K chars", description: "Aggressive trim" },
+				{ value: "4000", label: "4K chars", description: "Moderate trim" },
+				{ value: "8000", label: "8K chars", description: "Light trim" },
+			],
+		},
+	},
+
 	"interface.thinkingLevel": {
 		type: "string",
 		default: "medium",
@@ -3470,6 +3488,7 @@ export interface ThinkingBudgetsSettings {
 
 export interface InterfaceSettings {
 	compactionThresholdTokens: number;
+	contextFileMaxChars: number;
 	thinkingLevel: string;
 }
 
