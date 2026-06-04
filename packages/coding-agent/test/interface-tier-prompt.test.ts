@@ -124,7 +124,7 @@ describe("interface.contextFileMaxChars trimming", () => {
 	];
 
 	it("passes full context files when maxChars is -1 (default)", () => {
-		const maxChars = -1;
+		const maxChars: number = -1;
 		const result =
 			maxChars >= 0
 				? maxChars === 0
@@ -142,7 +142,7 @@ describe("interface.contextFileMaxChars trimming", () => {
 	});
 
 	it("skips context files when maxChars is 0", () => {
-		const maxChars = 0;
+		const maxChars: number = 0;
 		const result =
 			maxChars >= 0
 				? maxChars === 0
@@ -158,7 +158,7 @@ describe("interface.contextFileMaxChars trimming", () => {
 	});
 
 	it("truncates large files and preserves small ones", () => {
-		const maxChars = 2000;
+		const maxChars: number = 2000;
 		const result =
 			maxChars >= 0
 				? maxChars === 0
