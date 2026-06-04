@@ -6,7 +6,6 @@ import * as path from "node:path";
 import { performance } from "node:perf_hooks";
 import { $flag, getDebugLogPath } from "@open-agents/utils";
 import { isKeyRelease, matchesKey } from "./keys";
-import { isMouseClickable, isMouseSelectable, type MouseEvent, parseMouseEvent } from "./mouse";
 import { type Terminal, terminalHasEagerEraseScrollbackRisk } from "./terminal";
 import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } from "./terminal-capabilities";
 import {
@@ -300,7 +299,6 @@ export class TUI extends Container {
 	#previousHeight = 0;
 	#focusedComponent: Component | null = null;
 	#inputListeners = new Set<InputListener>();
-	#mouseDragActive = false;
 
 	/** Global callback for debug key (Shift+Ctrl+D). Called before input is forwarded to focused component. */
 	onDebug?: () => void;
@@ -336,7 +334,6 @@ export class TUI extends Container {
 	#eagerNativeScrollbackRebuild = false;
 	#hasEverRendered = false;
 	#stopped = false;
-	#childRegions = new Map<Component, { start: number; end: number }>();
 
 	// Overlay stack for modal components rendered on top of base content
 	overlayStack: {
@@ -349,16 +346,9 @@ export class TUI extends Container {
 	render(width: number): string[] {
 		width = Math.max(1, width);
 		const lines: string[] = [];
-		const regions = new Map<Component, { start: number; end: number }>();
-		let offset = 0;
 		for (const child of this.children) {
-			const start = offset;
-			const childLines = child.render(width);
-			offset += childLines.length;
-			lines.push(...childLines);
-			regions.set(child, { start, end: offset });
+			lines.push(...child.render(width));
 		}
-		this.#childRegions = regions;
 		return lines;
 	}
 
@@ -785,14 +775,6 @@ export class TUI extends Container {
 	}
 
 	#handleInput(data: string): void {
-		const mouseEvent = parseMouseEvent(data);
-		if (mouseEvent) {
-			if (mouseEvent.button === 0 || (mouseEvent.type === "move" && this.#mouseDragActive)) {
-				this.#handleMouseEvent(mouseEvent);
-			}
-			return;
-		}
-
 		if (this.#inputListeners.size > 0) {
 			let current = data;
 			for (const listener of this.#inputListeners) {
@@ -844,40 +826,6 @@ export class TUI extends Container {
 			}
 			this.#focusedComponent.handleInput(data);
 			this.requestRender();
-		}
-	}
-
-	#handleMouseEvent(event: MouseEvent): void {
-		const focused = this.#focusedComponent;
-		if (!isMouseClickable(focused)) return;
-
-		const region = this.#childRegions.get(focused);
-		if (!region) return;
-
-		const contentLine = this.#viewportTopRow + (event.row - 1);
-		if (contentLine < region.start || contentLine >= region.end) return;
-
-		const localTerminalRow = contentLine - region.start + 1;
-
-		if (event.type === "press") {
-			if (isMouseSelectable(focused)) {
-				this.#mouseDragActive = true;
-				focused.handleMouseDragStart(localTerminalRow, event.col);
-			} else {
-				focused.handleMouseClick(localTerminalRow, event.col);
-			}
-			this.requestRender(false, { allowUnknownViewportMutation: true });
-		} else if (event.type === "move" && this.#mouseDragActive) {
-			if (isMouseSelectable(focused)) {
-				focused.handleMouseDrag(localTerminalRow, event.col);
-				this.requestRender(false, { allowUnknownViewportMutation: true });
-			}
-		} else if (event.type === "release" && this.#mouseDragActive) {
-			this.#mouseDragActive = false;
-			if (isMouseSelectable(focused)) {
-				focused.handleMouseDragEnd(localTerminalRow, event.col);
-				this.requestRender(false, { allowUnknownViewportMutation: true });
-			}
 		}
 	}
 

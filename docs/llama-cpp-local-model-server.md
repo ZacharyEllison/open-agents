@@ -29,7 +29,7 @@ PRESET="/path/to/config.ini"
 : "${LLAMA_PORT:=8080}"
 : "${LLAMA_MODELS_MAX:=2}"
 : "${LLAMA_PARALLEL:=1}"
-: "${LLAMA_SLOT_PROMPT_SIMILARITY:=0.0}"
+: "${LLAMA_SLOT_PROMPT_SIMILARITY:=0.5}"
 
 llama-server \
     --models-preset "${PRESET}" \
@@ -39,8 +39,8 @@ llama-server \
     --slot-prompt-similarity "${LLAMA_SLOT_PROMPT_SIMILARITY}" \
     --host 0.0.0.0 \
     --port "${LLAMA_PORT}" \
-    --cache-ram 0 \
     --metrics \
+    --webui-mcp-proxy \
     --prio 2
 ```
 
@@ -51,10 +51,12 @@ llama-server \
 | `--models-max 2` | 2 | Interface + worker co-resident. No swapping between turns. |
 | `--parallel 1` | 1 (global default) | One concurrent request per model. Per-model `parallel` in `config.ini` overrides this. |
 | `--kv-unified` | — | Share KV cache memory across models instead of pre-allocating per slot. |
-| `--slot-prompt-similarity 0.0` | 0.0 | See [KV cache reuse](#kv-cache-reuse-tradeoff) below. |
-| `--cache-ram 0` | 0 | Disable RAM-based KV cache persistence. See [KV cache reuse](#kv-cache-reuse-tradeoff). |
+| `--slot-prompt-similarity 0.5` | 0.5 | Reuse a slot's KV cache when the prompt prefix overlaps by 50%+. See [KV cache reuse](#kv-cache-reuse-tradeoff) below. |
 | `--metrics` | — | Expose `/metrics` for timing diagnostics. |
+| `--webui-mcp-proxy` | — | Expose the bundled web UI / MCP proxy. |
 | `--prio 2` | 2 | Scheduling priority for the server process. |
+
+`--cache-ram` is left at its default (RAM-based KV persistence enabled) so released slots keep their KV for reuse on the next turn.
 
 ## config.ini (model presets)
 
@@ -153,28 +155,37 @@ Two flags control whether llama-server reuses KV cache across requests:
 
 | Flag | Current | Effect |
 |------|---------|--------|
-| `--slot-prompt-similarity` | `0.0` | Minimum prompt prefix overlap required to reuse a slot's KV cache. `0.0` = reuse on any overlap. |
-| `--cache-ram` | `0` | RAM-based KV cache persistence. `0` = disabled (KV evicted when slot is released). |
+| `--slot-prompt-similarity` | `0.5` | Minimum prompt prefix overlap required to reuse a slot's KV cache. `0.5` = reuse when 50%+ of the prefix matches. |
+| `--cache-ram` | default (enabled) | RAM-based KV cache persistence. Enabled = KV survives slot release and is available for the next turn. |
 
-### The problem
+### What this buys you
 
-With `--cache-ram 0`, the KV cache is discarded after each request completes. Combined with `--slot-prompt-similarity 0.0`, this means **every request re-prefills the entire prompt from scratch** — even when 95% of the prompt is identical to the previous turn.
+The interface tier carries a large fixed prefix (system prompt + tool schemas + project context — on the order of 20-40k tokens). With cache reuse enabled, that prefix is prefilled **once** and reused on every subsequent turn: only the new turn (~200-2000 tokens) is prefilled, dropping TTFT from tens of seconds to ~1-3s. The fixed prefix still exists, but it is effectively free after the first turn.
 
-For the interface model with a ~27k-token prompt at 600 tok/s, this costs ~45s of prefill on every message. With cache reuse, only the new turn (~200-2000 tokens) would need prefilling — reducing TTFT from 45s to 1-3s.
+This pairs with the harness-side trimming levers (worker-only heavy tools hidden from the interface schema, and `interface.contextFileMaxChars` to trim/skip AGENTS.md for the interface) which reduce the size of that prefix in the first place.
 
-### Why it's disabled
+### Verifying reuse
 
-Hybrid Qwen checkpoints (SWA architecture) can produce corrupted output when partial KV cache reuse crosses a checkpoint boundary incorrectly. The conservative setting (`cache-ram 0`, `slot-prompt-similarity 0.0`) avoids this entirely at the cost of always re-prefilling.
+After two interface turns, inspect the slot:
+
+```bash
+curl -s "http://127.0.0.1:8080/slots?model=gemma4-26b-a4b"
+```
+
+On the second turn, `n_prompt_tokens_processed` should be small (only the new suffix) while `n_prompt_tokens` reflects the full prompt — that gap is the reused cache.
+
+### Caveat: hybrid SWA models
+
+Hybrid Qwen checkpoints (SWA architecture) can produce corrupted output when partial KV cache reuse crosses a checkpoint boundary incorrectly. `--slot-prompt-similarity 0.5` is safe for the MoE Gemma interface. If you route a hybrid Qwen model as the worker and observe corrupted output, lower similarity for that workload (llama-server does not yet support per-model cache settings).
 
 ### Recommendations
 
 | Setup | `slot-prompt-similarity` | `cache-ram` | Notes |
 |-------|--------------------------|-------------|-------|
-| Conservative (current) | `0.0` | `0` | Safe for all models. Full re-prefill every turn. |
-| Interface-friendly | `0.5` | default | Reuses cache when 50%+ prefix matches. Safe for MoE Gemma. May cause issues on Qwen worker if the hybrid SWA cache is corrupted on partial reuse. |
-| Per-model (ideal, not yet supported) | — | — | llama-server does not support per-model cache settings. If added, use `0.5+` for the MoE interface and `0.0` for the hybrid Qwen worker. |
+| Current (default) | `0.5` | default (enabled) | Reuses cache when 50%+ prefix matches. Safe for the MoE Gemma interface; near-instant repeat turns. |
+| Conservative | `0.0` | `0` | Full re-prefill every turn. Only needed if a hybrid SWA worker corrupts on partial reuse. |
 
-The safest middle ground: keep the prompt small via aggressive interface compaction (`interface.compactionThresholdTokens`) and ONNX compactor, so even full re-prefill is cheap.
+Also keep the prompt small via aggressive interface compaction (`interface.compactionThresholdTokens`) and the ONNX compactor, so even a cold prefill stays cheap.
 
 ## Memory budget (Apple Silicon example)
 

@@ -17,7 +17,8 @@ import replaceDescription from "../prompts/tools/replace.md" with { type: "text"
 import type { ToolSession } from "../tools";
 import { truncateForPrompt } from "../tools/approval";
 import { isInternalUrlPath } from "../tools/path-utils";
-import { WORKER_ONLY_TIERS } from "../tools/tier-access";
+import { INTERFACE_MARKDOWN_TIERS, validateInterfaceTierFileAccess } from "../tools/tier-access";
+import { ToolError } from "../tools/tool-errors";
 import { type EditMode, normalizeEditMode, resolveEditMode } from "../utils/edit-mode";
 import { executeHashlineSingle, type HashlineParams, hashlineEditParamsSchema } from "./hashline";
 import { type ApplyPatchParams, applyPatchSchema, expandApplyPatchToEntries } from "./modes/apply-patch";
@@ -295,7 +296,7 @@ export class EditTool implements AgentTool<TInput> {
 		`File: ${truncateForPrompt(extractApprovalPath(args))}`,
 	];
 	readonly name = "edit";
-	readonly allowedTiers = WORKER_ONLY_TIERS;
+	readonly allowedTiers = INTERFACE_MARKDOWN_TIERS;
 	readonly label = "Edit";
 	readonly loadMode = "essential";
 	readonly nonAbortable = true;
@@ -369,6 +370,9 @@ export class EditTool implements AgentTool<TInput> {
 		onUpdate?: AgentToolUpdateCallback<EditToolDetails, TInput>,
 		context?: AgentToolContext,
 	): Promise<AgentToolResult<EditToolDetails, TInput>> {
+		const blockReason = validateInterfaceTierFileAccess(extractApprovalPath(params), this.session.taskDepth ?? 0);
+		if (blockReason) throw new ToolError(blockReason);
+
 		const modeDefinition = this.#getModeDefinition();
 		return modeDefinition.execute(this, params, signal, getLspBatchRequest(context?.toolCall), onUpdate);
 	}

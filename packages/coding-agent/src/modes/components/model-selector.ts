@@ -922,7 +922,8 @@ export class ModelSelectorComponent extends Container {
 				})
 			: this.#menuRoleActions.map((action, index) => {
 					const prefix = index === this.#menuSelectedIndex ? `  ${theme.nav.cursor} ` : "    ";
-					return `${prefix}${action.label}`;
+					const assigned = this.#roles[action.role] ? theme.fg("dim", " [assigned]") : "";
+					return `${prefix}${action.label}${assigned}`;
 				});
 
 		const selectedRoleName = this.#menuSelectedRole ? getRoleInfo(this.#menuSelectedRole, this.#settings).name : "";
@@ -930,7 +931,9 @@ export class ModelSelectorComponent extends Container {
 			showingThinking && this.#menuSelectedRole
 				? `  Thinking for: ${selectedRoleName} (${selectedItem.id})`
 				: `  Action for: ${selectedItem.id}`;
-		const hintText = showingThinking ? "  Enter: confirm  Esc: back" : "  Enter: continue  Esc: cancel";
+		const hintText = showingThinking
+			? "  Enter: confirm  Esc: back"
+			: "  Enter: continue  x: reset to auto  Esc: cancel";
 		const menuWidth = Math.max(
 			visibleWidth(headerText),
 			visibleWidth(hintText),
@@ -1060,6 +1063,18 @@ export class ModelSelectorComponent extends Container {
 			return;
 		}
 
+		// x - reset tier to auto (only in role step, only if tier is assigned)
+		if (matchesKey(keyData, "x")) {
+			if (this.#menuStep === "role") {
+				const action = this.#menuRoleActions[this.#menuSelectedIndex];
+				if (action && this.#roles[action.role]) {
+					this.#handleClearTier(action.role);
+					this.#closeMenu();
+				}
+			}
+			return;
+		}
+
 		if (getKeybindings().matches(keyData, "tui.select.cancel")) {
 			if (this.#menuStep === "thinking" && this.#menuSelectedRole !== null) {
 				this.#menuStep = "role";
@@ -1094,6 +1109,12 @@ export class ModelSelectorComponent extends Container {
 		this.#onSelectCallback(item.model, role, selectedThinkingLevel, item.selector);
 
 		// Update list to show new badges
+		this.#updateList();
+	}
+
+	#handleClearTier(role: string): void {
+		this.#settings.clearModelTier(role as (typeof MODEL_TIER_IDS)[number]);
+		delete this.#roles[role];
 		this.#updateList();
 	}
 

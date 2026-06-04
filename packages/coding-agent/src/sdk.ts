@@ -153,6 +153,7 @@ import { ToolContextStore } from "./tools/context";
 import { getImageGenTools } from "./tools/image-gen";
 import { wrapToolWithMetaNotice } from "./tools/output-meta";
 import { queueResolveHandler } from "./tools/resolve";
+import { isWorkerOnlyTool } from "./tools/tier-access";
 import { ttsTool } from "./tools/tts";
 import { EventBus } from "./utils/event-bus";
 import { buildNamedToolChoice } from "./utils/tool-choice";
@@ -1660,9 +1661,38 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const discoverableToolSummary = summarizeDiscoverableTools(discoverableToolsForDesc);
 			const hasDiscoverableTools =
 				mcpDiscoveryEnabled && toolNames.includes("search_tool_bm25") && discoverableToolsForDesc.length > 0;
-			const promptTools = buildSystemPromptToolMetadata(tools, {
+			// Interface tier (taskDepth 0) never sees worker-only tools on the wire, so
+			// keep them out of the rendered prompt too — both the tool inventory and the
+			// `{{#has tools "X"}}` guidance blocks. This trims interface prefill and keeps
+			// the role boundary unambiguous (worker-only work is delegated via `task`).
+			const promptVisibleTools =
+				taskDepth === 0
+					? new Map(Array.from(tools.entries()).filter(([, tool]) => !isWorkerOnlyTool(tool)))
+					: tools;
+			const promptVisibleToolNames =
+				taskDepth === 0
+					? toolNames.filter(name => {
+							const tool = tools.get(name);
+							return !tool || !isWorkerOnlyTool(tool);
+						})
+					: toolNames;
+			const promptTools = buildSystemPromptToolMetadata(promptVisibleTools, {
 				search_tool_bm25: { description: renderSearchToolBm25Description(discoverableToolsForDesc) },
 			});
+			// Interface tier delegates edits, so it rarely needs the full project context
+			// files (AGENTS.md etc.). Honor `interface.contextFileMaxChars` to trim or skip
+			// them and cut prefill; the worker (taskDepth > 0) always gets the full content.
+			const interfaceContextFileMaxChars = settings.getGroup("interface").contextFileMaxChars;
+			const promptContextFiles =
+				taskDepth === 0 && interfaceContextFileMaxChars >= 0
+					? interfaceContextFileMaxChars === 0
+						? []
+						: contextFiles.map(file =>
+								file.content.length > interfaceContextFileMaxChars
+									? { ...file, content: `${file.content.slice(0, interfaceContextFileMaxChars)}\n[truncated]` }
+									: file,
+							)
+					: contextFiles;
 			const memoryBackend = resolveMemoryBackend(settings);
 			const memoryInstructions = await memoryBackend.buildDeveloperInstructions(agentDir, settings, session);
 
@@ -1687,9 +1717,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const defaultPrompt = await buildSystemPromptInternal({
 				cwd,
 				skills,
-				contextFiles,
+				contextFiles: promptContextFiles,
 				tools: promptTools,
-				toolNames,
+				toolNames: promptVisibleToolNames,
 				rules: rulebookRules,
 				alwaysApplyRules,
 				skillsSettings: settings.getGroup("skills"),

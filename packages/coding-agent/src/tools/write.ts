@@ -54,7 +54,7 @@ import {
 	updateRowByKey,
 	updateRowByRowId,
 } from "./sqlite-reader";
-import { WORKER_ONLY_TIERS } from "./tier-access";
+import { INTERFACE_MARKDOWN_TIERS, validateInterfaceTierFileAccess } from "./tier-access";
 import { ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 
@@ -254,7 +254,7 @@ function parseSqliteWriteTarget(subPath: string, queryString: string): { table: 
  */
 export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails> {
 	readonly name = "write";
-	readonly allowedTiers = WORKER_ONLY_TIERS;
+	readonly allowedTiers = INTERFACE_MARKDOWN_TIERS;
 	readonly approval = (args: unknown) => {
 		const rawPath = (args as Partial<WriteParams>).path;
 		return typeof rawPath === "string" && isInternalUrlPath(rawPath) ? "read" : "write";
@@ -755,6 +755,9 @@ export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails
 		_onUpdate?: AgentToolUpdateCallback<WriteToolDetails>,
 		context?: AgentToolContext,
 	): Promise<AgentToolResult<WriteToolDetails>> {
+		const blockReason = validateInterfaceTierFileAccess(path, this.session.taskDepth ?? 0);
+		if (blockReason) throw new ToolError(blockReason);
+
 		return untilAborted(signal, async () => {
 			// Strip hashline display prefixes (¶PATH#HASH + LINE:) if the model copied them from read output
 			const { text: cleanContent, stripped } = stripWriteContent(this.session, content);

@@ -707,17 +707,22 @@ async function streamAssistantResponse(
 	const activeModel = getActiveModel(config);
 	const normalizedMessages = normalizeMessagesForProvider(llmMessages, activeModel);
 
+	// Filter tools by tier so the model never sees tools it cannot use.
+	const activeTier = getActiveTier(config);
+	const visibleTools = context.tools?.filter(t => isToolAllowedForTier(t, activeTier));
+	const tierFilteredContext: AgentContext = { ...context, tools: visibleTools };
+
 	// Build LLM context — append-only mode caches system prompt + tools
 	// AND keeps an append-only message log so prior-turn bytes are stable.
 	let llmContext: Context;
 	if (config.appendOnlyContext) {
 		config.appendOnlyContext.syncMessages(normalizedMessages);
-		llmContext = config.appendOnlyContext.build(context, { intentTracing: !!config.intentTracing });
+		llmContext = config.appendOnlyContext.build(tierFilteredContext, { intentTracing: !!config.intentTracing });
 	} else {
 		llmContext = {
 			systemPrompt: context.systemPrompt,
 			messages: normalizedMessages,
-			tools: normalizeTools(context.tools, !!config.intentTracing),
+			tools: normalizeTools(visibleTools, !!config.intentTracing),
 		};
 	}
 
