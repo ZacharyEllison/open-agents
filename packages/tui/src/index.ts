@@ -1,7 +1,6 @@
 // Core TUI interfaces and classes
 
 export * from "./autocomplete";
-export * from "./clipboard";
 export * from "./components/box";
 export * from "./components/cancellable-loader";
 export * from "./components/editor";
@@ -19,7 +18,6 @@ export type * from "./editor-component";
 export * from "./fuzzy";
 export * from "./keybindings";
 export * from "./keys";
-export * from "./mouse";
 export * from "./stdin-buffer";
 export type * from "./symbols";
 export * from "./terminal";
