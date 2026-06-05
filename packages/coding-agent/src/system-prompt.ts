@@ -14,7 +14,8 @@ import { loadSkills, type Skill } from "./extensibility/skills";
 import { hasObsidian } from "./internal-urls/vault-protocol";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import projectPromptTemplate from "./prompts/system/project-prompt.md" with { type: "text" };
-import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
+import systemPromptInterfaceTemplate from "./prompts/system/system-prompt-interface.md" with { type: "text" };
+import systemPromptWorkerTemplate from "./prompts/system/system-prompt-worker.md" with { type: "text" };
 import { shortenPath } from "./tools/render-utils";
 import { AGENTS_MD_LIMIT, buildWorkspaceTree, type WorkspaceTree } from "./workspace-tree";
 
@@ -230,6 +231,72 @@ export interface LoadContextFilesOptions {
 	cwd?: string;
 }
 
+/** One entry of the interface-tier `<context-index>` pointer manifest. */
+export interface ContextIndexEntry {
+	path: string;
+	/** UTF-8 byte size of the on-disk content. */
+	byteSize: number;
+	/** Depth from cwd (0 = in cwd), when known. */
+	depth?: number;
+	/** First heading / frontmatter title, capped at ~120 chars. Empty when none. */
+	summary: string;
+}
+
+const CONTEXT_SUMMARY_MAX_CHARS = 120;
+
+/**
+ * Derive a one-line summary for a context file's pointer-manifest entry.
+ * Prefers a frontmatter `title`/`name`/`description`, else the first markdown
+ * heading, else the first non-empty line. Capped at {@link CONTEXT_SUMMARY_MAX_CHARS}.
+ */
+export function summarizeContextFile(content: string): string {
+	const cap = (value: string): string => {
+		const trimmed = value.trim().replace(/\s+/g, " ");
+		return trimmed.length > CONTEXT_SUMMARY_MAX_CHARS
+			? `${trimmed.slice(0, CONTEXT_SUMMARY_MAX_CHARS - 1).trimEnd()}…`
+			: trimmed;
+	};
+
+	const text = content.replace(/^\uFEFF/, "");
+	const leading = text.trimStart();
+
+	// YAML frontmatter: prefer a human-facing title/name/description field.
+	if (leading.startsWith("---")) {
+		const end = leading.indexOf("\n---", 3);
+		if (end !== -1) {
+			const frontmatter = leading.slice(3, end);
+			const match = frontmatter.match(/^\s*(?:title|name|description)\s*:\s*(.+)$/im);
+			if (match?.[1]) {
+				const value = match[1].trim().replace(/^["']|["']$/g, "");
+				if (value) return cap(value);
+			}
+		}
+	}
+
+	for (const rawLine of leading.split("\n")) {
+		const line = rawLine.trim();
+		if (line.length === 0 || line === "---") continue;
+		const heading = line.match(/^#{1,6}\s+(.+)$/);
+		if (heading?.[1]) return cap(heading[1]);
+		// First meaningful prose line as a fallback summary.
+		return cap(line.replace(/^[#>*\-\s]+/, ""));
+	}
+
+	return "";
+}
+
+/** Build the interface-tier pointer manifest from loaded context files. */
+export function buildContextIndex(
+	contextFiles: Array<{ path: string; content: string; depth?: number }>,
+): ContextIndexEntry[] {
+	return contextFiles.map(file => ({
+		path: file.path,
+		byteSize: Buffer.byteLength(file.content, "utf-8"),
+		depth: file.depth,
+		summary: summarizeContextFile(file.content),
+	}));
+}
+
 function dedupeExactContextFiles(
 	contextFiles: Array<{ path: string; content: string; depth?: number }>,
 ): Array<{ path: string; content: string; depth?: number }> {
@@ -333,8 +400,20 @@ export interface BuildSystemPromptOptions {
 	tools?: Map<string, SystemPromptToolMetadata>;
 	/** Tool names to include in prompt. */
 	toolNames?: string[];
-	/** Text to append to system prompt. */
+	/** Text to append to system prompt (public catch-all → `<append>` slot). */
 	appendSystemPrompt?: string;
+	/**
+	 * Session-stable memory backend developer-instructions (static guidance +
+	 * mental models + first-turn recall). Rendered into a dedicated `<memory>`
+	 * slot so it is one authoritative, dedupable block in the frozen prefix —
+	 * not concatenated into the public `<append>` catch-all.
+	 */
+	memoryInstructions?: string;
+	/**
+	 * Aggregated MCP server instructions, rendered into a dedicated
+	 * `<mcp-instructions>` slot. Server-controlled and session-stable.
+	 */
+	mcpInstructions?: string;
 	/** Repeat full tool descriptions in system prompt. Default: false */
 	repeatToolDescriptions?: boolean;
 	/** Skills settings for discovery. */
@@ -343,6 +422,13 @@ export interface BuildSystemPromptOptions {
 	cwd?: string;
 	/** Pre-loaded context files (skips discovery if provided). */
 	contextFiles?: Array<{ path: string; content: string; depth?: number }>;
+	/**
+	 * How project context files are rendered:
+	 * - `"full"` (default): inline the file bodies in a `<context>` block.
+	 * - `"pointer"`: render a lightweight `<context-index>` manifest (path, byte
+	 *   size, summary) the agent can read on demand. Slims interface prefill.
+	 */
+	contextInjection?: "pointer" | "full";
 	/** Skills provided directly to system prompt construction. */
 	skills?: Skill[];
 	/** Pre-loaded rulebook rules (descriptions, excluding TTSR and always-apply). */
@@ -383,11 +469,14 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		customPrompt,
 		tools,
 		appendSystemPrompt,
+		memoryInstructions,
+		mcpInstructions,
 		repeatToolDescriptions = false,
 		skillsSettings,
 		toolNames: providedToolNames,
 		cwd,
 		contextFiles: providedContextFiles,
+		contextInjection = "full",
 		skills: providedSkills,
 		rules,
 		alwaysApplyRules,
@@ -547,7 +636,13 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		resolvedCustomPrompt,
 		resolvedAppendPrompt,
 	]);
-	const promptSources = [effectiveSystemPromptCustomization, resolvedCustomPrompt, resolvedAppendPrompt];
+	const promptSources = [
+		effectiveSystemPromptCustomization,
+		resolvedCustomPrompt,
+		resolvedAppendPrompt,
+		memoryInstructions,
+		mcpInstructions,
+	];
 	const injectedAlwaysApplyRules = dedupeAlwaysApplyRules(alwaysApplyRules, promptSources);
 
 	const environment = await logger.time("getEnvironmentInfo", getEnvironmentInfo);
@@ -555,12 +650,16 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		systemPromptCustomization: effectiveSystemPromptCustomization,
 		customPrompt: resolvedCustomPrompt,
 		appendPrompt: resolvedAppendPrompt ?? "",
+		memoryInstructions: memoryInstructions ?? "",
+		mcpInstructions: mcpInstructions ?? "",
 		tools: toolNames,
 		toolInfo,
 		repeatToolDescriptions,
 		toolRefs,
 		environment,
 		contextFiles,
+		contextPointerMode: contextInjection === "pointer",
+		contextIndex: contextInjection === "pointer" ? buildContextIndex(contextFiles) : [],
 		agentsMdSearch: { files: agentsMdFiles },
 		workspaceTree,
 		skills: filteredSkills,
@@ -581,7 +680,8 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		isInterfaceTier,
 		isWorkerTier: !isInterfaceTier,
 	};
-	const rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
+	const harnessTemplate = isInterfaceTier ? systemPromptInterfaceTemplate : systemPromptWorkerTemplate;
+	const rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : harnessTemplate, data);
 	const systemPrompt = [rendered];
 	const projectPrompt = resolvedCustomPrompt ? "" : prompt.render(projectPromptTemplate, data).trim();
 	if (projectPrompt) {

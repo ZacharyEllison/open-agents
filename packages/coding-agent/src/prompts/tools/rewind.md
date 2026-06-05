@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 End an active checkpoint. Rewind context to it, replacing intermediate exploration with your report.
 
 Call immediately after `checkpoint`-started investigative work.

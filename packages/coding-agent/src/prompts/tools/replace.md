@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Performs string replacements in files with fuzzy whitespace matching.
 
 <instruction>

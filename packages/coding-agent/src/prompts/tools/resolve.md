@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Resolves a pending action by either applying or discarding it.
 - `action` is required:
   - `"apply"` persists / submits the pending action.

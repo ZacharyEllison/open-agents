@@ -5,10 +5,24 @@
 ### Added
 
 - Allowed the interface tier to invoke `bash` for read-only shell commands (git status/log/diff/pull, file listing, package listing, `bun check`/`bun test`, etc.) while blocking destructive patterns; mutating tools (`edit`, `write`, …) remain worker-only.
+- Added a `context.injection` setting (`pointer` | `full`, default `pointer`) and a matching `worker.contextInjection` override (default `full`). In `pointer` mode the interface tier renders a lightweight `<context-index>` manifest (path, byte size, and a first-heading/frontmatter summary capped at ~120 chars) instead of inlining the full project context-file bodies, slimming interface prefill while keeping the files one read away. Always-apply rules stay in the harness regardless of injection mode.
+- Added `BeforeAgentStartResult.mergeSystemPrompt` (a `{ append }` slot patch) so extensions can append session-stable guidance to the system-prompt prefix without a full `systemPrompt[]` replacement; the legacy full-replacement path is retained but documented as cache-heavy.
+
+### Changed
+
+- Split the monolithic harness system prompt into lean per-tier templates (`system-prompt-interface.md` / `system-prompt-worker.md`) and removed the staff-engineer persona opener, `<stakes>`, `<completeness>`, and `<yielding>` blocks from both tiers. This trims the frozen prefill (~700 fewer tokens on the interface harness, ~150 on the worker) without touching the inviolable `CONTRACT` or tier workflows.
+- The legacy `interface.contextFileMaxChars: 0` ("skip") now maps to the `<context-index>` pointer manifest instead of silently omitting project context files; an explicit `-1`/positive trim value migrates to `context.injection: full` so prior inline behavior is preserved.
+- Tightened the interface-tier workspace tree to depth ≤ 2 and 60 rendered lines (worker stays at depth ≤ 3 / 120 lines), and the `<workspace-tree>` `depth ≤ N` note now reflects the active cap.
+- Consolidated `@path` file mentions into a single `<attached-files>` block and added a 10 MB aggregate auto-read budget across all mentions in a turn (in addition to the existing 5 MB per-file cap); files past the budget are listed by path with a `budgetExceeded` note rather than inlined.
+- MCP discovery advertisements now derive a per-server summary from the first line of the server's `instructions`/description (markdown heading markers stripped, capped at ~120 chars) — no markdown tool-doc parser is run for MCP servers.
+- Memory backend developer-instructions and MCP server instructions now render into dedicated `<memory>` and `<mcp-instructions>` slots in the project prompt, and the public `appendSystemPrompt` catch-all moved to its own `<append>` slot — instead of all three being concatenated into one append block. Each session-stable source is now an independent, dedupable region of the frozen prefix.
+- Autoresearch mode now appends its protocol as a trailing system-prompt block instead of re-embedding the entire base prompt inside a single merged block, so the cached harness/project prefix stays byte-stable when autoresearch activates.
+- The `/context` breakdown now reports tool tokens split into separate **Tool descriptions** and **Tool schemas** categories (which sum to the previous combined "System tools" figure), so the description cost that lazy tool wiring targets is visible on its own.
 
 ### Fixed
 
 - Fixed interface-tier calls to worker-only tools (`edit`, `write`, `checkpoint`, `rewind`) returning a tier-denied error; the harness now auto-executes them directly so the model receives a normal tool result without an extra `task` delegation hop.
+- Fixed first-turn long-term memory recall (Hindsight / mnemopi) appearing twice in context when a base-prompt rebuild (mental-model load, tool activation, or TTL reload) raced the first-turn recall injection. Recall is now merged through a single enforcement point so it is present exactly once.
 
 ## [15.8.1] - 2026-06-02
 

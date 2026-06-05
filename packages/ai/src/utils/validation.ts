@@ -814,6 +814,25 @@ function flattenIssues(issues: ReadonlyArray<ZodIssue>): FlatIssue[] {
  *   - Only accepts parsed results that match the expected type
  *   - Clones the args object before mutation (copy-on-write)
  */
+/**
+ * Flatten an arbitrary value into a string for a schema field that expects one.
+ * Objects/arrays are pretty-printed as JSON (readable for a downstream model and
+ * lossless); scalars use their natural string form. Used as a last-resort
+ * coercion when a model nests prose inside a structured value (e.g. emitting
+ * `context: { assignment: "…" }` instead of `context: "…"`).
+ */
+function coerceValueToString(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "object") {
+		try {
+			return JSON.stringify(value, null, 2);
+		} catch {
+			return String(value);
+		}
+	}
+	return String(value);
+}
+
 function coerceArgsFromIssues(args: unknown, issues: FlatIssue[]): { value: unknown; changed: boolean } {
 	if (issues.length === 0) return { value: args, changed: false };
 
@@ -836,14 +855,24 @@ function coerceArgsFromIssues(args: unknown, issues: FlatIssue[]): { value: unkn
 		if (issue.expectedTypes.length === 0) continue;
 
 		const currentValue = getValueAtPointer(nextArgs, issue.instancePath);
-		if (typeof currentValue !== "string") continue;
 
-		const result = tryParseJsonForTypes(currentValue, issue.expectedTypes);
-		const coercedValue = result.changed
-			? result.value
-			: issue.expectedTypes.includes("array")
-				? [currentValue]
-				: undefined;
+		let coercedValue: unknown;
+		if (typeof currentValue === "string") {
+			const result = tryParseJsonForTypes(currentValue, issue.expectedTypes);
+			coercedValue = result.changed
+				? result.value
+				: issue.expectedTypes.includes("array")
+					? [currentValue]
+					: undefined;
+		} else if (issue.expectedTypes.includes("string") && currentValue !== undefined && currentValue !== null) {
+			// The schema wanted a string but the model emitted a structured value
+			// (object/array) or a scalar. These string fields are free-form prose
+			// destined for another model, so flatten the value to text instead of
+			// rejecting the whole call — a reasoning model can still read it.
+			coercedValue = coerceValueToString(currentValue);
+		} else {
+			coercedValue = undefined;
+		}
 		if (coercedValue === undefined) continue;
 
 		if (!owned) {
@@ -922,6 +951,47 @@ function flattenJsonSchemaIssues(issues: ReadonlyArray<JsonSchemaValidationIssue
 
 function formatIssuePath(path: ReadonlyArray<PropertyKey>): string {
 	return path.length === 0 ? "root" : path.map(seg => String(seg)).join("/");
+}
+
+/** Human-readable type label for a single JSON-schema property node. */
+function jsonSchemaTypeLabel(propSchema: unknown): string {
+	if (!isPlainRecord(propSchema)) return "any";
+	if (Array.isArray(propSchema.enum)) return "enum";
+	const { type } = propSchema;
+	if (typeof type === "string") {
+		if (type === "array" && isPlainRecord(propSchema.items) && typeof propSchema.items.type === "string") {
+			return `array of ${propSchema.items.type}`;
+		}
+		return type;
+	}
+	// Optional/nullable fields are commonly emitted as anyOf:[<type>, null].
+	const variants = Array.isArray(propSchema.anyOf)
+		? propSchema.anyOf
+		: Array.isArray(propSchema.oneOf)
+			? propSchema.oneOf
+			: undefined;
+	if (variants) {
+		const labels = variants.map(jsonSchemaTypeLabel).filter(label => label !== "null" && label !== "any");
+		if (labels.length > 0) return [...new Set(labels)].join(" | ");
+	}
+	return "any";
+}
+
+/**
+ * Render the tool's expected parameter shape from its JSON schema so a model
+ * that mis-shaped a call can see the correct field names, types, and which are
+ * required. Kept compact (one line per top-level field) to fit a tool-result.
+ */
+function summarizeSchemaShape(json: Record<string, unknown>): string {
+	const properties = isPlainRecord(json.properties) ? json.properties : undefined;
+	if (!properties) return "";
+	const required = new Set(Array.isArray(json.required) ? json.required.map(String) : []);
+	const lines = Object.entries(properties).map(([name, propSchema]) => {
+		const label = jsonSchemaTypeLabel(propSchema);
+		const presence = required.has(name) ? "required" : "optional";
+		return `  - ${name}: ${label} (${presence})`;
+	});
+	return lines.length > 0 ? lines.join("\n") : "";
 }
 
 function validateContext(ctx: ValidationContext, value: unknown): ContextValidationResult {
@@ -1016,9 +1086,12 @@ export function validateToolArguments(tool: Tool, toolCall: ToolCall): ToolCall[
 			}
 		: originalArgs;
 
+	const shape = summarizeSchemaShape(json);
+	const expectedSection = shape ? `\n\nExpected parameters for "${toolCall.name}":\n${shape}` : "";
+
 	const errorMessage = `Validation failed for tool "${
 		toolCall.name
-	}":\n${errors}\n\nReceived arguments:\n${JSON.stringify(receivedArgs, null, 2)}`;
+	}":\n${errors}${expectedSection}\n\nReceived arguments:\n${JSON.stringify(receivedArgs, null, 2)}`;
 
 	throw new Error(errorMessage);
 }

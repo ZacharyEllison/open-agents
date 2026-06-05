@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Performs structural code search using AST matching via native ast-grep.
 
 <instruction>

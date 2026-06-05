@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Read files, directories, archives, SQLite databases, images, documents, internal resources, and web URLs through a single `path` string.
 
 <instruction>
@@ -19,6 +20,7 @@ Append `:<sel>` to `path`. The bare path falls back to the default mode.
 - `:50-200` — lines 50–200 inclusive.
 - `:50+150` — 150 lines starting at line 50.
 - `:20+1` — exactly one line.
+{{!-- @example --}}
 - `:5-16,960-973` — multiple ranges in one call (sorted, overlaps merged).
 - `:raw` — verbatim text; no anchors, no summary, no line prefixes.
 - `:2-4:raw` or `:raw:2-4` — range AND verbatim; the two compose in either order.

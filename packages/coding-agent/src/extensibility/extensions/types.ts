@@ -789,10 +789,31 @@ export interface UserPythonEventResult {
 
 export type { ToolResultEventResult } from "../shared-events";
 
+/**
+ * Additive, cache-friendly patch to the system prompt prefix. Unlike
+ * `systemPrompt` (full replacement), a merge appends a session-stable block as a
+ * distinct ordered prefix entry, so unrelated prefix bytes are preserved. Prefer
+ * this over `systemPrompt` for additive guidance.
+ */
+export interface SystemPromptSlotPatch {
+	/** Stable guidance block appended to the system prompt prefix. */
+	append: string;
+}
+
 export interface BeforeAgentStartEventResult {
 	message?: Pick<CustomMessage, "customType" | "content" | "display" | "details" | "attribution">;
-	/** Replace the system prompt for this turn. If multiple extensions return this, they are chained. */
+	/**
+	 * Replace the entire system prompt for this turn. If multiple extensions
+	 * return this, they are chained. Heavy-handed: a full replacement invalidates
+	 * the frozen prefix. Prefer `mergeSystemPrompt` for additive patches.
+	 */
 	systemPrompt?: string[];
+	/**
+	 * Additive slot patch merged into the system prompt prefix. Applied after any
+	 * `systemPrompt` replacement from the same (or earlier) handler, so an
+	 * extension can both replace and then append.
+	 */
+	mergeSystemPrompt?: SystemPromptSlotPatch;
 }
 
 export type {

@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Asks user when you need clarification or input during task execution.
 
 <conditions>

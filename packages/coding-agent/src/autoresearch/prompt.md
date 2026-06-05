@@ -1,5 +1,3 @@
-{{base_system_prompt}}
-
 ## Autoresearch Mode
 
 Autoresearch mode is active.

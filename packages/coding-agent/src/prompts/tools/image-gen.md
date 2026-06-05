@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Generates or edits images.
 
 <instructions>

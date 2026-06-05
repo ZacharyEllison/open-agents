@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 <system-notice>
 {{#if multiple}}{{jobs.length}} background jobs have completed. Resume your work using the results below.
 

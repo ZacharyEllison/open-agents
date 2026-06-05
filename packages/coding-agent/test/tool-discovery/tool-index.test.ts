@@ -199,6 +199,32 @@ describe("formatDiscoverableToolServerSummary", () => {
 	it("formats plural", () => {
 		expect(formatDiscoverableToolServerSummary({ name: "slack", toolCount: 3 })).toBe("slack (3 tools)");
 	});
+	it("appends a server description when present", () => {
+		expect(
+			formatDiscoverableToolServerSummary({ name: "github", toolCount: 2, description: "GitHub issues and PRs" }),
+		).toBe("github (2 tools): GitHub issues and PRs");
+	});
+});
+
+describe("summarizeDiscoverableTools server descriptions", () => {
+	it("derives the server description from the first line of its instructions", () => {
+		const tools: DiscoverableTool[] = [
+			{ name: "mcp__gh_1", label: "gh/1", summary: "x", source: "mcp", serverName: "github", schemaKeys: [] },
+			{ name: "mcp__sl_1", label: "sl/1", summary: "x", source: "mcp", serverName: "slack", schemaKeys: [] },
+		];
+		const serverDescriptions = new Map<string, string>([
+			["github", "# GitHub\nManage issues, pull requests, and reviews.\nMore detail here."],
+			["slack", ""],
+		]);
+
+		const summary = summarizeDiscoverableTools(tools, { serverDescriptions });
+
+		const github = summary.servers.find(s => s.name === "github");
+		const slack = summary.servers.find(s => s.name === "slack");
+		// Heading marker stripped; only the first non-empty line is used.
+		expect(github?.description).toBe("GitHub");
+		expect(slack?.description).toBeUndefined();
+	});
 });
 
 // ─── selectDiscoverableToolNamesByServer ──────────────────────────────────────

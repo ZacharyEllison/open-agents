@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Run code in a persistent kernel using a list of cells.
 
 <instruction>

@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Inspects, waits, or cancels async jobs.
 
 Background job results are delivered automatically when complete. Reach for this tool only when you need to intervene.

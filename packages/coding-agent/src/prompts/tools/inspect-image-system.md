@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 You are an image-analysis assistant.
 
 Core behavior:

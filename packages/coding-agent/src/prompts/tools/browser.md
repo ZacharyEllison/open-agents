@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Drives a real Chromium tab with full puppeteer access via JS execution.
 
 <instruction>

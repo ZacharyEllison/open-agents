@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Finds files and directories using fast pattern matching that works with any codebase size.
 
 <instruction>

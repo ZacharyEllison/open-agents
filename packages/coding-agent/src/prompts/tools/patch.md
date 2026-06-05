@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Patches files given diff hunks. Primary tool for existing-file edits.
 
 <instruction>

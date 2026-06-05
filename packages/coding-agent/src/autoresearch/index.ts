@@ -357,8 +357,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				: "Heads up: you are not on a dedicated `autoresearch/*` branch. `log_experiment discard` will only revert run-modified files, not reset to baseline — so harness files written before `init_experiment` may not survive a discard. Clean the worktree and re-run `/autoresearch` if you want full revert safety.";
 			return {
 				systemPrompt: [
+					...event.systemPrompt,
 					prompt.render(setupPromptTemplate, {
-						base_system_prompt: event.systemPrompt.join("\n\n"),
 						has_goal: goal.trim().length > 0,
 						goal,
 						working_dir: ctx.cwd,
@@ -372,8 +372,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		}
 		return {
 			systemPrompt: [
+				...event.systemPrompt,
 				prompt.render(promptTemplate, {
-					base_system_prompt: event.systemPrompt.join("\n\n"),
 					has_goal: goal.trim().length > 0,
 					goal,
 					working_dir: ctx.cwd,

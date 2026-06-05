@@ -233,6 +233,8 @@ export class UiHelpers {
 					if (file.skippedReason === "tooLarge") {
 						const size = typeof file.byteSize === "number" ? formatBytes(file.byteSize) : "unknown size";
 						suffix = `(skipped: ${size})`;
+					} else if (file.skippedReason === "budgetExceeded") {
+						suffix = "(skipped: attachment budget)";
 					} else {
 						suffix = file.image
 							? "(image)"

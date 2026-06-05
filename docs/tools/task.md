@@ -11,8 +11,8 @@
   - `packages/coding-agent/src/task/agents.ts` — bundled agent definitions and frontmatter parsing.
   - `packages/coding-agent/src/task/executor.ts` — create child sessions, run subagents, collect output.
   - `packages/coding-agent/src/task/parallel.ts` — concurrency-limited scheduling and async semaphore.
-  - `packages/coding-agent/src/task/isolation-backend.ts` — isolation backend resolution and platform fallback.
-  - `packages/coding-agent/src/task/worktree.ts` — worktree / FUSE / ProjFS setup, patch capture, branch merge.
+  - `packages/coding-agent/src/task/worktree.ts` — isolation lifecycle (`ensureIsolation`/`cleanupIsolation`), baseline capture, delta/patch capture, branch commit/merge.
+  - `crates/pi-iso/src/lib.rs` — cross-platform isolation PAL (backend probe/resolve/start/stop/diff), surfaced to TS via `@open-agents/natives`.
   - `packages/coding-agent/src/task/output-manager.ts` — session-scoped `agent://` id allocation.
   - `packages/coding-agent/src/task/simple-mode.ts` — `default` / `schema-free` / `independent` field gating.
   - `packages/coding-agent/src/internal-urls/agent-protocol.ts` — resolve `agent://<id>` to saved subagent output.
@@ -93,17 +93,16 @@ Artifacts and side channels:
 6. It resolves the requested agent with `getAgent(...)`, rejects unknown or disabled agents, and enforces parent spawn policy plus `OA_BLOCKED_AGENT` self-recursion prevention.
 7. It derives the effective output schema in priority order: task call `schema` (if allowed) → agent frontmatter `output` → inherited parent session schema.
 8. It validates task ids: missing ids and case-insensitive duplicates are immediate errors.
-9. If `isolated` was requested, it requires a git repo (`getRepoRoot(...)` / `captureBaseline(...)`) and resolves the actual backend through `resolveIsolationBackendForTaskExecution(...)`.
+9. If `isolated` was requested, it requires a git repo (`getRepoRoot(...)` / `captureBaseline(...)`) and maps the `task.isolation.mode` setting to a preferred backend hint via `parseIsolationMode(...)`. The actual backend is chosen later inside `ensureIsolation(...)`, which calls the PAL resolver (`natives.isoResolve`) and falls back through host-available candidates.
 10. It chooses an artifacts dir from the parent session when available, otherwise a temp dir, and writes `context.md` there when `session.getCompactContext?.()` returns content.
 11. It allocates unique ids again if the caller did not preallocate them, then builds `tasksWithUniqueIds`.
 12. For each task, it seeds an `AgentProgress` entry and runs `runTask(...)` through `mapWithConcurrencyLimit(...)` using `task.maxConcurrency`.
 13. Non-isolated `runTask(...)` calls `runSubprocess(...)` directly with parent cwd.
 14. Isolated `runTask(...)`:
-   - creates an isolation workspace (`ensureWorktree(...)`, `ensureFuseOverlay(...)`, or `ensureProjfsOverlay(...)`)
-   - applies the captured baseline for worktrees
-   - runs `runSubprocess(...)` inside that workspace
-   - on success, either commits to a per-task branch (`mergeMode === "branch"`) or captures a patch with `captureDeltaPatch(...)`
-   - always cleans up the isolation workspace/backend
+   - materialises a copy-on-write workspace with `ensureIsolation(repoRoot, task.id, preferredBackend)`, which returns an `IsolationHandle` whose `mergedDir` is the writable view (plus the backend actually used and any fallback reason)
+   - runs `runSubprocess(...)` inside `handle.mergedDir`
+   - on success, either commits to a per-task branch (`mergeMode === "branch"`, via `commitToBranch(...)`) or captures a patch with `captureDeltaPatch(...)`, both diffed against the cloned `baseline`
+   - always tears the workspace down in a `finally` with `cleanupIsolation(handle)`
 15. `runSubprocess(...)` in `packages/coding-agent/src/task/executor.ts` creates a child agent session with:
    - isolated settings snapshot via `Settings.isolated(...)`, forcing `async.enabled = false` and `bash.autoBackground.enabled = false`
    - child `agentId` / `parentTaskPrefix` equal to the allocated task id
@@ -132,11 +131,17 @@ Artifacts and side channels:
   - `default` — accepts shared `context` and per-call `schema`.
   - `schema-free` — accepts `context`, rejects `schema`.
   - `independent` — rejects `context` and `schema`; each assignment stands alone.
-- Isolation backend
+- Isolation backend — the `task.isolation.mode` setting (`none`, `auto`, or a specific backend) is a hint; the PAL (`crates/pi-iso`) probes the host and falls back through available candidates. Legacy values `worktree`/`fuse-overlay`/`fuse-projfs` map onto `rcopy`/`overlayfs`/`projfs`.
   - `none` — no isolation.
-  - `worktree` — detached git worktree plus baseline replay.
-  - `fuse-overlay` — Unix FUSE overlay mount.
-  - `fuse-projfs` — Windows ProjFS overlay.
+  - `auto` — no hint; the resolver walks the platform's preference order.
+  - `apfs` — macOS APFS `clonefile(2)` copy-on-write clone.
+  - `btrfs` — btrfs subvolume snapshot clone (Linux + btrfs).
+  - `zfs` — ZFS dataset snapshot + clone.
+  - `reflink` — Linux per-file `FICLONE` reflink tree (XFS+reflink, bcachefs, …).
+  - `overlayfs` — Linux kernel `overlay` mount, with `fuse-overlayfs` fallback.
+  - `projfs` — Windows Projected File System.
+  - `block-clone` — Windows `FSCTL_DUPLICATE_EXTENTS_TO_FILE` block clone (NTFS/ReFS).
+  - `rcopy` — universal fallback: `git worktree` when the source is a git repo, else plain recursive copy. Always available.
 - Isolation merge strategy
   - Patch mode — capture/apply root patches, keep patch artifacts when application fails.
   - Branch mode — commit each task onto `omp/task/<id>` branch, cherry-pick into parent, preserve failed branches for manual resolution.
@@ -158,14 +163,13 @@ Artifacts and side channels:
 - Filesystem
   - Writes `context.md`, `<id>.jsonl`, and `<id>.md` under the session artifacts dir or a temp task dir.
   - In isolated patch mode writes `<id>.patch` artifacts.
-  - Creates/removes worktrees or overlay mount directories.
+  - Creates/removes a per-task copy-on-write workspace under `~/.omp/wt/<task-id>-<hash>/merged` (hash from `hashPath(repoRoot)`), torn down by `cleanupIsolation(...)`.
   - In branch mode creates temporary worktrees and task branches.
 - Network
   - Child sessions may use whichever networked tools/models their active tool set permits.
   - MCP proxy tools can call existing parent MCP connections with a 60_000 ms timeout.
 - Subprocesses / native bindings
-  - `fuse-overlayfs` and `fusermount`/`fusermount3` for FUSE isolation.
-  - ProjFS native bindings via `@open-agents/natives` on Windows.
+  - The `pi-iso` PAL via `@open-agents/natives` (`isoResolve`/`isoStart`/`isoStop`) drives backend-specific primitives: APFS `clonefile`, btrfs/ZFS snapshots, Linux reflinks, kernel `overlay` (with `fuse-overlayfs` fallback), Windows ProjFS / block clone, or `rcopy`.
   - Git operations for baseline capture, patch apply, worktrees, branches, stash, cherry-pick, commits.
 - Session state (transcript, memory, jobs, checkpoints, registries)
   - Creates child `AgentSession` instances with isolated settings snapshots.
@@ -204,7 +208,7 @@ Artifacts and side channels:
   - spawn-policy denial
   - requesting `isolated` while isolation mode is `none`
 - Isolated execution without a git repo returns `Isolated task execution requires a git repository. ...`.
-- Backend resolution can return a hard error (`ProjFS isolation initialization failed...`) or a non-fatal warning with fallback to `worktree`.
+- Isolation setup walks the resolver's candidate list: an `Unavailable` backend error is swallowed and the next candidate is tried, while any other `isoStart` failure is rethrown. If every candidate is exhausted, `ensureIsolation(...)` throws `No isolation backend is available.` (or the first recorded fallback reason). Successful fallbacks are surfaced non-fatally through `IsolationHandle.fellBack` / `fallbackReason`.
 - `mapWithConcurrencyLimit(...)` fails fast on non-abort worker exceptions; already completed results are preserved only in the thrown path’s local state, not surfaced unless the caller catches and converts them.
 - Child-session failures surface as `SingleResult.exitCode = 1` with `stderr`/`error` populated.
 - If the child omits `yield`, `finalizeSubprocessOutput(...)` injects warnings such as `SYSTEM WARNING: Subagent exited without calling yield tool after 3 reminders.`

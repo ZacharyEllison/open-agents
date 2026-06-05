@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Runs commands on remote hosts.
 
 <instruction>

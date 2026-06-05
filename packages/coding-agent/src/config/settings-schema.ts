@@ -364,6 +364,26 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"context.injection": {
+		type: "enum",
+		values: ["pointer", "full"] as const,
+		default: "pointer",
+		ui: {
+			tab: "context",
+			label: "Interface Context Injection",
+			description:
+				"How project context files (AGENTS.md etc.) are injected into the interface tier prompt. 'pointer' renders a lightweight <context-index> manifest (path + size + summary) that the agent can read on demand — slimming prefill. 'full' inlines the file bodies (subject to Interface Context File Limit). The worker tier is controlled by Worker Context Injection.",
+			options: [
+				{
+					value: "pointer",
+					label: "Pointer index",
+					description: "Manifest of paths + summaries; read full content on demand",
+				},
+				{ value: "full", label: "Full bodies", description: "Inline full context file content" },
+			],
+		},
+	},
+
 	"interface.contextFileMaxChars": {
 		type: "number",
 		default: -1,
@@ -371,10 +391,10 @@ export const SETTINGS_SCHEMA = {
 			tab: "context",
 			label: "Interface Context File Limit",
 			description:
-				"Max characters of project context files (e.g. AGENTS.md) injected into the interface tier prompt. The interface delegates edits, so it rarely needs the full coding rules — trimming cuts prefill. -1 keeps the full content; 0 skips context files entirely. The worker always receives the full content.",
+				"When Interface Context Injection is 'full', the max characters of project context files (e.g. AGENTS.md) inlined into the interface tier prompt. -1 keeps the full content; a positive value truncates. 0 is treated as pointer mode (renders the <context-index> manifest instead of silently omitting context). The worker always receives the full content.",
 			options: [
 				{ value: "-1", label: "Full", description: "Inject context files in full" },
-				{ value: "0", label: "Skip", description: "Omit context files from the interface prompt" },
+				{ value: "0", label: "Pointer", description: "Render the <context-index> manifest instead" },
 				{ value: "2000", label: "2K chars", description: "Aggressive trim" },
 				{ value: "4000", label: "4K chars", description: "Moderate trim" },
 				{ value: "8000", label: "8K chars", description: "Light trim" },
@@ -415,6 +435,26 @@ export const SETTINGS_SCHEMA = {
 				{ value: "16000", label: "16K tokens", description: "Moderate" },
 				{ value: "24000", label: "24K tokens", description: "Relaxed" },
 				{ value: "32000", label: "32K tokens", description: "Large context" },
+			],
+		},
+	},
+
+	"worker.contextInjection": {
+		type: "enum",
+		values: ["pointer", "full"] as const,
+		default: "full",
+		ui: {
+			tab: "context",
+			label: "Worker Context Injection",
+			description:
+				"How project context files (AGENTS.md etc.) are injected into the worker tier prompt. Workers execute delegated work and benefit from the full coding rules, so 'full' is the default. 'pointer' renders the lightweight <context-index> manifest instead.",
+			options: [
+				{ value: "full", label: "Full bodies", description: "Inline full context file content" },
+				{
+					value: "pointer",
+					label: "Pointer index",
+					description: "Manifest of paths + summaries; read full content on demand",
+				},
 			],
 		},
 	},
@@ -3486,6 +3526,13 @@ export interface ThinkingBudgetsSettings {
 	xhigh: number;
 }
 
+/** How project context files are injected into a tier's prompt - derived from schema */
+export type ContextInjectionMode = SettingValue<"context.injection">;
+
+export interface ContextSettings {
+	injection: ContextInjectionMode;
+}
+
 export interface InterfaceSettings {
 	compactionThresholdTokens: number;
 	contextFileMaxChars: number;
@@ -3494,6 +3541,7 @@ export interface InterfaceSettings {
 
 export interface WorkerSettings {
 	compactionThresholdTokens: number;
+	contextInjection: ContextInjectionMode;
 	thinkingLevel: string;
 }
 
@@ -3536,6 +3584,7 @@ export interface GroupTypeMap {
 	thinkingBudgets: ThinkingBudgetsSettings;
 	stt: SttSettings;
 	modelTiers: Record<string, string>;
+	context: ContextSettings;
 	interface: InterfaceSettings;
 	worker: WorkerSettings;
 	modelTags: ModelTagsSettings;

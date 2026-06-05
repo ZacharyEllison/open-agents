@@ -199,7 +199,7 @@ describe("system Handlebars prompt templates", () => {
 		expect(subagentUser).not.toContain("Shared task background");
 	});
 	test("system-prompt renders MCP discovery hint when enabled", async () => {
-		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const templatePath = path.join(systemPromptsDir, "system-prompt-worker.md");
 		const template = await Bun.file(templatePath).text();
 
 		const rendered = prompt.render(template, {

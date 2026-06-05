@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 GitHub CLI tool with a single op-based dispatch. Wraps `gh` for repositories, pull requests, search, checkout, push, and Actions watch workflows. For reading a single issue or PR view, use the `issue://<N>` or `pr://<N>` URL schemes (cached automatically) — they replace what used to be `op: issue_view` and `op: pr_view`. For reading PR diffs, use `pr://<N>/diff` (changed-file listing), `pr://<N>/diff/<i>` (single file slice, 1-indexed), or `pr://<N>/diff/all` (full unified diff) — they replace what used to be `op: pr_diff`.
 
 <instruction>

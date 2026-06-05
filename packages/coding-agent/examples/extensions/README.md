@@ -55,7 +55,7 @@ cp permission-gate.ts ~/.omp/agent/extensions/
 
 | Extension              | Description                                                           |
 | ---------------------- | --------------------------------------------------------------------- |
-| `pirate.ts`            | Demonstrates `systemPromptAppend` to dynamically modify system prompt |
+| `pirate.ts`            | Demonstrates `mergeSystemPrompt` to dynamically append to system prompt |
 | `custom-compaction.ts` | Custom compaction that summarizes entire conversation                 |
 
 ### External Dependencies

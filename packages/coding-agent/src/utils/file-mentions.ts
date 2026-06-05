@@ -56,6 +56,11 @@ function getMentionCandidateDiscoveryProfile(): MentionDiscoveryProfile {
 // auto-reading and only include the path in the message.
 const MAX_AUTO_READ_TEXT_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_AUTO_READ_IMAGE_BYTES = 25 * 1024 * 1024; // 25MB
+// Aggregate guard across all @mentions in a single turn. Even when each file is
+// individually under the per-file cap, dozens of mentions can blow up the
+// consolidated <attached-files> block. Once the cumulative auto-read text budget
+// is exhausted, remaining text files are listed by path only (not inlined).
+const MAX_TOTAL_AUTO_READ_TEXT_BYTES = 10 * 1024 * 1024; // 10MB
 
 function isMentionBoundary(text: string, index: number): boolean {
 	if (index === 0) return true;
@@ -285,6 +290,7 @@ export async function generateFileMentionMessages(
 	const autoResizeImages = options?.autoResizeImages ?? true;
 
 	const files: FileMentionMessage["files"] = [];
+	let totalTextBytes = 0;
 	let mentionCandidatesPromise: Promise<MentionCandidate[]> | null = null;
 	const getMentionCandidates = (): Promise<MentionCandidate[]> => {
 		mentionCandidatesPromise ??= listMentionCandidates(cwd);
@@ -353,6 +359,19 @@ export async function generateFileMentionMessages(
 				});
 				continue;
 			}
+
+			if (totalTextBytes >= MAX_TOTAL_AUTO_READ_TEXT_BYTES) {
+				files.push({
+					path: resolvedPath,
+					content: `(skipped auto-read: attachment budget of ${formatBytes(
+						MAX_TOTAL_AUTO_READ_TEXT_BYTES,
+					)} exceeded — read this path manually if needed)`,
+					byteSize: stat.size,
+					skippedReason: "budgetExceeded",
+				});
+				continue;
+			}
+			totalTextBytes += stat.size;
 
 			const content = await Bun.file(absolutePath).text();
 			const snapshotStore = options?.useHashLines ? options.snapshotStore : undefined;

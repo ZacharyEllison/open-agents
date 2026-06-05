@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Searches files using powerful regex matching.
 
 <instruction>

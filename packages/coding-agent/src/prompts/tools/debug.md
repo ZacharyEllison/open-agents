@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Provides debugger access through the Debug Adapter Protocol (DAP).
 Use for launching or attaching debuggers, setting breakpoints, stepping through execution, inspecting threads/stack/variables, evaluating expressions, capturing output, and interrupting hung programs.
 

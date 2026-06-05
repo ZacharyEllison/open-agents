@@ -797,6 +797,29 @@ export class Settings {
 			delete raw.mnemosyne;
 		}
 
+		// interface.contextFileMaxChars legacy semantics -> context.injection.
+		// Historically `0` meant "skip context files on the interface" (silent
+		// omission). We now surface a lightweight <context-index> manifest instead,
+		// so map an explicit `0` to pointer mode. Any other explicit value (full
+		// `-1` or a positive truncation cap) expressed an intent to inline bodies,
+		// so map to full and preserve that. Only seed `context.injection` when the
+		// user has not already chosen it. Idempotent once materialised.
+		const contextObj = raw.context as Record<string, unknown> | undefined;
+		const interfaceObj = raw.interface as Record<string, unknown> | undefined;
+		const contextInjectionSet =
+			(contextObj && typeof contextObj.injection === "string") || typeof raw["context.injection"] === "string";
+		const legacyMaxChars =
+			interfaceObj && typeof interfaceObj.contextFileMaxChars === "number"
+				? (interfaceObj.contextFileMaxChars as number)
+				: typeof raw["interface.contextFileMaxChars"] === "number"
+					? (raw["interface.contextFileMaxChars"] as number)
+					: undefined;
+		if (!contextInjectionSet && legacyMaxChars !== undefined) {
+			const contextRoot = (contextObj ?? {}) as Record<string, unknown>;
+			contextRoot.injection = legacyMaxChars === 0 ? "pointer" : "full";
+			raw.context = contextRoot;
+		}
+
 		migrateModelRolesToTiers(raw);
 
 		// hindsight: dynamicBankId/agentName -> scoping enum + bankId

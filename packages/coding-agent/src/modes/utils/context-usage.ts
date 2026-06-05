@@ -18,7 +18,7 @@ const CELL_FILLED_MESSAGES = "⛃";
 const CELL_FREE = "⛶";
 const CELL_BUFFER = "⛝";
 
-type CategoryId = "systemPrompt" | "systemContext" | "systemTools" | "skills" | "messages";
+type CategoryId = "systemPrompt" | "systemContext" | "toolDescriptions" | "toolSchemas" | "skills" | "messages";
 
 interface CategoryInfo {
 	id: CategoryId;
@@ -63,6 +63,36 @@ export function estimateToolSchemaTokens(
 }
 
 /**
+ * Token cost of the tool *description* component only (each tool's name +
+ * natural-language description). This is the part lazy/slim wiring trims when
+ * `discoveryMode=all`, so /context exposes it separately from the schema cost.
+ */
+export function estimateToolDescriptionTokens(tools: ReadonlyArray<Pick<Tool, "name" | "description">>): number {
+	const fragments: string[] = [];
+	for (const tool of tools) {
+		fragments.push(tool.name, tool.description);
+	}
+	return countTokens(fragments);
+}
+
+/**
+ * Token cost of the tool *parameter schema* component only (the JSON Schema
+ * sent on the wire). Disjoint from {@link estimateToolDescriptionTokens}; the
+ * two sum to {@link estimateToolSchemaTokens}.
+ */
+export function estimateToolSchemaOnlyTokens(tools: ReadonlyArray<Pick<Tool, "parameters">>): number {
+	const fragments: string[] = [];
+	for (const tool of tools) {
+		try {
+			fragments.push(JSON.stringify(tool.parameters ?? {}));
+		} catch {
+			// Schema may contain functions or cycles; ignore.
+		}
+	}
+	return countTokens(fragments);
+}
+
+/**
  * Compute just the NON-MESSAGE token total: system prompt (with its skills
  * section subtracted, since skills are tokenized separately) + system context
  * (the rest of the system-prompt array) + tools + skills.
@@ -88,15 +118,40 @@ export function computeNonMessageTokens(session: AgentSession): number {
 function computeNonMessageBreakdown(session: AgentSession): {
 	skillsTokens: number;
 	toolsTokens: number;
+	/** Tool name + description component of `toolsTokens`. */
+	toolDescriptionTokens: number;
+	/** Parameter JSON Schema component of `toolsTokens`. Disjoint from descriptions. */
+	toolSchemaTokens: number;
 	systemContextTokens: number;
+	/**
+	 * Per-session dynamic prompt slots (memory, MCP, context, append, etc.) —
+	 * the system-prompt blocks after the frozen harness (block 0). Equal to
+	 * `systemContextTokens`; exposed under a name that reflects what those blocks
+	 * actually carry. NOT double-counted against tools: the harness inventory
+	 * lists tool *names* only (`repeatToolDescriptions` is false by default), and
+	 * tool descriptions are counted under `toolDescriptionTokens` from the wire
+	 * tool list, not from the rendered prompt text.
+	 */
+	dynamicSlotsTokens: number;
 	systemPromptTokens: number;
 } {
 	const skillsTokens = estimateSkillsTokens(session.skills ?? []);
-	const toolsTokens = estimateToolSchemaTokens(session.agent?.state?.tools ?? []);
+	const tools = session.agent?.state?.tools ?? [];
+	const toolDescriptionTokens = estimateToolDescriptionTokens(tools);
+	const toolSchemaTokens = estimateToolSchemaOnlyTokens(tools);
+	const toolsTokens = estimateToolSchemaTokens(tools);
 	const systemPromptParts = session.systemPrompt ?? [];
 	const systemContextTokens = countTokens(systemPromptParts.slice(1));
 	const systemPromptTokens = Math.max(0, countTokens(systemPromptParts[0] ?? "") - skillsTokens);
-	return { skillsTokens, toolsTokens, systemContextTokens, systemPromptTokens };
+	return {
+		skillsTokens,
+		toolsTokens,
+		toolDescriptionTokens,
+		toolSchemaTokens,
+		systemContextTokens,
+		dynamicSlotsTokens: systemContextTokens,
+		systemPromptTokens,
+	};
 }
 
 /**
@@ -121,11 +176,25 @@ export function computeContextBreakdown(session: AgentSession): ContextBreakdown
 	//   Tools         = JSON tool schema sent separately on the wire
 	//   Skills        = the skill list embedded in the system prompt
 	//   Messages      = conversation messages
-	const { skillsTokens, toolsTokens, systemContextTokens, systemPromptTokens } = computeNonMessageBreakdown(session);
+	const { skillsTokens, toolDescriptionTokens, toolSchemaTokens, systemContextTokens, systemPromptTokens } =
+		computeNonMessageBreakdown(session);
 
 	const categories: CategoryInfo[] = [
 		{ id: "systemPrompt", label: "System prompt", tokens: systemPromptTokens, color: "accent", glyph: CELL_FILLED },
-		{ id: "systemTools", label: "System tools", tokens: toolsTokens, color: "warning", glyph: CELL_FILLED },
+		{
+			id: "toolDescriptions",
+			label: "Tool descriptions",
+			tokens: toolDescriptionTokens,
+			color: "warning",
+			glyph: CELL_FILLED,
+		},
+		{
+			id: "toolSchemas",
+			label: "Tool schemas",
+			tokens: toolSchemaTokens,
+			color: "warning",
+			glyph: CELL_FILLED,
+		},
 		{
 			id: "systemContext",
 			label: "System context",

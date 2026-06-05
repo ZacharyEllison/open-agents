@@ -206,6 +206,37 @@ describe("Settings", () => {
 	});
 
 	describe("migrations", () => {
+		it("maps legacy interface.contextFileMaxChars=0 onto context.injection=pointer", async () => {
+			await writeSettings({
+				interface: { contextFileMaxChars: 0 },
+			});
+
+			const settings = await Settings.init({ cwd: projectDir, agentDir });
+
+			expect(settings.get("context.injection")).toBe("pointer");
+		});
+
+		it("maps an explicit interface.contextFileMaxChars trim onto context.injection=full", async () => {
+			await writeSettings({
+				interface: { contextFileMaxChars: 4000 },
+			});
+
+			const settings = await Settings.init({ cwd: projectDir, agentDir });
+
+			expect(settings.get("context.injection")).toBe("full");
+		});
+
+		it("does not override an explicit context.injection when migrating contextFileMaxChars", async () => {
+			await writeSettings({
+				interface: { contextFileMaxChars: 0 },
+				context: { injection: "full" },
+			});
+
+			const settings = await Settings.init({ cwd: projectDir, agentDir });
+
+			expect(settings.get("context.injection")).toBe("full");
+		});
+
 		it("maps removed atom edit mode settings to hashline", async () => {
 			await writeSettings({
 				edit: {

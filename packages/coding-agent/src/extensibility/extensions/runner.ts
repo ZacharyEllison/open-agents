@@ -898,6 +898,14 @@ export class ExtensionRunner {
 						currentSystemPrompt = result.systemPrompt;
 						systemPromptModified = true;
 					}
+					// Additive slot patch: append a stable block as a distinct prefix
+					// entry rather than replacing the array. Cheaper on the cache than a
+					// full `systemPrompt` replacement.
+					const appendBlock = result.mergeSystemPrompt?.append.trim();
+					if (appendBlock) {
+						currentSystemPrompt = [...currentSystemPrompt, appendBlock];
+						systemPromptModified = true;
+					}
 				}
 			}
 		}

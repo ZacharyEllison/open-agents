@@ -115,6 +115,81 @@ describe("interface tier prompt filtering", () => {
 	});
 });
 
+describe("context injection pointer manifest", () => {
+	const emptyTree = (rootPath: string) => ({
+		rootPath,
+		rendered: "",
+		truncated: false,
+		totalLines: 0,
+		agentsMdFiles: [],
+	});
+
+	const contextFiles = [
+		{ path: "AGENTS.md", content: "# Project Rules\n\nNever skip the verification step before yielding." },
+	];
+
+	it("renders a <context-index> manifest (no inlined bodies) when injection is pointer", async () => {
+		const result = await buildSystemPrompt({
+			cwd: "/tmp/ctx-pointer",
+			toolNames: ["read"],
+			skills: [],
+			rules: [],
+			workspaceTree: emptyTree("/tmp/ctx-pointer"),
+			contextFiles,
+			contextInjection: "pointer",
+			isInterfaceTier: true,
+		});
+
+		const prompt = result.systemPrompt.join("\n\n");
+		expect(prompt).toContain("<context-index>");
+		expect(prompt).toContain("AGENTS.md");
+		// Summary derived from the first heading.
+		expect(prompt).toContain("Project Rules");
+		// The full body is NOT inlined in pointer mode.
+		expect(prompt).not.toContain("Never skip the verification step before yielding.");
+		expect(prompt).not.toContain("Follow the context files below for all tasks:");
+	});
+
+	it("renders full <context> bodies when injection is full (worker tier)", async () => {
+		const result = await buildSystemPrompt({
+			cwd: "/tmp/ctx-full",
+			toolNames: ["read"],
+			skills: [],
+			rules: [],
+			workspaceTree: emptyTree("/tmp/ctx-full"),
+			contextFiles,
+			contextInjection: "full",
+			isInterfaceTier: false,
+		});
+
+		const prompt = result.systemPrompt.join("\n\n");
+		expect(prompt).toContain("<context>");
+		expect(prompt).toContain("Never skip the verification step before yielding.");
+		expect(prompt).not.toContain("<context-index>");
+	});
+
+	it("keeps safety-critical always-apply rules in the harness even with pointer context", async () => {
+		const safetyRule = "NEVER force-push to main without explicit approval.";
+		const result = await buildSystemPrompt({
+			cwd: "/tmp/ctx-pointer-rules",
+			toolNames: ["read"],
+			skills: [],
+			rules: [],
+			workspaceTree: emptyTree("/tmp/ctx-pointer-rules"),
+			contextFiles,
+			contextInjection: "pointer",
+			isInterfaceTier: true,
+			alwaysApplyRules: [{ name: "git-safety", content: safetyRule, path: "/tmp/RULES.md" }],
+		});
+
+		const prompt = result.systemPrompt.join("\n\n");
+		// Always-apply rules are content-keyed and render in the harness, independent
+		// of whether context files are inlined or merely indexed.
+		expect(prompt).toContain(safetyRule);
+		expect(prompt).toContain("<context-index>");
+	});
+});
+
 describe("interface.contextFileMaxChars trimming", () => {
 	const longContent = "A".repeat(10_000);
 	const shortContent = "Short content";

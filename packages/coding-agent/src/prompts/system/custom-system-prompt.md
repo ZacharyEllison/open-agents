@@ -3,7 +3,19 @@
 {{/if}}
 {{customPrompt}}
 {{#if appendPrompt}}
+<append>
 {{appendPrompt}}
+</append>
+{{/if}}
+{{#if memoryInstructions}}
+<memory>
+{{memoryInstructions}}
+</memory>
+{{/if}}
+{{#if mcpInstructions}}
+<mcp-instructions>
+{{mcpInstructions}}
+</mcp-instructions>
 {{/if}}
 {{#ifAny contextFiles.length git.isRepo}}
 <project>

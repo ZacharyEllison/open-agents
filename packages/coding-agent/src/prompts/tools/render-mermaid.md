@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Convert Mermaid graph source into ASCII diagram output.
 
 Parameters:

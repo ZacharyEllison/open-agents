@@ -78,6 +78,44 @@ describe("Tool argument coercion", () => {
 		expect(result.paths).toEqual(["src/**/*.ts"]);
 	});
 
+	it("flattens an object into JSON text when schema expects a string", () => {
+		const tool: Tool = {
+			name: "t3c",
+			description: "",
+			parameters: z.object({ agent: z.string(), context: z.string().optional() }),
+		};
+
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-3c",
+			name: "t3c",
+			arguments: { agent: "task", context: { assignment: "rewrite the persona", files: ["a.md"] } },
+		};
+
+		const result = validateToolArguments(tool, toolCall) as { agent: string; context: string };
+		expect(typeof result.context).toBe("string");
+		expect(result.context).toContain("rewrite the persona");
+		expect(JSON.parse(result.context)).toEqual({ assignment: "rewrite the persona", files: ["a.md"] });
+	});
+
+	it("stringifies a scalar when schema expects a string", () => {
+		const tool: Tool = {
+			name: "t3d",
+			description: "",
+			parameters: z.object({ note: z.string() }),
+		};
+
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-3d",
+			name: "t3d",
+			arguments: { note: 42 },
+		};
+
+		const result = validateToolArguments(tool, toolCall) as { note: string };
+		expect(result.note).toBe("42");
+	});
+
 	it("parses JSON objects in string values when schema expects object", () => {
 		const tool: Tool = {
 			name: "t4",
@@ -494,6 +532,39 @@ describe("Tool argument coercion", () => {
 		};
 
 		expect(() => validateToolArguments(tool, toolCall)).toThrow('Validation failed for tool "t6"');
+	});
+
+	it("includes the expected parameter shape in the validation error to teach the model", () => {
+		const tool: Tool = {
+			name: "t6b",
+			description: "",
+			parameters: z.object({
+				agent: z.string(),
+				count: z.number(),
+				tasks: z.array(z.string()),
+				note: z.string().optional(),
+			}),
+		};
+
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-6b",
+			name: "t6b",
+			// `count` cannot be coerced (object → number), forcing the error path.
+			arguments: { agent: "task", count: { nested: true }, tasks: ["a"] },
+		};
+
+		let message = "";
+		try {
+			validateToolArguments(tool, toolCall);
+		} catch (err) {
+			message = (err as Error).message;
+		}
+		expect(message).toContain('Expected parameters for "t6b":');
+		expect(message).toContain("agent: string (required)");
+		expect(message).toContain("count: number (required)");
+		expect(message).toContain("tasks: array of string (required)");
+		expect(message).toContain("note: string (optional)");
 	});
 
 	it("coerces numeric string for Optional<number> (anyOf:[number,null])", () => {

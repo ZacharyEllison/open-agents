@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Search long-term memory for relevant information. Returns raw matching entries ranked by relevance.
 
 Use proactively — before answering questions about past conversations, user preferences, project decisions, or any topic where prior context would help accuracy. When in doubt, recall first.

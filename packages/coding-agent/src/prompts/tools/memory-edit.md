@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Edit Mnemopi long-term memories by id.
 
 Use only with ids returned by the `recall` tool. Operations:

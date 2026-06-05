@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Search hidden tool metadata to discover and activate tools.
 
 Activate hidden tools (MCP and built-in) when you need a capability not in your active tool set.

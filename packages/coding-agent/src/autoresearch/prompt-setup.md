@@ -1,5 +1,3 @@
-{{base_system_prompt}}
-
 ## Autoresearch Mode — Phase 1: Harness Setup
 
 Autoresearch mode is active and there is no session yet. Your job in this turn is to **build the benchmark harness**, not to optimise anything. Optimisation starts only after you call `init_experiment`.

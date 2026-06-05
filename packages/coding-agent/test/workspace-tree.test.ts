@@ -154,6 +154,43 @@ describe("buildWorkspaceTree", () => {
 		expect(tree.rendered).toContain("… 1 more");
 	});
 
+	it("applies tighter depth and line caps for the interface tier", async () => {
+		const cwd = await makeTempDir();
+		// Depth 3 path: only depths 1-2 should render under the interface cap.
+		await writeFileWithMtime(path.join(cwd, "a", "b", "c", "deep.txt"), "deep", Date.now() - 1_000);
+
+		const interfaceTree = await buildWorkspaceTree(cwd, { interfaceTier: true });
+		const workerTree = await buildWorkspaceTree(cwd);
+
+		expect(interfaceTree.maxDepth).toBe(2);
+		expect(workerTree.maxDepth).toBe(3);
+		// The depth-3 directory `c/` and its file are pruned for the interface but
+		// surface for the worker (depth ≤ 3).
+		expect(interfaceTree.rendered).not.toContain("c/");
+		expect(interfaceTree.rendered).not.toContain("deep.txt");
+		expect(workerTree.rendered).toContain("c/");
+	});
+
+	it("caps the interface tree at 60 rendered lines", async () => {
+		const cwd = await makeTempDir();
+		const base = Date.now() - 60_000;
+		for (let dirIndex = 0; dirIndex < 12; dirIndex += 1) {
+			const dirPath = path.join(cwd, `dir-${String(dirIndex).padStart(2, "0")}`);
+			await fs.mkdir(dirPath, { recursive: true });
+			for (let fileIndex = 0; fileIndex < 12; fileIndex += 1) {
+				const fileName = `file-${String(fileIndex).padStart(2, "0")}.txt`;
+				await writeFileWithMtime(path.join(dirPath, fileName), fileName, base + fileIndex);
+			}
+			await touchDirWithMtime(dirPath, base + dirIndex);
+		}
+
+		const tree = await buildWorkspaceTree(cwd, { interfaceTier: true });
+
+		expect(tree.truncated).toBe(true);
+		expect(tree.totalLines).toBeLessThanOrEqual(60);
+		expect(tree.rendered.split("\n").length).toBeLessThanOrEqual(60);
+	});
+
 	it("returns AGENTS.md files at directory depths one through four", async () => {
 		const cwd = await makeTempDir();
 

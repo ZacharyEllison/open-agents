@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Launches subagents to parallelize workflows.
 
 {{#if asyncEnabled}}

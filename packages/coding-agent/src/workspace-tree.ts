@@ -2,11 +2,22 @@ import * as path from "node:path";
 import { FileType, type GlobMatch, listWorkspace } from "@open-agents/natives";
 import { formatAge, formatBytes } from "@open-agents/utils";
 
-/** Defaults for the workspace tree shown in the system prompt. */
+/** Defaults for the workspace tree shown in the worker-tier system prompt. */
 const WORKSPACE_DEFAULTS = {
 	maxDepth: 3,
 	perDirLimit: 12,
 	lineCap: 120,
+} as const;
+
+/**
+ * Tighter caps for the interface tier. The interface gathers context and
+ * delegates execution, so it needs only a shallow structural overview — a
+ * smaller tree trims interface prefill without hurting orientation.
+ */
+const WORKSPACE_INTERFACE_DEFAULTS = {
+	maxDepth: 2,
+	perDirLimit: 12,
+	lineCap: 60,
 } as const;
 
 /**
@@ -25,6 +36,8 @@ export interface DirectoryTree {
 export interface WorkspaceTree extends DirectoryTree {
 	/** AGENTS.md files beneath the root whose rules may apply to subdirectories. */
 	agentsMdFiles: string[];
+	/** Directory depth the tree was scanned to (drives the prompt's `depth ≤ N` note). */
+	maxDepth?: number;
 }
 
 export interface BuildDirectoryTreeOptions {
@@ -41,6 +54,11 @@ export interface BuildDirectoryTreeOptions {
 export interface BuildWorkspaceTreeOptions {
 	/** Abort the native workspace scan after this many milliseconds. */
 	timeoutMs?: number;
+	/**
+	 * Apply the tighter interface-tier caps (shallower depth, fewer lines)
+	 * instead of the worker-tier defaults. Default: false (worker-tier).
+	 */
+	interfaceTier?: boolean;
 }
 
 /**
@@ -85,24 +103,25 @@ export async function buildDirectoryTree(cwd: string, options: BuildDirectoryTre
  */
 export async function buildWorkspaceTree(cwd: string, options: BuildWorkspaceTreeOptions = {}): Promise<WorkspaceTree> {
 	const rootPath = path.resolve(cwd);
+	const caps = options.interfaceTier ? WORKSPACE_INTERFACE_DEFAULTS : WORKSPACE_DEFAULTS;
 	try {
 		const result = await listWorkspace({
 			path: rootPath,
-			maxDepth: WORKSPACE_DEFAULTS.maxDepth,
+			maxDepth: caps.maxDepth,
 			hidden: false,
 			gitignore: true,
 			collectAgentsMd: true,
 			timeoutMs: options.timeoutMs,
 		});
 		const tree = assembleTree(rootPath, result.entries, {
-			perDirLimit: WORKSPACE_DEFAULTS.perDirLimit,
-			rootLimit: WORKSPACE_DEFAULTS.perDirLimit,
-			lineCap: WORKSPACE_DEFAULTS.lineCap,
+			perDirLimit: caps.perDirLimit,
+			rootLimit: caps.perDirLimit,
+			lineCap: caps.lineCap,
 			nativeTruncated: result.truncated,
 		});
-		return { ...tree, agentsMdFiles: result.agentsMdFiles };
+		return { ...tree, agentsMdFiles: result.agentsMdFiles, maxDepth: caps.maxDepth };
 	} catch {
-		return { ...emptyTree(rootPath), agentsMdFiles: [] };
+		return { ...emptyTree(rootPath), agentsMdFiles: [], maxDepth: caps.maxDepth };
 	}
 }
 

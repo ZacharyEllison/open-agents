@@ -279,7 +279,7 @@ export interface FileMentionMessage {
 		/** File size in bytes, if known. */
 		byteSize?: number;
 		/** Why the file contents were omitted from auto-read. */
-		skippedReason?: "tooLarge";
+		skippedReason?: "tooLarge" | "budgetExceeded";
 		image?: ImageContent;
 	}>;
 	timestamp: number;
@@ -460,7 +460,10 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 						})
 						.join("\n\n");
 					const content: (TextContent | ImageContent)[] = [
-						{ type: "text" as const, text: `<system-reminder>\n${fileContents}\n</system-reminder>` },
+						{
+							type: "text" as const,
+							text: `<system-reminder>\n<attached-files>\n${fileContents}\n</attached-files>\n</system-reminder>`,
+						},
 					];
 					for (const file of m.files) {
 						if (file.image) {

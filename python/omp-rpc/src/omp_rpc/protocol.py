@@ -568,7 +568,7 @@ class FileMentionItem(TypedDict, total=False):
     content: str
     lineCount: NotRequired[int]
     byteSize: NotRequired[int]
-    skippedReason: NotRequired[Literal["tooLarge"]]
+    skippedReason: NotRequired[Literal["tooLarge", "budgetExceeded"]]
     image: NotRequired[ImageContent]
 
 

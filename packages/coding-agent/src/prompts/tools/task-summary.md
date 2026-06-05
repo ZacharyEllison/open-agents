@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 <task-summary>
 <header>{{successCount}}/{{totalCount}} succeeded{{#if hasCancelledNote}} ({{cancelledCount}} cancelled){{/if}} [{{duration}}]</header>
 

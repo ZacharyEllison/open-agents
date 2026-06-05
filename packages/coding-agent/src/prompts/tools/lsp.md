@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Interacts with Language Server Protocol servers for code intelligence.
 
 <operations>

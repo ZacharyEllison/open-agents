@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Inspects an image file with a vision-capable model and returns compact text analysis.
 
 <instruction>

@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Searches the web for up-to-date information beyond knowledge cutoff.
 
 <instruction>

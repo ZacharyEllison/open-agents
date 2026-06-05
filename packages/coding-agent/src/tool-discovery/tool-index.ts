@@ -20,6 +20,8 @@ export interface DiscoverableTool {
 export interface DiscoverableToolServerSummary {
 	name: string;
 	toolCount: number;
+	/** First line of the server's MCP `instructions`/description, when available. */
+	description?: string;
 }
 
 export interface DiscoverableToolSummary {
@@ -172,9 +174,30 @@ export function filterBySource(tools: DiscoverableTool[], source: DiscoverableTo
 	return tools.filter(t => t.source === source);
 }
 
+const SERVER_SUMMARY_MAX_CHARS = 120;
+
+/**
+ * Derive a one-line server summary from its MCP `instructions`/description.
+ * Uses the first non-empty line (markdown heading markers stripped), capped at
+ * {@link SERVER_SUMMARY_MAX_CHARS}. This intentionally does NOT run a markdown
+ * parser — MCP servers expose plain instructions, not sectioned tool docs.
+ */
+export function deriveServerSummaryLine(description: string | undefined): string | undefined {
+	if (!description) return undefined;
+	for (const rawLine of description.split("\n")) {
+		const line = rawLine.replace(/^#{1,6}\s+/, "").trim();
+		if (line.length === 0) continue;
+		return line.length > SERVER_SUMMARY_MAX_CHARS
+			? `${line.slice(0, SERVER_SUMMARY_MAX_CHARS - 1).trimEnd()}…`
+			: line;
+	}
+	return undefined;
+}
+
 export function formatDiscoverableToolServerSummary(server: DiscoverableToolServerSummary): string {
 	const toolLabel = server.toolCount === 1 ? "tool" : "tools";
-	return `${server.name} (${server.toolCount} ${toolLabel})`;
+	const base = `${server.name} (${server.toolCount} ${toolLabel})`;
+	return server.description ? `${base}: ${server.description}` : base;
 }
 
 export function selectDiscoverableToolNamesByServer(
@@ -187,7 +210,10 @@ export function selectDiscoverableToolNamesByServer(
 		.map(tool => tool.name);
 }
 
-export function summarizeDiscoverableTools(tools: DiscoverableTool[]): DiscoverableToolSummary {
+export function summarizeDiscoverableTools(
+	tools: DiscoverableTool[],
+	options?: { serverDescriptions?: ReadonlyMap<string, string> },
+): DiscoverableToolSummary {
 	const serverToolCounts = new Map<string, number>();
 	for (const tool of tools) {
 		if (!tool.serverName) continue;
@@ -195,7 +221,11 @@ export function summarizeDiscoverableTools(tools: DiscoverableTool[]): Discovera
 	}
 	const servers = Array.from(serverToolCounts.entries())
 		.sort(([left], [right]) => left.localeCompare(right))
-		.map(([name, toolCount]) => ({ name, toolCount }));
+		.map(([name, toolCount]) => ({
+			name,
+			toolCount,
+			description: deriveServerSummaryLine(options?.serverDescriptions?.get(name)),
+		}));
 	return {
 		servers,
 		toolCount: tools.length,

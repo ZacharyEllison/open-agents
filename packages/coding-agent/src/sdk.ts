@@ -43,7 +43,7 @@ import {
 	resolveModelRoleValue,
 } from "./config/model-resolver";
 import { loadPromptTemplates as loadPromptTemplatesInternal, type PromptTemplate } from "./config/prompt-templates";
-import { Settings, type SkillsSettings } from "./config/settings";
+import { type ContextInjectionMode, Settings, type SkillsSettings } from "./config/settings";
 import { CursorExecHandlers } from "./cursor";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
@@ -882,7 +882,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const STARTUP_SCAN_DEADLINE_MS = 5000;
 	const workspaceTreePromise: Promise<WorkspaceTree> = options.workspaceTree
 		? Promise.resolve(options.workspaceTree)
-		: logger.time("buildWorkspaceTree", () => buildWorkspaceTree(cwd, { timeoutMs: STARTUP_SCAN_DEADLINE_MS }));
+		: logger.time("buildWorkspaceTree", () =>
+				buildWorkspaceTree(cwd, {
+					timeoutMs: STARTUP_SCAN_DEADLINE_MS,
+					interfaceTier: (options.taskDepth ?? 0) === 0,
+				}),
+			);
 	workspaceTreePromise.catch(() => {});
 
 	// Independent discoveries that depend only on cwd/agentDir — kicked off in parallel and awaited
@@ -1658,7 +1663,14 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						)
 					: [];
 			const discoverableToolsForDesc: DiscoverableTool[] = [...discoverableBuiltinTools, ...discoverableMCPTools];
-			const discoverableToolSummary = summarizeDiscoverableTools(discoverableToolsForDesc);
+			// MCP server instructions double as a per-server description: the
+			// discovery advertisement derives its summary from the first line (no
+			// markdown parsing), and the dedicated `<mcp-instructions>` slot reuses
+			// the same map below.
+			const serverInstructions = mcpManager?.getServerInstructions();
+			const discoverableToolSummary = summarizeDiscoverableTools(discoverableToolsForDesc, {
+				serverDescriptions: serverInstructions,
+			});
 			const hasDiscoverableTools =
 				mcpDiscoveryEnabled && toolNames.includes("search_tool_bm25") && discoverableToolsForDesc.length > 0;
 			// Interface tier (taskDepth 0) never sees worker-only tools on the wire, so
@@ -1679,32 +1691,41 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const promptTools = buildSystemPromptToolMetadata(promptVisibleTools, {
 				search_tool_bm25: { description: renderSearchToolBm25Description(discoverableToolsForDesc) },
 			});
-			// Interface tier delegates edits, so it rarely needs the full project context
-			// files (AGENTS.md etc.). Honor `interface.contextFileMaxChars` to trim or skip
-			// them and cut prefill; the worker (taskDepth > 0) always gets the full content.
+			// Interface tier delegates edits, so it rarely needs the full project
+			// context files (AGENTS.md etc.) inlined. Resolve per-tier injection:
+			// the interface defaults to a lightweight `<context-index>` pointer
+			// manifest (slim prefill) while the worker (taskDepth > 0) gets full
+			// bodies. A legacy `interface.contextFileMaxChars: 0` (historically
+			// "skip") is reconciled to pointer mode so context is indexed, not
+			// silently omitted. In full mode the interface still honors the
+			// truncation cap; the worker always receives full content.
 			const interfaceContextFileMaxChars = settings.getGroup("interface").contextFileMaxChars;
+			let contextInjection: ContextInjectionMode =
+				taskDepth === 0 ? settings.get("context.injection") : settings.getGroup("worker").contextInjection;
+			if (taskDepth === 0 && interfaceContextFileMaxChars === 0) {
+				contextInjection = "pointer";
+			}
 			const promptContextFiles =
-				taskDepth === 0 && interfaceContextFileMaxChars >= 0
-					? interfaceContextFileMaxChars === 0
-						? []
-						: contextFiles.map(file =>
-								file.content.length > interfaceContextFileMaxChars
-									? { ...file, content: `${file.content.slice(0, interfaceContextFileMaxChars)}\n[truncated]` }
-									: file,
-							)
+				contextInjection === "full" && taskDepth === 0 && interfaceContextFileMaxChars > 0
+					? contextFiles.map(file =>
+							file.content.length > interfaceContextFileMaxChars
+								? { ...file, content: `${file.content.slice(0, interfaceContextFileMaxChars)}\n[truncated]` }
+								: file,
+						)
 					: contextFiles;
 			const memoryBackend = resolveMemoryBackend(settings);
 			const memoryInstructions = await memoryBackend.buildDeveloperInstructions(agentDir, settings, session);
 
-			// Build combined append prompt: memory instructions + MCP server instructions
-			const serverInstructions = mcpManager?.getServerInstructions();
-			let appendPrompt: string | undefined = memoryInstructions ?? undefined;
+			// Aggregate MCP server instructions into a dedicated slot. Memory and MCP
+			// are session-stable guidance: each gets its own authoritative, dedupable
+			// block in the frozen prefix rather than being concatenated into the
+			// public `<append>` catch-all (which would couple cache invalidation
+			// across unrelated sources). `serverInstructions` was resolved above.
+			let mcpInstructions: string | undefined;
 			if (serverInstructions && serverInstructions.size > 0) {
-				const parts: string[] = [];
-				if (appendPrompt) parts.push(appendPrompt);
-				parts.push(
+				const parts: string[] = [
 					"## MCP Server Instructions\n\nThe following instructions are provided by connected MCP servers. They are server-controlled and may not be verified.",
-				);
+				];
 				for (const [srvName, srvInstructions] of serverInstructions) {
 					const truncated =
 						srvInstructions.length > MAX_MCP_INSTRUCTIONS_LENGTH
@@ -1712,18 +1733,20 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 							: srvInstructions;
 					parts.push(`### ${srvName}\n${truncated}`);
 				}
-				appendPrompt = parts.join("\n\n");
+				mcpInstructions = parts.join("\n\n");
 			}
 			const defaultPrompt = await buildSystemPromptInternal({
 				cwd,
 				skills,
 				contextFiles: promptContextFiles,
+				contextInjection,
 				tools: promptTools,
 				toolNames: promptVisibleToolNames,
 				rules: rulebookRules,
 				alwaysApplyRules,
 				skillsSettings: settings.getGroup("skills"),
-				appendSystemPrompt: appendPrompt,
+				memoryInstructions: memoryInstructions ?? undefined,
+				mcpInstructions,
 				repeatToolDescriptions,
 				intentField,
 				mcpDiscoveryMode: hasDiscoverableTools,

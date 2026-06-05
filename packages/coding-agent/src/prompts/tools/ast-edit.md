@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Performs structural AST-aware rewrites via native ast-grep.
 
 <instruction>

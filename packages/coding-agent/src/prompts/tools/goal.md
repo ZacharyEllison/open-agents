@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Manage the active goal-mode objective.
 
 Use a single `op` field:

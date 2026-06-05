@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Tool argument validation now flattens a structured value (object/array) or scalar into a string when the schema expects a string, instead of failing. This recovers the common interface-tier failure where a weaker model nests prose inside a structured value (e.g. `context: { assignment: "…" }` for the `task` tool); objects/arrays are pretty-printed as JSON so a downstream reasoning model can still read them losslessly.
+- Tool argument validation errors now include an `Expected parameters for "<tool>"` section listing each field's name, type, and required/optional status, derived from the tool's JSON schema. This gives a model that mis-shaped a call the correct shape to retry against instead of only an opaque per-field type mismatch.
+
 ## [15.8.0] - 2026-06-02
 ### Added
 

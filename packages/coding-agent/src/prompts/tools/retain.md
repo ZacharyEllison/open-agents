@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Store one or more facts in long-term memory for future sessions.
 
 Use for durable, reusable knowledge: user preferences, project decisions, architectural choices, anything that improves future responses.

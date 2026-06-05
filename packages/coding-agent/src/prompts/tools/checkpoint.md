@@ -1,3 +1,4 @@
+{{!-- @summary --}}
 Creates a context checkpoint before exploratory work so you can later rewind and keep only a concise report.
 
 Use this when you need to investigate with many intermediate tool calls (read/search/find/lsp/etc.) and want to minimize context cost afterward.
