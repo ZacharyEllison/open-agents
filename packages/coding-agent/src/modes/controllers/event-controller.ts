@@ -96,6 +96,12 @@ export class EventController {
 		this.#ircExpiryTimers.clear();
 	}
 
+	/** Drop UI-side caches that are safe to rebuild after context maintenance. */
+	clearCompactionCaches(): void {
+		this.#renderedCustomMessages.clear();
+		this.#resetReadGroup();
+	}
+
 	#resetReadGroup(): void {
 		this.#lastReadGroup = undefined;
 	}

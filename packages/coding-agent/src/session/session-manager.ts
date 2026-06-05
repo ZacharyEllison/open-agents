@@ -3303,6 +3303,54 @@ export class SessionManager {
 	}
 
 	/**
+	 * Drop session entries that are not on the active branch (sibling retries,
+	 * abandoned tool paths). Keeps the current session file and leaf. Returns
+	 * how many entries were removed from the in-memory index.
+	 */
+	pruneToActiveBranch(): number {
+		const leafId = this.#leafId;
+		if (!leafId) return 0;
+
+		const before = this.getEntries().length;
+		const header = this.getHeader();
+		if (!header) return 0;
+
+		const branchPath = this.getBranch(leafId);
+		if (branchPath.length === 0) return 0;
+
+		const pathWithoutLabels = branchPath.filter(e => e.type !== "label");
+		const pathEntryIds = new Set(pathWithoutLabels.map(e => e.id));
+		const labelsToWrite: Array<{ targetId: string; label: string }> = [];
+		for (const [targetId, label] of this.#labelsById) {
+			if (pathEntryIds.has(targetId)) {
+				labelsToWrite.push({ targetId, label });
+			}
+		}
+
+		const labelEntries: LabelEntry[] = [];
+		let parentId = pathWithoutLabels[pathWithoutLabels.length - 1]?.id ?? null;
+		const usedIds = new Set(pathEntryIds);
+		for (const { targetId, label } of labelsToWrite) {
+			const labelEntry: LabelEntry = {
+				type: "label",
+				id: generateId(usedIds),
+				parentId,
+				timestamp: new Date().toISOString(),
+				targetId,
+				label,
+			};
+			labelEntries.push(labelEntry);
+			usedIds.add(labelEntry.id);
+			parentId = labelEntry.id;
+		}
+
+		this.#fileEntries = [header, ...pathWithoutLabels, ...labelEntries];
+		this.#buildIndex();
+		this.#needsFullRewriteOnNextPersist = true;
+		return before - this.getEntries().length;
+	}
+
+	/**
 	 * Resolve the canonical default session directory for a cwd.
 	 */
 	static getDefaultSessionDir(

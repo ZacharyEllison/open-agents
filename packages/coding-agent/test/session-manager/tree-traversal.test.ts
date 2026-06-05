@@ -404,6 +404,32 @@ describe("SessionManager append and tree traversal", () => {
 	});
 });
 
+describe("pruneToActiveBranch", () => {
+	it("drops sibling branches while keeping the active leaf path", () => {
+		const session = SessionManager.inMemory();
+
+		const id1 = session.appendMessage(userMsg("1"));
+		const id2 = session.appendMessage(assistantMsg("2"));
+		session.appendMessage(userMsg("3"));
+		session.branch(id2);
+		const id4 = session.appendMessage(userMsg("4"));
+		const id5 = session.appendMessage(assistantMsg("5"));
+
+		expect(session.getEntries()).toHaveLength(5);
+		const removed = session.pruneToActiveBranch();
+		expect(removed).toBe(1);
+		expect(session.getEntries().map(e => e.id)).toEqual([id1, id2, id4, id5]);
+	});
+
+	it("is a no-op when the branch is already linear", () => {
+		const session = SessionManager.inMemory();
+		session.appendMessage(userMsg("1"));
+		session.appendMessage(assistantMsg("2"));
+		expect(session.pruneToActiveBranch()).toBe(0);
+		expect(session.getEntries()).toHaveLength(2);
+	});
+});
+
 describe("createBranchedSession", () => {
 	it("throws for non-existent entry", () => {
 		const session = SessionManager.inMemory();

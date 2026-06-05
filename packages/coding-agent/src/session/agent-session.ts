@@ -154,6 +154,7 @@ import type { Goal, GoalModeState } from "../goals/state";
 import type { HindsightSessionState } from "../hindsight/state";
 import { type LocalProtocolOptions, resolveLocalUrlToPath } from "../internal-urls";
 import { resolveMemoryBackend } from "../memory-backend";
+import { mergeRecallBlock } from "../memory-backend/recall-merge";
 import { getMnemopiSessionState, type MnemopiSessionState, setMnemopiSessionState } from "../mnemopi/state";
 import { containsOrchestrate, ORCHESTRATE_NOTICE } from "../modes/orchestrate";
 import { getCurrentThemeName, theme } from "../modes/theme/theme";
@@ -2369,6 +2370,16 @@ export class AgentSession {
 		this.#streamingEditFileCache.clear();
 	}
 
+	/** Release caches and dead branch entries after context maintenance. */
+	async #releasePostCompactionMemory(): Promise<void> {
+		this.#resetStreamingEditState();
+		this.agent.appendOnlyContext?.resetSyncCursor();
+		const removed = this.sessionManager.pruneToActiveBranch();
+		if (removed > 0 && this.sessionManager.isPersisted()) {
+			await this.sessionManager.rewriteEntries();
+		}
+	}
+
 	#getStreamingEditToolCall(event: AgentEvent):
 		| {
 				toolCall: ToolCall;
@@ -3519,8 +3530,10 @@ export class AgentSession {
 
 		try {
 			const injected = await backend.beforeAgentStartPrompt(this, promptText);
-			if (!injected) return this.#baseSystemPrompt;
-			return [...this.#baseSystemPrompt, injected];
+			// Collapse the dual recall paths: only append the trailing block when a
+			// concurrent base rebuild has not already folded the snippet in, so
+			// first-turn recall appears exactly once.
+			return mergeRecallBlock(this.#baseSystemPrompt, injected ?? undefined);
 		} catch (err) {
 			logger.debug("Memory backend beforeAgentStartPrompt failed", {
 				backend: backend.id,
@@ -5704,6 +5717,7 @@ export class AgentSession {
 		const sessionContext = this.buildDisplaySessionContext();
 		this.agent.replaceMessages(sessionContext.messages);
 		this.#closeCodexProviderSessionsForHistoryRewrite();
+		await this.#releasePostCompactionMemory();
 
 		return {
 			mode,
@@ -5880,6 +5894,7 @@ export class AgentSession {
 			this.agent.replaceMessages(sessionContext.messages);
 			this.#syncTodoPhasesFromBranch();
 			this.#closeCodexProviderSessionsForHistoryRewrite();
+			await this.#releasePostCompactionMemory();
 
 			// Get the saved compaction entry for the hook
 			const savedCompactionEntry = newEntries.find(e => e.type === "compaction" && e.summary === summary) as
@@ -6816,7 +6831,10 @@ export class AgentSession {
 
 	#getCompactionModelCandidates(availableModels: Model[]): Model[] {
 		const compactor = this.#resolveRoleModelFull("compactor", availableModels, this.model).model;
-		return compactor ? [compactor] : [];
+		if (compactor) return [compactor];
+		const iface = this.#resolveRoleModelFull("interface", availableModels, this.model).model;
+		if (iface) return [iface];
+		return this.model ? [this.model] : [];
 	}
 	#isCompactionAuthFailure(error: unknown): boolean {
 		if (!(error instanceof Error)) return false;
@@ -7275,6 +7293,7 @@ export class AgentSession {
 			this.agent.replaceMessages(sessionContext.messages);
 			this.#syncTodoPhasesFromBranch();
 			this.#closeCodexProviderSessionsForHistoryRewrite();
+			await this.#releasePostCompactionMemory();
 
 			// Get the saved compaction entry for the hook
 			const savedCompactionEntry = newEntries.find(e => e.type === "compaction" && e.summary === summary) as
